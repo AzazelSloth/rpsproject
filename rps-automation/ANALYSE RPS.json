@@ -1,0 +1,575 @@
+{
+  "name": "ANALYSE RPS",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyse les résultats RPS  ",
+        "options": {
+          "systemMessage": "=Tu es un expert en Psychologie du Travail pour Solutions Tech Québec. Voici les résultats bruts de plusieurs sondages RPS (Risques Psychosociaux) :\n\n\nTon travail est de rédiger un Rapport de Synthèse Global pour la direction.\n\n    Analyse les tendances générales (points forts et points faibles de l'équipe).\n\n    Identifie les alertes critiques si plusieurs employés mentionnent le même problème.\n\n    Donne 3 recommandations prioritaires pour l'entreprise.\n\nRédige cela de manière professionnelle et structurée (utilise des titres et des listes à puces)."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -528,
+        -288
+      ],
+      "id": "29dacb79-0aa5-4a9b-ad93-f1ba807f248c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "mistral-large-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -96
+      ],
+      "id": "03510aa2-4aee-424e-b5e0-53fc56e34588",
+      "name": "Mistral Cloud Chat Model",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "Y0rfVxWOlowuCOem",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "anaiarandria62@gmail.com",
+        "toEmail": "anaiarandrianantenaina@gmail.com",
+        "subject": "=Rapport d'analyse RPS - {{ $now.format('') }}",
+        "emailFormat": "text",
+        "text": "=Bonjour, vous trouverez ci-joint l'analyse des risques psychosociaux pour votre l'entreprise  . Le rapport complet a également été déposé sur le Drive\n ",
+        "options": {
+          "attachments": "=data"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        304,
+        -288
+      ],
+      "id": "f7289293-58c3-4f0e-82b2-ea203c12a8cb",
+      "name": "Send email",
+      "webhookId": "4b20b4ae-3672-4aab-b5f8-9012bede3e07",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "credentials": {
+        "smtp": {
+          "id": "3spn4eJqsekN79ve",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1328,
+        -288
+      ],
+      "id": "cb00d9c0-b252-40b7-b41f-34b671d6359c",
+      "name": "Execution du workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    \"Nom\": \"Gagnon\",\n    \"Prénom\": \"Julie\",\n    \"Email\": \"julie.gagnon@test.com\",\n    \"Poste\": \"Secrétaire\",\n    \"score_charge_travail\": 3.5,\n    \"commentaires_libres\": \"Beaucoup de paperasse administrative cette semaine, j'ai du mal à suivre.\"\n  },\n  {\n    \"Nom\": \"Roy\",\n    \"Prénom\": \"Luc\",\n    \"Email\": \"luc.roy@test.com\",\n    \"Poste\": \"Personnel de soutien\",\n    \"score_charge_travail\": 4.2,\n    \"commentaires_libres\": \"Le matériel manque souvent pour intervenir rapidement chez les clients.\"\n  },\n  {\n    \"Nom\": \"Bouchard\",\n    \"Prénom\": \"Sophie\",\n    \"Email\": \"sophie.bouchard@test.com\",\n    \"Poste\": \"Gestionnaire\",\n    \"score_charge_travail\": 2.8,\n    \"commentaires_libres\": \"Bonne cohésion d'équipe globale, mais les délais de projets sont serrés.\"\n  },\n  {\n    \"Nom\": \"Tremblay\",\n    \"Prénom\": \"Jean\",\n    \"Email\": \"jean.tremblay@test.com\",\n    \"Poste\": \"Développeur\",\n    \"score_charge_travail\": 4.5,\n    \"commentaires_libres\": \"Le rythme est très soutenu, je fais beaucoup d'heures supplémentaires.\"\n  },\n  {\n    \"Nom\": \"Lavoie\",\n    \"Prénom\": \"Marc\",\n    \"Email\": \"marc.lavoie@test.com\",\n    \"Poste\": \"Technicien Réseau\",\n    \"score_charge_travail\": 3.9,\n    \"commentaires_libres\": \"Trop d'interruptions pendant les tâches critiques.\"\n  },\n  {\n    \"Nom\": \"Côté\",\n    \"Prénom\": \"Isabelle\",\n    \"Email\": \"isabelle.cote@test.com\",\n    \"Poste\": \"Analyste\",\n    \"score_charge_travail\": 2.5,\n    \"commentaires_libres\": \"Ambiance de travail agréable, les outils sont performants.\"\n  },\n  {\n    \"Nom\": \"Pelletier\",\n    \"Prénom\": \"Antoine\",\n    \"Email\": \"antoine.p@test.com\",\n    \"Poste\": \"Support Client\",\n    \"score_charge_travail\": 4.8,\n    \"commentaires_libres\": \"Alerte : Trop de fatigue accumulée, le volume d'appels est ingérable.\"\n  },\n  {\n    \"Nom\": \"Lévesque\",\n    \"Prénom\": \"Karine\",\n    \"Email\": \"karine.l@test.com\",\n    \"Poste\": \"Ressources Humaines\",\n    \"score_charge_travail\": 3.0,\n    \"commentaires_libres\": \"Les employés semblent stressés par le manque de reconnaissance.\"\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        -288
+      ],
+      "id": "1181ffae-3e27-4f2b-bc9c-fa36b07345d6",
+      "name": "Liste des réponses"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1376,
+        240
+      ],
+      "id": "225f390f-46d0-4faf-ab86-7051f8ef2bb3",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig",
+          "mode": "list",
+          "cachedResultName": "Suivi Campagne RPS.",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Feuille 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $json.Email }}",
+            "Statut": "Répondu",
+            "Nom": "={{ $json.Nom }}",
+            "Prenom": "={{ $json[\"Prénom\"] }}",
+            "Poste": "={{ $json.Poste }}",
+            "Date d'envoie": "={{ $now.format('yyyy-MM-dd') }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Nom",
+              "displayName": "Nom",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Prenom",
+              "displayName": "Prenom",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Poste",
+              "displayName": "Poste",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Statut",
+              "displayName": "Statut",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date d'envoie",
+              "displayName": "Date d'envoie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -912,
+        -288
+      ],
+      "id": "1ec0a897-b1eb-4219-95b3-4addf15a24f3",
+      "name": "Liste des employés dans google sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4pk7H53CBEHznX1l",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// On récupère tous les employés (3 items en entrée)\nconst allItems = $input.all();\n\n// On construit une seule grande chaîne de texte avec toutes les infos\nlet texteGlobal = \"LISTE DES RÉSULTATS DE SONDAGE POUR L'ANALYSE GLOBALE :\\n\\n\";\n\nfor (const item of allItems) {\n  texteGlobal += `--- EMPLOYÉ ---\\n`;\n  texteGlobal += `Nom: ${item.json.employe_nom}\\n`;\n  texteGlobal += `Poste: ${item.json.titre_pro}\\n`;\n  texteGlobal += `Score Charge: ${item.json.score_charge_travail}/5\\n`;\n  texteGlobal += `Commentaire: ${item.json.commentaires_libres}\\n\\n`;\n}\n\n// On retourne un SEUL item (Output: 1 item) contenant tout le texte\nreturn {\n  donnees_synthese: texteGlobal\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        -288
+      ],
+      "id": "dff83ca2-7c16-444a-9c63-0d564024041c",
+      "name": "Assemblage des réponses"
+    },
+    {
+      "parameters": {
+        "jsCode": "let text = $json.output;\n\n// 1. Enlever les doubles étoiles pour le gras\ntext = text.replace(/\\*\\*/g, '');\n\n// 2. Transformer les titres ### en lignes simples et nettes\ntext = text.replace(/###\\s?/g, '');\ntext = text.replace(/##\\s?/g, '');\n\n// 3. Optionnel : Ajouter un peu d'espace entre les sections\ntext = text.replace(/\\n/g, '\\r\\n');\n\nreturn {\n  clean_text: text\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -288
+      ],
+      "id": "ee99ddb9-af37-467b-a16a-5c6ca29d07ec",
+      "name": "Néttoyage du rapport"
+    },
+    {
+      "parameters": {
+        "operation": "createFromText",
+        "content": "={{ $json.clean_text }}",
+        "name": "=Rapport_Synthese_Global_RPS_{{ $now.format('dd-MM-yyyy') }}.docx",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultName": "/ (Root folder)"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -64,
+        -288
+      ],
+      "id": "48f82fc1-b0d0-43d7-8f8d-64b5ecfe8b8f",
+      "name": "Enregistrement du rapport dans drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "6DA5X6C0c9NRlrLH",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $node[\"Enregistrement du rapport dans drive\"].json[\"id\"] }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        112,
+        -288
+      ],
+      "id": "12b8efbd-a913-4635-9fd5-3bbe232c8719",
+      "name": "Téléchargement du fichier pour l'email",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "6DA5X6C0c9NRlrLH",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig",
+          "mode": "list",
+          "cachedResultName": "Suivi Campagne RPS.",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Feuille 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1184,
+        240
+      ],
+      "id": "5f186f83-b9c3-4bf4-9559-e47e0e9d4470",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4pk7H53CBEHznX1l",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "anaiarandria@gmail.com",
+        "toEmail": "={{ $json.Email }}",
+        "subject": "Rappel : Ton avis est précieux pour l'équipe",
+        "html": "=Bonjour {{ $json.Prenom }} {{ $json.Nom }},\n\nNous n'avons pas encore reçu ton retour pour le diagnostic RPS de Solutions Tech Québec.\nTa participation est essentielle pour nous aider à mieux comprendre la charge de travail actuelle et améliorer notre organisation.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -800,
+        240
+      ],
+      "id": "d8ee5c0b-e654-47bc-baca-c3df1d70b971",
+      "name": "Send email1",
+      "webhookId": "da2ab9a4-f885-4c49-b036-02b67454bbe1",
+      "credentials": {
+        "smtp": {
+          "id": "3spn4eJqsekN79ve",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "55380075-fb22-4adf-9b99-e78df7ed0c9c",
+              "leftValue": "={{ $json.Statut }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -992,
+        240
+      ],
+      "id": "48d96644-3ce7-41c2-9704-6b88b2aff4cb",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "content": "ANALYSE DES RÉPONSES / RAPPORT SUR DRIVE ET EMAIL\n",
+        "height": 448,
+        "width": 1888
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1392,
+        -416
+      ],
+      "id": "86b35e28-1279-4086-9402-2487a72756f9",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "RELANCE \n**Double click** to edit me. [Guide](https://docs.n8n.io/workflows/components/sticky-notes/)",
+        "height": 416,
+        "width": 1056
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1408,
+        96
+      ],
+      "id": "6380c7db-1443-435b-afcd-eabfb12b71d8",
+      "name": "Sticky Note1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Néttoyage du rapport",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execution du workflow": {
+      "main": [
+        [
+          {
+            "node": "Liste des réponses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Liste des réponses": {
+      "main": [
+        [
+          {
+            "node": "Liste des employés dans google sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Liste des employés dans google sheet": {
+      "main": [
+        [
+          {
+            "node": "Assemblage des réponses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemblage des réponses": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Néttoyage du rapport": {
+      "main": [
+        [
+          {
+            "node": "Enregistrement du rapport dans drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enregistrement du rapport dans drive": {
+      "main": [
+        [
+          {
+            "node": "Téléchargement du fichier pour l'email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Téléchargement du fichier pour l'email": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Send email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "b8f90c7a-b10b-4b8d-b0ad-9a289f31b96d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e13e6ceb71ea035352efd36881a07478385b706e1a6ef8688b92d999ba345118"
+  },
+  "id": "h2wX9HQ8teo_MAcikY6Y5",
+  "tags": []
+}

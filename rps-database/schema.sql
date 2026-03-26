@@ -30,6 +30,7 @@ CREATE TABLE questions (
     question_text TEXT NOT NULL,
     question_type VARCHAR(50),
     rps_dimension VARCHAR(100),
+    order_index INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -51,6 +52,19 @@ CREATE TABLE responses (
     question_id INTEGER REFERENCES questions(id) ON DELETE CASCADE,
     answer TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE campaign_participants (
+    id SERIAL PRIMARY KEY,
+    campaign_id INTEGER REFERENCES campaigns(id) ON DELETE CASCADE,
+    employee_id INTEGER REFERENCES employees(id) ON DELETE CASCADE,
+    participation_token VARCHAR(255) UNIQUE NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    invitation_sent_at TIMESTAMP NULL,
+    reminder_sent_at TIMESTAMP NULL,
+    completed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (campaign_id, employee_id)
 );
 
 CREATE TABLE reports (

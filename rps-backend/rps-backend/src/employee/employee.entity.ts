@@ -1,10 +1,27 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { Company } from '../company/company.entity';
+import { CampaignParticipant } from '../campaign-participant/campaign-participant.entity';
+import { SurveyResponse } from '../response/response.entity';
 
-@Entity()
+@Entity({ name: 'employees' })
 export class Employee {
-
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Company, (company) => company.employees, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'company_id' })
+  company: Company;
 
   @Column()
   first_name: string;
@@ -16,9 +33,23 @@ export class Employee {
   email: string;
 
   @Column({ nullable: true })
+  phone: string;
+
+  @Column({ nullable: true })
   department: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   survey_token: string;
 
+  @CreateDateColumn({ type: 'timestamp' })
+  created_at: Date;
+
+  @OneToMany(() => SurveyResponse, (response) => response.employee)
+  responses: SurveyResponse[];
+
+  @OneToMany(
+    () => CampaignParticipant,
+    (campaignParticipant) => campaignParticipant.employee,
+  )
+  campaign_participations: CampaignParticipant[];
 }
