@@ -1,4 +1,6 @@
-# Nginx et SSL (Let's Encrypt) - Guide complet
+# Nginx - Configuration simple avec IP du serveur
+
+Configuration minimaliste: pas de domaine, pas de SSL, accès direct par IP du serveur.
 
 ## 1. Installation Nginx
 
@@ -9,155 +11,134 @@ sudo systemctl enable nginx
 sudo systemctl start nginx
 ```
 
-Verifier le status:
+Vérifier le status:
+
 ```bash
 sudo systemctl status nginx
 ```
 
-## 2. Configuration de base (sans SSL)
+## 2. Configuration rapide
 
 ```bash
-# Copier la configuration
-sudo cp scripts/vps/nginx.rps.conf /etc/nginx/sites-available/rps.conf
-
-# Activer la configuration
-sudo ln -s /etc/nginx/sites-available/rps.conf /etc/nginx/sites-enabled/
-
-# Tester la syntaxe
-sudo nginx -t
-
-# Recharger Nginx
-sudo systemctl reload nginx
+cd /chemin/vers/ton/repo
+sudo bash scripts/vps/setup-nginx.sh
 ```
 
-A ce stade:
-- Frontend accessible sur http://YOUR_VPS_IP:80 (redirige vers frontend port 3001)
-- API accessible sur http://YOUR_VPS_IP:80/api/* (redirige vers backend port 3000)
+C'est tout. Le script:
 
-## 3. Configuration SSL avec Let's Encrypt (HTTPS)
+- Copie la config Nginx
+- Valide la syntaxe
+- Recharge Nginx
 
-### 3.1 Installer Certbot
+## 3. Accès
+
+Remplace `YOUR_VPS_IP` par l'IP réelle de ton serveur:
+
+- Frontend: `http://YOUR_VPS_IP`
+- API Backend: `http://YOUR_VPS_IP/api/*`
+
+Exemples:
+- `http://192.168.1.100`
+- `http://192.168.1.100/api/campaigns`
+
+Trouver l'IP du VPS:
+```bash
+hostname -I
+ip addr show
+```
+
+## 4. Logs et debugging
 
 ```bash
-sudo apt install certbot python3-certbot-nginx
-```
+# Status
+sudo systemctl status nginx
 
-### 3.2 Generer le certificat
-
-Remplace `your-domain.com` par ton domaine reel:
-
-```bash
-sudo certbot certonly --nginx -d your-domain.com -d www.your-domain.com
-```
-
-Accepte les conditions de Let's Encrypt et fournis une adresse email valide.
-
-### 3.3 Mettre a jour la config Nginx
-
-Editer `/etc/nginx/sites-available/rps.conf` et decommenter les lignes SSL:
-
-```nginx
-ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-ssl_trusted_certificate /etc/letsencrypt/live/your-domain.com/chain.pem;
-```
-
-Decommenter aussi la redirection HTTP -> HTTPS:
-
-```nginx
-server {
-    listen 80;
-    listen [::]:80;
-    server_name _;
-    return 301 https://$host$request_uri;
-}
-```
-
-### 3.4 Tester et recharger
-
-```bash
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-## 4. Auto-renouvellement des certificats
-
-Let's Encrypt emet des certificats valables 90 jours. Configurer le renouvellement automatique:
-
-```bash
-# Verifier que le timer est actif
-sudo systemctl status certbot.timer
-
-# Si non actif:
-sudo systemctl enable --now certbot.timer
-
-# Tester le renouvellement (dry-run):
-sudo certbot renew --dry-run
-```
-
-## 5. Verification et logs
-
-```bash
-# Verifier le certificat
-sudo certbot certificates
-
-# Logs Nginx
+# Récents logs d'accès
 sudo tail -f /var/log/nginx/rps_access.log
+
+# Logs d'erreur
 sudo tail -f /var/log/nginx/rps_error.log
 
-# Verifier les ports
-sudo netstat -tlnp | grep -E ':(80|443|3000|3001)'
+# Vérifier les ports écoutants
+sudo netstat -tlnp | grep nginx
 ```
 
-## 6. Configuration du domaine DNS
+## 5. Recharger après changements d'app
 
-Pointer ton domaine vers l'IP du VPS via ton registraire:
+Si tu relances l'app (PM2), Nginx continue de fonctionner.
 
+Pour recharger manuellement:
+```bash
+sudo systemctl reload nginx
 ```
-A record: your-domain.com -> YOUR_VPS_IP
-A record: www.your-domain.com -> YOUR_VPS_IP
+
+## 6. Configuration du Frontend
+
+Fais en sorte que le frontend accède au backend correctement.
+
+Édite `rps-frontend/nextjs-app/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://YOUR_VPS_IP/api
+API_URL=http://127.0.0.1:3000
 ```
 
-## 7. Firewall (si UFW est actif)
+Puis relance le déploiement:
+```bash
+./scripts/vps/deploy.sh
+```
+
+## 7. Firewall (optionnel)
+
+Si UFW est actif, autoriser les ports:
 
 ```bash
 sudo ufw allow 22/tcp    # SSH
 sudo ufw allow 80/tcp    # HTTP
-sudo ufw allow 443/tcp   # HTTPS
 sudo ufw enable
 ```
 
 ## Cheat sheet - Commandes Nginx
 
 ```bash
-sudo systemctl start nginx    # Demarrer
-sudo systemctl stop nginx     # Arreter
-sudo systemctl restart nginx  # Redemarrer
+sudo systemctl start nginx    # Démarrer
+sudo systemctl stop nginx     # Arrêter
+sudo systemctl restart nginx  # Redémarrer
 sudo systemctl reload nginx   # Recharger config (sans couper connexions)
 sudo nginx -t                 # Valider la syntaxe
-
-# Afficher l'etat
-sudo systemctl status nginx
-
-# Logs
-sudo tail -f /var/log/nginx/access.log
-sudo tail -f /var/log/nginx/error.log
+sudo systemctl status nginx   # Afficher l'état
 ```
 
 ## Troubleshooting
 
-### Le domaine ne resout pas
-- Verifier les enregistrements DNS: `nslookup your-domain.com`
-- Attendre la propagation DNS (5-30 min)
+### Nginx refuse de redémarrer
+```bash
+sudo nginx -t  # Check de la syntaxe
+sudo systemctl status nginx  # Logs d'erreur
+```
 
-### Erreur "Connection refused" sur l'API
-- Verifier que le backend est en cours d'execution: `pm2 logs rps-backend`
-- Verifier les ports: `sudo netstat -tlnp`
+### Port 80 déjà utilisé
+```bash
+sudo lsof -i :80  # Voir ce qui l'utilise
+sudo fuser -k 80/tcp  # Tuer le processus
+```
 
-### Certificate expired
-- Renouveler manuellement: `sudo certbot renew --force-renewal`
-- Verifier le timer: `sudo systemctl status certbot.timer`
+### Backend pas accessible sur /api
+- Vérifier que le backend tourne: `pm2 ls`
+- Vérifier le port 3000: `sudo netstat -tlnp | grep 3000`
+- Logs backend: `pm2 logs rps-backend`
 
-### Performance lente
-- Verifier la compression gzip est activee
-- Verifier les logs d'erreur: `sudo tail -f /var/log/nginx/rps_error.log`
+### Frontend pas accessible
+- Vérifier que le frontend tourne: `pm2 ls`
+- Vérifier le port 3001: `sudo netstat -tlnp | grep 3001`
+- Logs frontend: `pm2 logs rps-frontend`
+
+## Ajouter SSL/HTTPS plus tard
+
+Quand tu auras un domaine, tu pourras ajouter HTTPS facilement:
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot certonly --nginx -d ton-domaine.com
+# Puis éditer /etc/nginx/sites-available/rps.conf pour uncomment les lignes SSL
+```
