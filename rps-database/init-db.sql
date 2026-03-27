@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS questions (
     question_text TEXT NOT NULL,
     question_type VARCHAR(50),
     rps_dimension VARCHAR(100),
+    choice_options TEXT,
     order_index INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

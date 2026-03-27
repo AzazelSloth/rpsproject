@@ -1,5 +1,5 @@
 import {
-  ArrayNotEmpty,
+  ArrayMaxSize,
   IsArray,
   IsInt,
   IsOptional,
@@ -7,9 +7,7 @@ import {
   MaxLength,
   Min,
   MinLength,
-  ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 
 export class CreateQuestionDto {
   @IsInt()
@@ -35,6 +33,13 @@ export class CreateQuestionDto {
   @IsInt()
   @Min(0)
   order_index?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  @MaxLength(120, { each: true })
+  choice_options?: string[];
 }
 
 export class UpdateQuestionDto {
@@ -63,6 +68,13 @@ export class UpdateQuestionDto {
   @IsInt()
   @Min(0)
   order_index?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  @MaxLength(120, { each: true })
+  choice_options?: string[];
 }
 
 export class ReorderQuestionDto {

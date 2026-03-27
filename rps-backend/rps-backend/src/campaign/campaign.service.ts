@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Company } from '../company/company.entity';
@@ -89,7 +93,9 @@ export class CampaignService {
     const campaign = await this.findOne(id);
 
     if (!campaign.questions.length) {
-      throw new BadRequestException('A campaign needs at least one question before activation');
+      throw new BadRequestException(
+        'A campaign needs at least one question before activation',
+      );
     }
 
     campaign.status = 'active';

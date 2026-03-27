@@ -99,15 +99,15 @@ export class EmployeeService {
 
     const employees: DeepPartial<Employee>[] = rows
       .filter((row) => row.email?.trim())
-        .map((row) => ({
-          first_name: row.first_name?.trim() || 'N/A',
-          last_name: row.last_name?.trim() || 'N/A',
-          email: row.email.trim(),
-          phone: row.phone?.trim() || undefined,
-          department: row.department?.trim() || undefined,
-          survey_token: randomUUID(),
-          company: { id: payload.company_id } as Company,
-        }));
+      .map((row) => ({
+        first_name: row.first_name?.trim() || 'N/A',
+        last_name: row.last_name?.trim() || 'N/A',
+        email: row.email.trim(),
+        phone: row.phone?.trim() || undefined,
+        department: row.department?.trim() || undefined,
+        survey_token: randomUUID(),
+        company: { id: payload.company_id } as Company,
+      }));
 
     const saved = await this.employeeRepository.save(employees);
 
@@ -128,7 +128,9 @@ export class EmployeeService {
     }
 
     const [headerLine, ...dataLines] = lines;
-    const headers = headerLine.split(',').map((header) => header.trim().toLowerCase());
+    const headers = headerLine
+      .split(',')
+      .map((header) => header.trim().toLowerCase());
 
     return dataLines.map((line) => {
       const values = line.split(',').map((value) => value.trim());

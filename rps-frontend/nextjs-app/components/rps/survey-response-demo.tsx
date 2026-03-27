@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
 
@@ -8,6 +8,8 @@ export function SurveyResponseDemo({
   participantToken,
   employeeId,
   employeeName,
+  employeeTitle,
+  companyName,
   campaignName,
   status,
   completedAt,
@@ -16,31 +18,38 @@ export function SurveyResponseDemo({
   participantToken?: string | null;
   employeeId: number | null;
   employeeName?: string;
+  employeeTitle?: string;
+  companyName?: string;
   campaignName?: string;
   status?: string;
   completedAt?: string | null;
   questions: SurveyQuestion[];
 }) {
-  const [stress, setStress] = useState(4);
-  const [workload, setWorkload] = useState("Oui");
-  const [comment, setComment] = useState(
-    "Plus de visibilite sur les priorites et un meilleur equilibre de charge entre les equipes.",
-  );
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setAnswers((current) => {
+      const next = { ...current };
+      for (const question of questions) {
+        if (!(question.id in next)) {
+          next[question.id] = "";
+        }
+      }
+      return next;
+    });
+  }, [questions]);
 
   const completion = useMemo(() => {
     if (!questions.length) {
       return 0;
     }
 
-    let completed = 0;
-    if (stress) completed += 1;
-    if (workload) completed += 1;
-    if (comment.trim()) completed += 1;
+    const completed = questions.filter((question) => (answers[question.id] ?? "").trim()).length;
     return Math.round((completed / questions.length) * 100);
-  }, [comment, questions.length, stress, workload]);
+  }, [answers, questions]);
 
   function handleSubmit() {
     if (completedAt) {
@@ -50,20 +59,15 @@ export function SurveyResponseDemo({
     setSubmitError(null);
 
     startTransition(async () => {
-      const answers = [
-        questions[0]
-          ? { questionId: Number(questions[0].id), answer: String(stress) }
-          : null,
-        questions[1]
-          ? { questionId: Number(questions[1].id), answer: workload }
-          : null,
-        questions[2]
-          ? { questionId: Number(questions[2].id), answer: comment.trim() }
-          : null,
-      ].filter((entry): entry is { questionId: number; answer: string } => Boolean(entry));
+      const payloadAnswers = questions
+        .map((question) => ({
+          questionId: Number(question.id),
+          answer: (answers[question.id] ?? "").trim(),
+        }))
+        .filter((entry) => entry.answer);
 
-      if (!answers.length) {
-        setSubmitError("Aucune question exploitable n'a ete trouvee pour ce lien.");
+      if (payloadAnswers.length !== questions.length) {
+        setSubmitError("Merci de repondre a toutes les questions avant l'envoi.");
         return;
       }
 
@@ -76,7 +80,7 @@ export function SurveyResponseDemo({
           body: JSON.stringify({
             participantToken,
             employeeId,
-            answers,
+            answers: payloadAnswers,
           }),
         });
 
@@ -117,48 +121,105 @@ export function SurveyResponseDemo({
       ) : null}
 
       <div className="mt-8 space-y-6">
-        <div className="rounded-[12px] border border-slate-200 p-5">
-          <p className="text-sm font-semibold">{questions[0]?.title}</p>
-          <div className="mt-4 grid grid-cols-5 gap-3">
-            {[1, 2, 3, 4, 5].map((value) => (
-              <button
-                key={value}
-                onClick={() => setStress(value)}
-                className={`rounded-[12px] border px-4 py-3 text-sm font-semibold ${
-                  value === stress
-                    ? "border-amber-400 bg-amber-50 text-amber-800"
-                    : "border-slate-200 bg-white text-slate-600"
-                }`}
-              >
-                {value}
-              </button>
-            ))}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-[12px] border border-slate-200 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+              Nom de l&apos;employeur
+            </p>
+            <input
+              value={companyName ?? ""}
+              readOnly
+              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+            />
+          </div>
+          <div className="rounded-[12px] border border-slate-200 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+              Prenom et nom
+            </p>
+            <input
+              value={employeeName ?? ""}
+              readOnly
+              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+            />
+          </div>
+          <div className="rounded-[12px] border border-slate-200 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+              Titre professionnel
+            </p>
+            <input
+              value={employeeTitle ?? ""}
+              readOnly
+              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+            />
           </div>
         </div>
 
-        <div className="rounded-[12px] border border-slate-200 p-5">
-          <p className="text-sm font-semibold">{questions[1]?.title}</p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            {questions[1]?.options?.map((option) => (
-              <SecondaryButton
-                key={option}
-                className={option === workload ? "border-amber-400 bg-amber-50 text-amber-800" : ""}
-                onClick={() => setWorkload(option)}
-              >
-                {option}
-              </SecondaryButton>
-            ))}
-          </div>
-        </div>
+        {questions.map((question, index) => (
+          <div key={question.id} className="rounded-[12px] border border-slate-200 p-5">
+            <p className="text-sm font-semibold">
+              {index + 1}. {question.title}
+            </p>
 
-        <div className="rounded-[12px] border border-slate-200 p-5">
-          <p className="text-sm font-semibold">{questions[2]?.title}</p>
-          <textarea
-            value={comment}
-            onChange={(event) => setComment(event.target.value)}
-            className="mt-4 min-h-32 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-          />
-        </div>
+            {question.type === "scale" ? (
+              <>
+                <div className="mt-4 grid grid-cols-5 gap-3">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button
+                      key={value}
+                      onClick={() =>
+                        setAnswers((current) => ({ ...current, [question.id]: String(value) }))
+                      }
+                      className={`rounded-[12px] border px-4 py-3 text-sm font-semibold ${
+                        answers[question.id] === String(value)
+                          ? "border-amber-400 bg-amber-50 text-amber-800"
+                          : "border-slate-200 bg-white text-slate-600"
+                      }`}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-3 grid gap-2 text-xs text-slate-500 sm:grid-cols-5">
+                  {[
+                    "Pas du tout d&apos;accord",
+                    "Plutot pas d&apos;accord",
+                    "Ni d&apos;accord, ni pas d&apos;accord",
+                    "Plutot d&apos;accord",
+                    "Tout a fait d&apos;accord",
+                  ].map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+              </>
+            ) : question.type === "choice" ? (
+              <div className="mt-4 flex flex-wrap gap-3">
+                {(question.options ?? []).map((option) => (
+                  <SecondaryButton
+                    key={option}
+                    className={
+                      answers[question.id] === option
+                        ? "border-amber-400 bg-amber-50 text-amber-800"
+                        : ""
+                    }
+                    onClick={() =>
+                      setAnswers((current) => ({ ...current, [question.id]: option }))
+                    }
+                  >
+                    {option}
+                  </SecondaryButton>
+                ))}
+              </div>
+            ) : (
+              <textarea
+                value={answers[question.id] ?? ""}
+                onChange={(event) =>
+                  setAnswers((current) => ({ ...current, [question.id]: event.target.value }))
+                }
+                className="mt-4 min-h-32 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              />
+            )}
+          </div>
+        ))}
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">

@@ -9,6 +9,7 @@ export type BackendQuestion = {
   question_text: string;
   question_type: string | null;
   rps_dimension: string | null;
+  choice_options?: string[] | null;
   order_index: number;
   created_at: string;
 };

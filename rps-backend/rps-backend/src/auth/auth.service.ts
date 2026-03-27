@@ -1,10 +1,19 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import bcryptModule from 'bcrypt';
 import { User } from './user.entity';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
+
+const bcrypt = bcryptModule as unknown as {
+  compare(data: string, encrypted: string): Promise<boolean>;
+  hash(data: string, saltOrRounds: number): Promise<string>;
+};
 
 @Injectable()
 export class AuthService {
@@ -47,7 +56,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');

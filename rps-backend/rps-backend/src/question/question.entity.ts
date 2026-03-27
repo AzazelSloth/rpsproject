@@ -34,6 +34,9 @@ export class Question {
   @Column({ default: 0 })
   order_index: number;
 
+  @Column('simple-array', { nullable: true })
+  choice_options: string[] | null;
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 

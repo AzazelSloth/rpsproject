@@ -1,7 +1,15 @@
-import { Body, Controller, Post, UseGuards, Request, Get } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  UseGuards,
+  Request,
+  Get,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { AuthGuard } from './auth.guard';
+import type { AuthenticatedRequest } from './auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -19,7 +27,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(AuthGuard)
-  getProfile(@Request() req) {
-    return this.authService.validateUser(req.user.id);
+  getProfile(@Request() req: AuthenticatedRequest) {
+    return this.authService.validateUser(req.user.sub);
   }
 }

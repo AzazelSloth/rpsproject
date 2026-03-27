@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Campaign } from '../campaign/campaign.entity';
@@ -24,6 +28,10 @@ export class QuestionService {
       question_type: createQuestionDto.question_type,
       rps_dimension: createQuestionDto.rps_dimension,
       order_index: createQuestionDto.order_index ?? 0,
+      choice_options:
+        createQuestionDto.question_type === 'choice'
+          ? (createQuestionDto.choice_options?.filter(Boolean) ?? [])
+          : null,
       campaign: { id: createQuestionDto.campaign_id } as Campaign,
     });
 
@@ -70,8 +78,19 @@ export class QuestionService {
       question.order_index = updateQuestionDto.order_index;
     }
 
+    if (updateQuestionDto.choice_options !== undefined) {
+      question.choice_options =
+        question.question_type === 'choice'
+          ? updateQuestionDto.choice_options.filter(Boolean)
+          : null;
+    }
+
     if (updateQuestionDto.campaign_id !== undefined) {
       question.campaign = { id: updateQuestionDto.campaign_id } as Campaign;
+    }
+
+    if (question.question_type !== 'choice') {
+      question.choice_options = null;
     }
 
     return this.questionRepository.save(question);
@@ -92,7 +111,9 @@ export class QuestionService {
       relations: { campaign: true },
     });
 
-    const questionById = new Map(questions.map((question) => [question.id, question]));
+    const questionById = new Map(
+      questions.map((question) => [question.id, question]),
+    );
 
     for (const item of items) {
       const question = questionById.get(item.question_id);
@@ -119,7 +140,9 @@ export class QuestionService {
     }
 
     if (campaign.status === 'active') {
-      throw new BadRequestException('Questions cannot be modified when the campaign is active');
+      throw new BadRequestException(
+        'Questions cannot be modified when the campaign is active',
+      );
     }
   }
 }

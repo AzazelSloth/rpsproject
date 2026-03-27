@@ -24,7 +24,7 @@ export default function LoginPage() {
       saveAuth(response);
       router.push("/dashboard");
     } catch (err) {
-      setError("Identifiants invalides. Veuillez réessayer.");
+      setError("Identifiants invalides. Veuillez reessayer.");
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -107,24 +107,22 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f7f2ea] px-4 py-3 text-sm outline-none focus:border-[#c9a86c] focus:ring-1 focus:ring-[#c9a86c]"
-                placeholder="••••••••"
+                placeholder="........"
               />
             </div>
 
-            {error && (
-              <p className="text-sm text-red-600">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-600">{error}</p>}
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? "Connexion..." : "Se connecter"}
             </button>
           </form>
 
-          <p className="mt-4 text-xs text-center text-slate-500">
+          <p className="mt-4 text-center text-xs text-slate-500">
             Demo: admin@laroche.fr / password
           </p>
         </Card>

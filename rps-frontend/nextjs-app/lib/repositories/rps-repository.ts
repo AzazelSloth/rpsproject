@@ -13,6 +13,7 @@ import {
 import type {
   BackendCampaign,
   BackendCampaignProgress,
+  BackendCompany,
   BackendEmployee,
   BackendQuestionnaire,
   BackendQuestion,
@@ -60,6 +61,8 @@ type SurveyResponseData = {
   participantToken: string | null;
   employeeId: number | null;
   employeeName: string;
+  employeeTitle: string;
+  companyName: string;
   campaignName: string;
   status: string;
   completedAt: string | null;
@@ -97,6 +100,7 @@ export type EmployeeManagementData = {
 export type SurveyBuilderData = {
   campaignId: number | null;
   companyId: number | null;
+  companies: { id: number; name: string }[];
   title: string;
   description: string;
   status: string;
@@ -162,9 +166,16 @@ export async function getSurveyBuilderData(scenario?: string | null): Promise<Su
 
   if (isBackendConfigured()) {
     try {
-      const campaigns = await getBackendCollection<BackendCampaign>("/campaigns");
+      const [campaigns, companies] = await Promise.all([
+        getBackendCollection<BackendCampaign>("/campaigns"),
+        getBackendCollection<BackendCompany>("/companies"),
+      ]);
       const activeCampaign =
         campaigns.find((item) => item.status === "active") ?? campaigns[0];
+      const companyOptions = companies.map((company) => ({
+        id: company.id,
+        name: company.name,
+      }));
 
       if (activeCampaign) {
         const mappedCampaign = mapBackendCampaign(activeCampaign);
@@ -172,6 +183,7 @@ export async function getSurveyBuilderData(scenario?: string | null): Promise<Su
         return {
           campaignId: activeCampaign.id,
           companyId: activeCampaign.company?.id ?? null,
+          companies: companyOptions,
           title: mappedCampaign.title,
           description: mappedCampaign.description,
           status: mappedCampaign.status,
@@ -180,6 +192,19 @@ export async function getSurveyBuilderData(scenario?: string | null): Promise<Su
           questions: mappedCampaign.questions,
         };
       }
+
+      return {
+        campaignId: null,
+        companyId: companyOptions[0]?.id ?? null,
+        companies: companyOptions,
+        title: "Nouvelle campagne RPS",
+        description:
+          "Campagne trimestrielle visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.",
+        status: "draft",
+        startDate: "",
+        endDate: "",
+        questions: [],
+      };
     } catch {
       // Fall back to the demo-backed shape below.
     }
@@ -190,6 +215,12 @@ export async function getSurveyBuilderData(scenario?: string | null): Promise<Su
   return {
     campaignId: currentCampaign.id ?? null,
     companyId: 1,
+    companies: [
+      {
+        id: 1,
+        name: currentCampaign.companyName || demoDataset.campaign.companyName,
+      },
+    ],
     title: currentCampaign.title || demoDataset.campaign.title,
     description:
       currentCampaign.description ||
@@ -453,6 +484,8 @@ export async function getSurveyResponseData(
       participantToken: demoSurveyAccessToken,
       employeeId: demoDataset.employees[0]?.id ?? 1,
       employeeName: demoDataset.employees[0]?.name ?? "Salarie demo",
+      employeeTitle: demoDataset.employees[0]?.department ?? "Collaborateur",
+      companyName: demoDataset.campaign.companyName ?? "Entreprise demo",
       campaignName: demoDataset.campaign.title,
       status: "pending",
       completedAt: null,
@@ -469,13 +502,15 @@ export async function getSurveyResponseData(
         return mapBackendQuestionnaire(questionnaire);
       }
     } catch {
-      return {
-        participantToken: null,
-        employeeId: null,
-        employeeName: "",
-        campaignName: "",
-        status: "not-found",
-        completedAt: null,
+        return {
+          participantToken: null,
+          employeeId: null,
+          employeeName: "",
+          employeeTitle: "",
+          companyName: "",
+          campaignName: "",
+          status: "not-found",
+          completedAt: null,
         questions: [],
       };
     }
@@ -493,6 +528,8 @@ export async function getSurveyResponseData(
       employeeName:
         `${employeeEntries[0]?.first_name ?? ""} ${employeeEntries[0]?.last_name ?? ""}`.trim() ||
         "Salarie",
+      employeeTitle: employeeEntries[0]?.department ?? "Collaborateur",
+      companyName: currentCampaign.companyName,
       campaignName: currentCampaign.title,
       status: "pending",
       completedAt: null,
@@ -503,6 +540,8 @@ export async function getSurveyResponseData(
       participantToken: demoSurveyAccessToken,
       employeeId: demoDataset.employees[0]?.id ?? 1,
       employeeName: demoDataset.employees[0]?.name ?? "Salarie demo",
+      employeeTitle: demoDataset.employees[0]?.department ?? "Collaborateur",
+      companyName: demoDataset.campaign.companyName ?? "Entreprise demo",
       campaignName: demoDataset.campaign.title,
       status: "pending",
       completedAt: null,
@@ -516,6 +555,8 @@ function mapBackendQuestionnaire(entry: BackendQuestionnaire): SurveyResponseDat
     participantToken: entry.token,
     employeeId: entry.employee.id,
     employeeName: `${entry.employee.first_name} ${entry.employee.last_name}`.trim(),
+    employeeTitle: entry.employee.department ?? "Collaborateur",
+    companyName: entry.campaign.company?.name ?? "Entreprise",
     campaignName: entry.campaign.name,
     status: entry.status,
     completedAt: entry.completed_at,
@@ -546,6 +587,7 @@ function mapBackendCampaign(entry: BackendCampaign) {
 
 function mapBackendQuestion(entry: BackendQuestion): SurveyQuestion {
   const type = normalizeQuestionType(entry.question_type);
+  const defaultOptions = ["Oui", "Partiellement", "Non"];
 
   return {
     id: String(entry.id),
@@ -555,7 +597,12 @@ function mapBackendQuestion(entry: BackendQuestion): SurveyQuestion {
     helpText: entry.rps_dimension
       ? `Dimension analysee: ${entry.rps_dimension}`
       : "Question du questionnaire RPS",
-    options: type === "choice" ? ["Oui", "Partiellement", "Non"] : undefined,
+    options:
+      type === "choice"
+        ? entry.choice_options?.filter(Boolean).length
+          ? entry.choice_options.filter(Boolean)
+          : defaultOptions
+        : undefined,
     orderIndex: entry.order_index ?? 0,
   };
 }

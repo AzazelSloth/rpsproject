@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type ChangeEvent } from "react";
+import * as XLSX from "xlsx";
 import { Card, Pill, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { EmployeeManagementData } from "@/lib/repositories/rps-repository";
 
@@ -15,8 +16,9 @@ export function EmployeesTableDemo({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "completed" | "pending" | "reminded">("all");
   const [csv, setCsv] = useState(
-    "email,first_name,last_name,department\nj.dupond@laroche.fr,Julie,Dupond,Finance\nm.bernard@laroche.fr,Marc,Bernard,IT",
+    "Nom,Prenom,Adresse courriel,Fonction\nLefebvre,Anne,anne.lefebvre@test.com,gestionnaire\nTremblay,Marc,marc.tremblay@test.com,cadre",
   );
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -55,6 +57,48 @@ export function EmployeesTableDemo({
         setError("L'action admin a echoue. Verifie la configuration de l'API.");
       }
     });
+  }
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setError(null);
+    setFeedback(null);
+    setSelectedFileName(file.name);
+
+    try {
+      const extension = file.name.split(".").pop()?.toLowerCase();
+
+      if (extension === "csv" || extension === "txt") {
+        const text = await file.text();
+        setCsv(normalizeCsv(text));
+        setFeedback(`Fichier charge: ${file.name}`);
+        return;
+      }
+
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const firstSheetName = workbook.SheetNames[0];
+
+      if (!firstSheetName) {
+        throw new Error("empty_workbook");
+      }
+
+      const firstSheet = workbook.Sheets[firstSheetName];
+      const parsedCsv = XLSX.utils.sheet_to_csv(firstSheet);
+
+      setCsv(normalizeCsv(parsedCsv));
+      setFeedback(`Fichier charge: ${file.name}`);
+    } catch {
+      setError(
+        "Le fichier n'a pas pu etre lu. Utilise un fichier .xlsx, .xls, .csv ou colle les lignes dans la zone de texte.",
+      );
+    } finally {
+      event.target.value = "";
+    }
   }
 
   function handleImport() {
@@ -119,8 +163,33 @@ export function EmployeesTableDemo({
             Ajouter des salaries a la campagne
           </h3>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Colle un CSV simple pour creer les participants et generer leurs liens uniques.
+            Charge un fichier Excel ou colle un CSV simple pour creer les participants et generer
+            leurs liens uniques. Le format attendu est: Nom, Prenom, Adresse courriel, Fonction.
           </p>
+
+          <div className="mt-5 rounded-[12px] border border-dashed border-slate-300 bg-slate-50/80 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Import direct depuis Excel</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Formats acceptes: .xlsx, .xls, .csv
+                </p>
+              </div>
+              <label className="inline-flex cursor-pointer items-center justify-center rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-amber-300 hover:text-slate-900">
+                Choisir un fichier
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv,.txt"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </label>
+            </div>
+            {selectedFileName ? (
+              <p className="mt-3 text-xs text-slate-500">Fichier selectionne: {selectedFileName}</p>
+            ) : null}
+          </div>
+
           <textarea
             value={csv}
             onChange={(event) => setCsv(event.target.value)}
@@ -163,7 +232,8 @@ export function EmployeesTableDemo({
             </div>
           </div>
           <p className="mt-5 text-sm leading-6 text-slate-600">
-            Chaque participant dispose d&apos;un lien personnel vers son questionnaire, visible dans le tableau ci-dessous.
+            Chaque participant dispose d&apos;un lien personnel vers son questionnaire, visible
+            dans le tableau ci-dessous.
           </p>
         </Card>
       </div>
@@ -204,11 +274,11 @@ export function EmployeesTableDemo({
           <table className="min-w-full text-left text-sm">
             <thead className="bg-slate-50 uppercase tracking-[0.18em] text-slate-500">
               <tr>
-                <th className="px-6 py-4">Name</th>
-                <th className="px-6 py-4">Department</th>
-                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Participant</th>
+                <th className="px-6 py-4">Fonction</th>
+                <th className="px-6 py-4">Statut</th>
                 <th className="px-6 py-4">Invitation</th>
-                <th className="px-6 py-4">Survey link</th>
+                <th className="px-6 py-4">Lien sondage</th>
               </tr>
             </thead>
             <tbody>
@@ -264,6 +334,10 @@ export function EmployeesTableDemo({
       </Card>
     </div>
   );
+}
+
+function normalizeCsv(value: string) {
+  return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
 }
 
 function formatShortDate(value: string | null) {

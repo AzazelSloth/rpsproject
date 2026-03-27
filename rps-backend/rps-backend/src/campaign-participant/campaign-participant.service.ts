@@ -43,7 +43,8 @@ export class CampaignParticipantService {
       campaign: { id: createCampaignParticipantDto.campaign_id } as Campaign,
       employee: { id: createCampaignParticipantDto.employee_id } as Employee,
       participation_token: randomUUID(),
-      invitation_sent_at: createCampaignParticipantDto.invitation_sent_at ?? null,
+      invitation_sent_at:
+        createCampaignParticipantDto.invitation_sent_at ?? null,
       reminder_sent_at: null,
       completed_at: null,
       status: CampaignParticipantStatus.PENDING,
@@ -139,16 +140,24 @@ export class CampaignParticipantService {
     };
   }
 
-  async update(id: number, updateCampaignParticipantDto: UpdateCampaignParticipantDto) {
+  async update(
+    id: number,
+    updateCampaignParticipantDto: UpdateCampaignParticipantDto,
+  ) {
     const participant = await this.findOne(id);
 
     if (updateCampaignParticipantDto.invitation_sent_at !== undefined) {
-      participant.invitation_sent_at = updateCampaignParticipantDto.invitation_sent_at;
+      participant.invitation_sent_at =
+        updateCampaignParticipantDto.invitation_sent_at;
     }
 
     if (updateCampaignParticipantDto.reminder_sent_at !== undefined) {
-      participant.reminder_sent_at = updateCampaignParticipantDto.reminder_sent_at;
-      if (participant.reminder_sent_at && participant.status !== CampaignParticipantStatus.COMPLETED) {
+      participant.reminder_sent_at =
+        updateCampaignParticipantDto.reminder_sent_at;
+      if (
+        participant.reminder_sent_at &&
+        participant.status !== CampaignParticipantStatus.COMPLETED
+      ) {
         participant.status = CampaignParticipantStatus.REMINDED;
       }
     }
@@ -167,7 +176,9 @@ export class CampaignParticipantService {
     const participant = await this.findByToken(token);
 
     if (participant.completed_at) {
-      throw new BadRequestException('This participation link has already been used');
+      throw new BadRequestException(
+        'This participation link has already been used',
+      );
     }
 
     if (!payload.responses?.length) {
@@ -195,7 +206,9 @@ export class CampaignParticipantService {
     );
 
     if (invalidQuestion) {
-      throw new BadRequestException('Submitted questions must belong to the participant campaign');
+      throw new BadRequestException(
+        'Submitted questions must belong to the participant campaign',
+      );
     }
 
     const responses = payload.responses.map((item) =>
@@ -230,10 +243,12 @@ export class CampaignParticipantService {
 
     const total = participants.length;
     const completed = participants.filter(
-      (participant) => participant.status === CampaignParticipantStatus.COMPLETED,
+      (participant) =>
+        participant.status === CampaignParticipantStatus.COMPLETED,
     ).length;
     const reminded = participants.filter(
-      (participant) => participant.status === CampaignParticipantStatus.REMINDED,
+      (participant) =>
+        participant.status === CampaignParticipantStatus.REMINDED,
     ).length;
     const pending = total - completed;
 
@@ -243,7 +258,8 @@ export class CampaignParticipantService {
       completed_participants: completed,
       pending_participants: pending,
       reminded_participants: reminded,
-      participation_rate: total === 0 ? 0 : Number(((completed / total) * 100).toFixed(2)),
+      participation_rate:
+        total === 0 ? 0 : Number(((completed / total) * 100).toFixed(2)),
       participants,
     };
   }
@@ -259,6 +275,12 @@ export class CampaignParticipantService {
 
     if (!campaign) {
       throw new NotFoundException(`Campaign ${campaignId} not found`);
+    }
+
+    if (campaign.company.id !== payload.company_id) {
+      throw new BadRequestException(
+        'The provided company does not match the campaign company',
+      );
     }
 
     const rows = payload.rows?.length
@@ -298,12 +320,13 @@ export class CampaignParticipantService {
     const participantsToCreate: CampaignParticipant[] = [];
 
     for (const employee of employees) {
-      const existingParticipant = await this.campaignParticipantRepository.findOne({
-        where: {
-          campaign: { id: campaignId },
-          employee: { id: employee.id },
-        },
-      });
+      const existingParticipant =
+        await this.campaignParticipantRepository.findOne({
+          where: {
+            campaign: { id: campaignId },
+            employee: { id: employee.id },
+          },
+        });
 
       if (!existingParticipant) {
         participantsToCreate.push(
@@ -390,7 +413,9 @@ export class CampaignParticipantService {
     }
 
     const [headerLine, ...dataLines] = lines;
-    const headers = headerLine.split(',').map((header) => header.trim().toLowerCase());
+    const headers = headerLine
+      .split(',')
+      .map((header) => this.normalizeCsvHeader(header));
 
     return dataLines.map((line) => {
       const values = line.split(',').map((value) => value.trim());
@@ -401,12 +426,22 @@ export class CampaignParticipantService {
       });
 
       return {
-        email: row.email,
-        first_name: row.first_name,
-        last_name: row.last_name,
+        email: row.email ?? row.adresse_courriel ?? row.courriel,
+        first_name: row.first_name ?? row.prenom,
+        last_name: row.last_name ?? row.nom,
         phone: row.phone,
-        department: row.department,
+        department: row.department ?? row.fonction ?? row.titre_professionnel,
       };
     });
+  }
+
+  private normalizeCsvHeader(header: string) {
+    return header
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
   }
 }

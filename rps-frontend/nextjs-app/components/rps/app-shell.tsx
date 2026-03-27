@@ -11,7 +11,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard": "Bonjour, Admin",
   "/surveys": "Creation et pilotage des sondages",
   "/employees": "Gestion des employes",
-  "/results": "Resultats et analytics",
+  "/results": "Resultats et analyses",
   "/report": "Rapports et recommandations",
 };
 
@@ -63,13 +63,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={buildHref(item.href)}
-                  className={`rounded-[12px] px-4 py-3 text-sm font-medium transition ${
+                  className={`flex items-center justify-between rounded-[12px] px-4 py-3 text-sm font-semibold no-underline transition visited:no-underline ${
                     active
-                      ? "bg-slate-900 text-white shadow-lg shadow-slate-200"
-                      : "text-slate-600 hover:bg-[#f2e7d4] hover:text-slate-900"
+                      ? "bg-slate-900 text-white visited:text-white shadow-lg shadow-slate-300/60 ring-1 ring-slate-800"
+                      : "text-slate-600 visited:text-slate-600 hover:bg-[#f2e7d4] hover:text-slate-900"
                   }`}
                 >
-                  {item.label}
+                  <span className={active ? "text-white" : "text-inherit"}>{item.label}</span>
+                  {active ? <span className="h-2.5 w-2.5 rounded-full bg-[#f0c36d]" /> : null}
                 </Link>
               );
             })}
@@ -116,7 +117,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Card>
               <div className="card-surface flex items-center gap-3 rounded-[12px] px-4 py-2.5">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d5ba85] bg-[#181818] font-bold text-[#f7f1e6]">
-                  {(user?.name || "Admin").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                  {(user?.name || "Admin")
+                    .split(" ")
+                    .map((name) => name[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2)}
                 </div>
                 <div>
                   <p className="text-sm font-semibold">{user?.name || "Admin"}</p>
@@ -127,7 +133,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   className="ml-2 text-xs text-slate-500 hover:text-red-600"
                   title="Se deconnecter"
                 >
-                  ✕
+                  X
                 </button>
               </div>
             </div>

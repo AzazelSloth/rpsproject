@@ -50,6 +50,8 @@ export default async function SurveyResponseTokenPage({
         participantToken={surveyData.participantToken}
         employeeId={surveyData.employeeId}
         employeeName={surveyData.employeeName}
+        employeeTitle={surveyData.employeeTitle}
+        companyName={surveyData.companyName}
         campaignName={surveyData.campaignName}
         status={surveyData.status}
         completedAt={surveyData.completedAt}

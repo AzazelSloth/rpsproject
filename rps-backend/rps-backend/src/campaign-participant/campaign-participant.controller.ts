@@ -51,9 +51,7 @@ export class CampaignParticipantController {
   }
 
   @Get('campaign/:campaignId/progress')
-  getCampaignProgress(
-    @Param('campaignId', ParseIntPipe) campaignId: number,
-  ) {
+  getCampaignProgress(@Param('campaignId', ParseIntPipe) campaignId: number) {
     return this.campaignParticipantService.getCampaignProgress(campaignId);
   }
 
@@ -86,6 +84,9 @@ export class CampaignParticipantController {
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCampaignParticipantDto: UpdateCampaignParticipantDto,
   ) {
-    return this.campaignParticipantService.update(id, updateCampaignParticipantDto);
+    return this.campaignParticipantService.update(
+      id,
+      updateCampaignParticipantDto,
+    );
   }
 }

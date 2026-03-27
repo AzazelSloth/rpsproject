@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class AppService {
-  getHello(): string {
-    return 'Hello World!';
+  getStatus() {
+    return {
+      name: 'RPS Platform API',
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+    };
   }
 }
