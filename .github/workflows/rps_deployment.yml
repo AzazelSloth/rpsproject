@@ -103,7 +103,6 @@ jobs:
           port: ${{ env.VPS_PORT || '22' }}
           timeout: 300s
           command_timeout: 10m
-          script_stop: true
           envs: TARGET_BRANCH,BUILD_NUMBER,VPS_APP_DIR_DEV,VPS_APP_DIR_PROD
           script: |
             set -e
