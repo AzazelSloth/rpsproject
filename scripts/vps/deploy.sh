@@ -2,7 +2,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-BRANCH="${1:-$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)}"
+BRANCH="${1:-}"
+ENVIRONMENT="${2:-production}"
 
 log() {
   printf "[%s] %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$1"
@@ -21,6 +22,7 @@ require_command npm
 cd "$REPO_ROOT"
 
 log "Deploying branch: $BRANCH"
+log "Environment: $ENVIRONMENT"
 log "Repository: $REPO_ROOT"
 
 git fetch --all --prune

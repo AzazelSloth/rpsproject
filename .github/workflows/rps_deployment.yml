@@ -72,7 +72,8 @@ jobs:
       - backend-ci
       - frontend-ci
     if: github.event_name == 'push' && (github.ref == 'refs/heads/deploy' || github.ref == 'refs/heads/main')
-    environment: ${{ github.ref == 'refs/heads/main' && 'development' || 'production' }}
+    environment: 
+      name: ${{ github.ref == 'refs/heads/main' && 'development' || 'production' }}
     env:
       VPS_HOST: ${{ secrets.VPS_HOST }}
       VPS_USER: ${{ secrets.VPS_USER }}
@@ -134,7 +135,7 @@ jobs:
 
             echo "🔧 Exécution du script de déploiement"
             chmod +x scripts/vps/deploy.sh
-            ./scripts/vps/deploy.sh "$DEPLOY_BRANCH"
+            ./scripts/vps/deploy.sh "$TARGET_BRANCH" "$ENV"
 
             echo "✅ Déploiement $ENV terminé"
 
