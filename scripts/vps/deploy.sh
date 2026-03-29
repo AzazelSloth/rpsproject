@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-BRANCH="${1:-}"
+BRANCH="${1:-main}"
 ENVIRONMENT="${2:-production}"
 
 # Source scripts

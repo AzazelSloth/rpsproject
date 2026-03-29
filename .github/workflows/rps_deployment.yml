@@ -98,7 +98,7 @@ jobs:
               [ -f "$script" ] && source "$script"
             done
 
-            TARGET_BRANCH="$GITHUB_REF_NAME"
+            TARGET_BRANCH="${GITHUB_REF_NAME:-main}"
 
             if [ "$TARGET_BRANCH" = "main" ]; then
               ENV=development
