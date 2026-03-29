@@ -5,6 +5,11 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BRANCH="${1:-}"
 ENVIRONMENT="${2:-production}"
 
+# Source scripts
+for script in "$REPO_ROOT/scripts/"*.sh; do
+  [ -f "$script" ] && source "$script"
+done
+
 log() {
   printf "[%s] %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$1"
 }
@@ -18,6 +23,12 @@ require_command() {
 
 require_command git
 require_command npm
+
+# Setup SSH for GitHub authentication
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_deploy
+ssh -T git@github.com
+clear
 
 cd "$REPO_ROOT"
 

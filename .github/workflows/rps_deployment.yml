@@ -93,6 +93,11 @@ jobs:
           script: |
             set -e
 
+            # Source scripts from scripts/ folder
+            for script in ~/prod/scripts/*.sh; do
+              [ -f "$script" ] && source "$script"
+            done
+
             TARGET_BRANCH="$GITHUB_REF_NAME"
 
             if [ "$TARGET_BRANCH" = "main" ]; then
