@@ -141,8 +141,9 @@ jobs:
             echo "🚀 Déploiement RPS - $ENV"
             echo "Build #$BUILD_NUMBER"
 
-            mkdir -p "$APP_DIR"
-            cd "$APP_DIR"
+            # Project is stored directly in ~/prod (no rpsproject subfolder)
+            mkdir -p "$APP_DIR/rpsproject"
+            cd "$APP_DIR/rpsproject"
 
             if [ -d .git ]; then
               echo "📥 Mise à jour du repository ($DEPLOY_BRANCH)"
