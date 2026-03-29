@@ -71,9 +71,15 @@ jobs:
     needs:
       - backend-ci
       - frontend-ci
+    # Trigger conditions:
+    # - Only on 'push' events (not on pull_request)
+    # - Only when pushing to 'main' or 'deploy' branches
+    # - Will be skipped if backend-ci or frontend-ci fails
     if: github.event_name == 'push' && (github.ref == 'refs/heads/deploy' || github.ref == 'refs/heads/main')
-    environment: 
-      name: ${{ github.ref == 'refs/heads/main' && 'development' || 'production' }}
+    outputs:
+      trigger-event: ${{ github.event_name }}
+      trigger-ref: ${{ github.ref }}
+      target-branch: ${{ github.ref_name }}
     env:
       VPS_HOST: ${{ secrets.VPS_HOST }}
       VPS_USER: ${{ secrets.VPS_USER }}
@@ -82,7 +88,16 @@ jobs:
       VPS_APP_DIR_DEV: ${{ secrets.VPS_APP_DIR_DEV }}
       VPS_APP_DIR_PROD: ${{ secrets.VPS_APP_DIR_PROD }}
       TARGET_BRANCH: ${{ github.ref_name }}
+    environment: 
+      name: ${{ github.ref == 'refs/heads/main' && 'development' || 'production' }}
     steps:
+      - name: Debug workflow trigger
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Ref name: ${{ github.ref_name }}"
+          echo "Head ref: ${{ github.head_ref }}"
+          echo "Base ref: ${{ github.base_ref }}"
       - name: Set Build Number
         run: echo "BUILD_NUMBER=${{ github.run_number }}" >> "$GITHUB_ENV"
 
