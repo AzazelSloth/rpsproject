@@ -71,101 +71,79 @@ jobs:
     needs:
       - backend-ci
       - frontend-ci
-    # Trigger conditions:
-    # - Only on 'push' events (not on pull_request)
-    # - Only when pushing to 'main' or 'deploy' branches
-    # - Will be skipped if backend-ci or frontend-ci fails
     if: github.event_name == 'push' && (github.ref == 'refs/heads/deploy' || github.ref == 'refs/heads/main')
-    outputs:
-      trigger-event: ${{ github.event_name }}
-      trigger-ref: ${{ github.ref }}
-      target-branch: ${{ github.ref_name }}
-    env:
-      VPS_HOST: ${{ secrets.VPS_HOST }}
-      VPS_USER: ${{ secrets.VPS_USER }}
-      VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-      VPS_PORT: ${{ secrets.VPS_PORT }}
-      VPS_APP_DIR_DEV: ${{ secrets.VPS_APP_DIR_DEV }}
-      VPS_APP_DIR_PROD: ${{ secrets.VPS_APP_DIR_PROD }}
-      TARGET_BRANCH: ${{ github.ref_name }}
-    environment: 
-      name: ${{ github.ref == 'refs/heads/main' && 'development' || 'production' }}
+
     steps:
-      - name: Debug workflow trigger
-        run: |
-          echo "Event: ${{ github.event_name }}"
-          echo "Ref: ${{ github.ref }}"
-          echo "Ref name: ${{ github.ref_name }}"
-          echo "Head ref: ${{ github.head_ref }}"
-          echo "Base ref: ${{ github.base_ref }}"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Set Build Number
-        run: echo "BUILD_NUMBER=${{ github.run_number }}" >> "$GITHUB_ENV"
+        run: echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
 
-      - name: Validate required secrets
-        run: |
-          test -n "$VPS_HOST" || (echo "❌ Missing secret: VPS_HOST" && exit 1)
-          test -n "$VPS_USER" || (echo "❌ Missing secret: VPS_USER" && exit 1)
-          test -n "$VPS_SSH_PRIVATE_KEY" || (echo "❌ Missing secret: VPS_SSH_PRIVATE_KEY" && exit 1)
-          test -n "$VPS_APP_DIR_DEV" || (echo "❌ Missing secret: VPS_APP_DIR_DEV" && exit 1)
-          test -n "$VPS_APP_DIR_PROD" || (echo "❌ Missing secret: VPS_APP_DIR_PROD" && exit 1)
-          echo "✅ All required secrets validated"
-
-      - name: Prepare SSH key
-        run: |
-          echo "$VPS_SSH_PRIVATE_KEY" > ssh_key
-          chmod 600 ssh_key
-
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.2
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ env.VPS_HOST }}
-          username: ${{ env.VPS_USER }}
-          key_path: ssh_key
-          port: ${{ env.VPS_PORT || '22' }}
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.VPS_PORT }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           timeout: 300s
           command_timeout: 10m
-          envs: TARGET_BRANCH,BUILD_NUMBER,VPS_APP_DIR_DEV,VPS_APP_DIR_PROD
+          envs: GITHUB_REF_NAME,BUILD_NUMBER
           script: |
             set -e
 
+            TARGET_BRANCH="$GITHUB_REF_NAME"
+
             if [ "$TARGET_BRANCH" = "main" ]; then
               ENV=development
-              APP_DIR="$VPS_APP_DIR_DEV"
-              DEPLOY_BRANCH=main
+              APP_DIR=~/prod
+              GIT_BRANCH=main
             else
               ENV=production
-              APP_DIR="$VPS_APP_DIR_PROD"
-              DEPLOY_BRANCH=deploy
+              APP_DIR=~/prod
+              GIT_BRANCH=deploy
             fi
 
-            echo "🚀 Déploiement RPS - $ENV"
-            echo "Build #$BUILD_NUMBER"
+            echo "🚀 Déploiement RPS – $ENV"
 
-            # Project is stored directly in ~/prod (no rpsproject subfolder)
-            mkdir -p "$APP_DIR/rpsproject"
-            cd "$APP_DIR/rpsproject"
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
 
             if [ -d .git ]; then
-              echo "📥 Mise à jour du repository ($DEPLOY_BRANCH)"
-              git fetch origin "$DEPLOY_BRANCH"
-              git reset --hard "origin/$DEPLOY_BRANCH"
+              git fetch origin "$GIT_BRANCH"
+              git reset --hard "origin/$GIT_BRANCH"
             else
-              echo "📥 Clone du repository ($DEPLOY_BRANCH)"
-              git clone -b "$DEPLOY_BRANCH" "git@github.com:${{ github.repository }}.git" .
+              git clone -b "$GIT_BRANCH" git@github.com:${{ github.repository }}.git .
             fi
 
+            echo "🔧 Configuration des variables d'environnement"
+            
+            # Backend .env configuration
+            cd "$APP_DIR/rps-backend/rps-backend"
+            echo "NODE_ENV=$ENV" > .env
+            echo "PORT=3000" >> .env
+            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+            echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+            echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+            echo "DB_SYNCHRONIZE=false" >> .env
+            echo "DB_LOGGING=false" >> .env
+            echo "✅ Backend .env configured"
+
+            # Frontend .env.local configuration
+            cd "$APP_DIR/rps-frontend/nextjs-app"
+            echo "NEXT_PUBLIC_API_URL=http://127.0.0.1:3000" > .env.local
+            echo "API_URL=http://127.0.0.1:3000" >> .env.local
+            echo "NEXT_PUBLIC_STRAPI_URL=" >> .env.local
+            echo "STRAPI_API_TOKEN=" >> .env.local
+            echo "✅ Frontend .env.local configured"
+
             echo "🔧 Exécution du script de déploiement"
+            cd "$APP_DIR"
             chmod +x scripts/vps/deploy.sh
             ./scripts/vps/deploy.sh "$TARGET_BRANCH" "$ENV"
 
             echo "✅ Déploiement $ENV terminé"
-
-      - name: Deployment summary
-        run: |
-          echo "📋 Résumé du déploiement:"
-          echo "  • Environnement: ${{ github.ref_name == 'main' && 'development' || 'production' }}"
-          echo "  • Branche: ${{ github.ref_name }}"
-          echo "  • Build: $BUILD_NUMBER"
-          echo "  • Serveur: ${{ env.VPS_HOST }}"
-          echo "  • Répertoire DEV: ${{ env.VPS_APP_DIR_DEV }}"
-          echo "  • Répertoire PROD: ${{ env.VPS_APP_DIR_PROD }}"
