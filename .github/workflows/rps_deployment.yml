@@ -110,12 +110,17 @@ jobs:
           test -n "$VPS_APP_DIR_PROD" || (echo "❌ Missing secret: VPS_APP_DIR_PROD" && exit 1)
           echo "✅ All required secrets validated"
 
+      - name: Prepare SSH key
+        run: |
+          echo "$VPS_SSH_PRIVATE_KEY" > ssh_key
+          chmod 600 ssh_key
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ env.VPS_HOST }}
           username: ${{ env.VPS_USER }}
-          key: ${{ env.VPS_SSH_PRIVATE_KEY }}
+          key_path: ssh_key
           port: ${{ env.VPS_PORT || '22' }}
           timeout: 300s
           command_timeout: 10m
