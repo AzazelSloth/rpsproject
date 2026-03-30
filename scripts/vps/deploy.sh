@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Guard against double-sourcing
-if [ -n "${RPS_DEPLOY_SCRIPT_SOURCED:-}" ]; then
-  echo "Deploy script already sourced, skipping..."
-  return 0 2>/dev/null || exit 0
-fi
-
-export RPS_DEPLOY_SCRIPT_SOURCED=1
-
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BRANCH="${1:-main}"
 ENVIRONMENT="${2:-production}"
+
+echo "=== Deployment Debug Info ==="
+echo "Script directory: $(dirname "${BASH_SOURCE[0]}")"
+echo "Repo root calculated: $REPO_ROOT"
+echo "Branch: $BRANCH"
+echo "Environment: $ENVIRONMENT"
+echo "================================"
 
 # Source scripts
 for script in "$REPO_ROOT/scripts/"*.sh; do
@@ -90,10 +89,18 @@ NPM_VERSION=$(npm -v 2>/dev/null || echo "unknown")
 log "Using npm version: $NPM_VERSION"
 
 # Setup SSH for GitHub authentication using existing id_deploy key
+# Start SSH agent and add the key
+log "Starting SSH agent..."
+eval "$(ssh-agent -s)"
+log "Adding SSH key to agent..."
+ssh-add ~/.ssh/id_deploy
+
+# Test SSH connection to GitHub
+log "Testing SSH connection to GitHub..."
+ssh -T git@github.com
+
 # Configure Git to use id_deploy for all operations with verbose output
 export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_deploy"
-log "Testing SSH connection to GitHub..."
-ssh -v -T git@github.com 2>&1 || true
 
 cd "$REPO_ROOT"
 
@@ -122,12 +129,24 @@ fi
 
 log "Installing and building backend"
 cd "$REPO_ROOT/rps-backend/rps-backend"
-npm ci
+
+echo "=== Backend npm debug ==="
+echo "Current directory: $(pwd)"
+echo "PATH: $PATH"
+echo "NODE_ENV: ${NODE_ENV:-not set}"
+
+unset NODE_ENV
+npm ci --include=dev
+
+echo "Checking installed binaries..."
+ls node_modules/.bin/tsc 2>/dev/null && echo "tsc found" || echo "tsc NOT found"
+
 npm run build
 
 log "Installing and building frontend"
 cd "$REPO_ROOT/rps-frontend/nextjs-app"
-npm ci
+unset NODE_ENV
+npm ci --include=dev
 npm run build
 
 if ! command -v pm2 >/dev/null 2>&1; then
