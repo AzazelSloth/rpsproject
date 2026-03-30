@@ -111,6 +111,15 @@ jobs:
             # Test SSH connection to GitHub
             ssh -T git@github.com 2>&1 || true
 
+            # Debug: Show SSH config and key details
+            echo "=== SSH Debug Info ==="
+            ls -la ~/.ssh/
+            echo "--- Testing with explicit key ---"
+            ssh -v -i ~/.ssh/id_deploy -T git@github.com 2>&1 || true
+            echo "--- Testing git fetch ---"
+            GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_deploy" git fetch origin main 2>&1 || true
+            echo "======================="
+
             # Source scripts from scripts/ folder
             for script in ~/prod/scripts/*.sh; do
               [ -f "$script" ] && source "$script"
@@ -134,13 +143,13 @@ jobs:
             cd "$APP_DIR"
 
             # Use SSH to clone from GitHub
-            export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no"
+            export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_deploy"
             if [ -d .git ]; then
               git remote set-url origin git@github.com:${{ github.repository }}.git
-              git fetch origin "$GIT_BRANCH"
+              git fetch -v origin "$GIT_BRANCH"
               git reset --hard "origin/$GIT_BRANCH"
             else
-              git clone -b "$GIT_BRANCH" git@github.com:${{ github.repository }}.git .
+              git clone -v -b "$GIT_BRANCH" git@github.com:${{ github.repository }}.git .
             fi
 
             echo "Configuring environment variables"

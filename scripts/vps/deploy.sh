@@ -31,11 +31,69 @@ require_command() {
 
 require_command git
 require_command npm
+require_command curl
+
+# Try to load nvm and set Node.js 20+ if available
+# This handles cases where Node.js is installed via nvm but not in the default PATH
+for nvm_dir in "$HOME/.nvm/versions/node/"*; do
+  if [ -d "$nvm_dir" ]; then
+    export PATH="$nvm_dir/bin:$PATH"
+    log "Loaded Node.js from nvm: $(node -v)"
+    break
+  fi
+done
+
+# Also try to load from standard nvm locations
+[ -s "$HOME/.nvm/nvm.sh" ] && source "$HOME/.nvm/nvm.sh" 2>/dev/null || true
+[ -s "$HOME/.profile" ] && source "$HOME/.profile" 2>/dev/null || true
+[ -s "$HOME/.bashrc" ] && source "$HOME/.bashrc" 2>/dev/null || true
+[ -s "$HOME/.bash_profile" ] && source "$HOME/.bash_profile" 2>/dev/null || true
+
+# Try to find node using which/command -v
+NODE_BIN=$(command -v node 2>/dev/null || echo "")
+if [ -n "$NODE_BIN" ]; then
+  log "Found node at: $NODE_BIN"
+else
+  # Try common Node.js installation paths
+  for path in /usr/local/bin/node /usr/bin/node "$HOME/.local/bin/node"; do
+    if [ -x "$path" ]; then
+      export PATH="$(dirname "$path"):$PATH"
+      log "Found Node.js at: $path"
+      break
+    fi
+  done
+fi
+
+# Check Node.js version
+NODE_VERSION=$(node -v 2>/dev/null || echo "not found")
+log "Node.js version: $NODE_VERSION"
+
+NODE_MAJOR_VERSION=$(echo "$NODE_VERSION" | cut -d. -f1 | tr -d 'v' || echo "0")
+
+if [ "$NODE_MAJOR_VERSION" = "0" ] || [ "$NODE_MAJOR_VERSION" = "" ]; then
+  log "ERROR: Node.js not found in PATH"
+  log "PATH was: $PATH"
+  exit 1
+fi
+
+if [ "$NODE_MAJOR_VERSION" -lt 20 ]; then
+  log "ERROR: Node.js 20+ is required but found v$NODE_MAJOR_VERSION"
+  log "Current PATH: $PATH"
+  log "Please upgrade Node.js on your VPS or configure PATH properly"
+  exit 1
+fi
+
+log "Using Node.js version: $NODE_VERSION"
+
+# Ensure npm is also using the correct version
+NPM_VERSION=$(npm -v 2>/dev/null || echo "unknown")
+log "Using npm version: $NPM_VERSION"
 
 # Setup SSH for GitHub authentication using existing id_deploy key
-# Configure Git to use id_deploy for all operations
-export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no"
-ssh -T git@github.com 2>&1 || true
+# Configure Git to use id_deploy for all operations with verbose output
+export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_deploy"
+log "Testing SSH connection to GitHub..."
+ssh -v -T git@github.com 2>&1 || true
 
 cd "$REPO_ROOT"
 
@@ -43,9 +101,9 @@ log "Deploying branch: $BRANCH"
 log "Environment: $ENVIRONMENT"
 log "Repository: $REPO_ROOT"
 
-git fetch --all --prune
+git fetch -v --all --prune
 git checkout "$BRANCH"
-git pull --ff-only origin "$BRANCH"
+git pull -v --ff-only origin "$BRANCH"
 
 if [ ! -f "rps-backend/rps-backend/.env" ]; then
   cp "rps-backend/rps-backend/.env.example" "rps-backend/rps-backend/.env"
