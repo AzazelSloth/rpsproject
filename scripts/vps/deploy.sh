@@ -24,10 +24,7 @@ require_command() {
 require_command git
 require_command npm
 
-# Setup SSH for GitHub authentication
-eval "$(ssh-agent -s)"
-ssh-add ~/.ssh/id_deploy
-ssh -T git@github.com
+# Using HTTPS for GitHub - no SSH agent needed
 
 cd "$REPO_ROOT"
 

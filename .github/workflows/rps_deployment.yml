@@ -115,11 +115,13 @@ jobs:
             mkdir -p "$APP_DIR"
             cd "$APP_DIR"
 
+            # Use HTTPS instead of SSH to avoid authentication issues
             if [ -d .git ]; then
+              git remote set-url origin https://${{ github.repository }}@github.com/${{ github.repository }}.git
               git fetch origin "$GIT_BRANCH"
               git reset --hard "origin/$GIT_BRANCH"
             else
-              git clone -b "$GIT_BRANCH" git@github.com:${{ github.repository }}.git .
+              git clone -b "$GIT_BRANCH" https://${{ github.repository }}@github.com/${{ github.repository }}.git .
             fi
 
             echo "🔧 Configuration des variables d'environnement"
