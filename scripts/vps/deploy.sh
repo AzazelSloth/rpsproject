@@ -28,7 +28,6 @@ require_command npm
 eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_deploy
 ssh -T git@github.com
-clear
 
 cd "$REPO_ROOT"
 
