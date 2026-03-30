@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Guard against double-sourcing
+if [ -n "${RPS_DEPLOY_SCRIPT_SOURCED:-}" ]; then
+  echo "Deploy script already sourced, skipping..."
+  return 0 2>/dev/null || exit 0
+fi
+
+export RPS_DEPLOY_SCRIPT_SOURCED=1
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BRANCH="${1:-main}"
 ENVIRONMENT="${2:-production}"
@@ -24,7 +32,10 @@ require_command() {
 require_command git
 require_command npm
 
-# Using HTTPS for GitHub - no SSH agent needed
+# Setup SSH for GitHub authentication using existing id_deploy key
+# Configure Git to use id_deploy for all operations
+export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no"
+ssh -T git@github.com 2>&1 || true
 
 cd "$REPO_ROOT"
 

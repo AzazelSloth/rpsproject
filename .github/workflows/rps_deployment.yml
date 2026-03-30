@@ -93,6 +93,24 @@ jobs:
           script: |
             set -e
 
+            # Setup SSH for GitHub using existing id_deploy key
+            mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
+            
+            # Ensure proper permissions on existing keys
+            chmod 600 ~/.ssh/id_deploy 2>/dev/null || true
+            chmod 600 ~/.ssh/id_ed25519 2>/dev/null || true
+            
+            # Add GitHub to known hosts
+            ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null
+            chmod 644 ~/.ssh/known_hosts
+            
+            # Configure Git to use id_deploy key
+            export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no"
+            
+            # Test SSH connection to GitHub
+            ssh -T git@github.com 2>&1 || true
+
             # Source scripts from scripts/ folder
             for script in ~/prod/scripts/*.sh; do
               [ -f "$script" ] && source "$script"
@@ -110,21 +128,22 @@ jobs:
               GIT_BRANCH=deploy
             fi
 
-            echo "🚀 Déploiement RPS – $ENV"
+            echo "Deploying RPS - $ENV"
 
             mkdir -p "$APP_DIR"
             cd "$APP_DIR"
 
-            # Use HTTPS instead of SSH to avoid authentication issues
+            # Use SSH to clone from GitHub
+            export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no"
             if [ -d .git ]; then
-              git remote set-url origin https://${{ github.repository }}@github.com/${{ github.repository }}.git
+              git remote set-url origin git@github.com:${{ github.repository }}.git
               git fetch origin "$GIT_BRANCH"
               git reset --hard "origin/$GIT_BRANCH"
             else
-              git clone -b "$GIT_BRANCH" https://${{ github.repository }}@github.com/${{ github.repository }}.git .
+              git clone -b "$GIT_BRANCH" git@github.com:${{ github.repository }}.git .
             fi
 
-            echo "🔧 Configuration des variables d'environnement"
+            echo "Configuring environment variables"
             
             # Backend .env configuration
             cd "$APP_DIR/rps-backend/rps-backend"
@@ -138,7 +157,7 @@ jobs:
             echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
             echo "DB_SYNCHRONIZE=false" >> .env
             echo "DB_LOGGING=false" >> .env
-            echo "✅ Backend .env configured"
+            echo "Done: Backend .env configured"
 
             # Frontend .env.local configuration
             cd "$APP_DIR/rps-frontend/nextjs-app"
@@ -146,11 +165,11 @@ jobs:
             echo "API_URL=http://127.0.0.1:3000" >> .env.local
             echo "NEXT_PUBLIC_STRAPI_URL=" >> .env.local
             echo "STRAPI_API_TOKEN=" >> .env.local
-            echo "✅ Frontend .env.local configured"
+            echo "Done: Frontend .env.local configured"
 
-            echo "🔧 Exécution du script de déploiement"
+            echo "Running deployment script"
             cd "$APP_DIR"
             chmod +x scripts/vps/deploy.sh
             ./scripts/vps/deploy.sh "$TARGET_BRANCH" "$ENV"
 
-            echo "✅ Déploiement $ENV terminé"
+            echo "Done: Deployment $ENV completed"
