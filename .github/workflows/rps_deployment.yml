@@ -84,7 +84,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rps-frontend
-          path: .next/
+          path: ${{ github.workspace }}/rps-frontend/nextjs-app/.next/
+          include-hidden-files: true
           retention-days: 7
           if-no-files-found: error
 
