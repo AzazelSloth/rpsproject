@@ -108,7 +108,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: rps-frontend
-          path: .next-temp/
+          path: frontend-artifact/
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -194,16 +194,18 @@ jobs:
             # ---------------------------------------------
             echo "Deploying frontend..."
             
-            # Move frontend from temp location
-            mv .next-temp .next
+            # Clone the repo to get frontend files
+            cd /tmp
+            rm -rf rps-frontend-temp
+            git clone --depth 1 -b "$TARGET_BRANCH" https://github.com/${{ github.repository }}.git rps-frontend-temp
             
-            # Copy frontend files (from artifacts)
-            cp -r .next "$APP_DIR/rps-frontend/nextjs-app/" 2>/dev/null || true
+            # Copy frontend files
+            cp -r rps-frontend-temp/rps-frontend/nextjs-app/.next "$APP_DIR/rps-frontend/nextjs-app/" 2>/dev/null || true
             
             # Ensure package.json exists for PM2
             if [ ! -f "$APP_DIR/rps-frontend/nextjs-app/package.json" ]; then
-              cp /tmp/rps-backend-temp/rps-frontend/nextjs-app/package.json "$APP_DIR/rps-frontend/nextjs-app/" 2>/dev/null || true
-              cp /tmp/rps-backend-temp/rps-frontend/nextjs-app/package-lock.json "$APP_DIR/rps-frontend/nextjs-app/" 2>/dev/null || true
+              cp /tmp/rps-frontend-temp/rps-frontend/nextjs-app/package.json "$APP_DIR/rps-frontend/nextjs-app/" 2>/dev/null || true
+              cp /tmp/rps-frontend-temp/rps-frontend/nextjs-app/package-lock.json "$APP_DIR/rps-frontend/nextjs-app/" 2>/dev/null || true
             fi
 
             cd "$APP_DIR/rps-frontend/nextjs-app"
