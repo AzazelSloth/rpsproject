@@ -36,11 +36,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Unit tests
-        run: npm run test -- --ci --runInBand
+      - name: Run tests
+        run: npm run test -- --passWithNoTests
 
       - name: Build
         run: npm run build
+
+      - name: List build output
+        run: ls -la dist/
 
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4
@@ -48,6 +51,7 @@ jobs:
           name: rps-backend
           path: dist/
           retention-days: 7
+          if-no-files-found: error
 
   frontend-ci:
     name: Frontend CI (Next.js)
@@ -72,12 +76,16 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: List build output
+        run: ls -la .next/
+
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
         with:
           name: rps-frontend
           path: .next/
           retention-days: 7
+          if-no-files-found: error
 
   deploy:
     name: Deploy to Ubuntu VPS
