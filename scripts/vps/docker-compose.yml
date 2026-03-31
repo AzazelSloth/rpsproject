@@ -1,0 +1,168 @@
+version: '3.8'
+
+# ==============================================================================
+# RPS Platform - Docker Compose Configuration
+# ==============================================================================
+# Services:
+#   - PostgreSQL (database - optional, can use external)
+#   - n8n (automation - prepared for future)
+#
+# Usage:
+#   docker-compose up -d
+#   docker-compose logs -f
+#   docker-compose down
+# ==============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # PostgreSQL Database (optional - use external DB if preferred)
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    container_name: rps-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-rps_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-rps_pass}
+      POSTGRES_DB: ${DB_NAME:-rps_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-rps_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rps_network
+
+  # --------------------------------------------------------------------------
+  # Backend API (NestJS)
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./rps-backend/rps-backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    container_name: rps-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-rps_user}
+      DB_PASSWORD: ${DB_PASSWORD:-rps_pass}
+      DB_NAME: ${DB_NAME:-rps_db}
+      DB_SYNCHRONIZE: "false"
+      DB_LOGGING: "false"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./rps-backend/rps-backend:/app
+      - /app/node_modules
+    networks:
+      - rps_network
+
+  # --------------------------------------------------------------------------
+  # Frontend (Next.js)
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./rps-frontend/nextjs-app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    container_name: rps-frontend
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+      API_URL: http://localhost:3000
+      NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL:-}
+      STRAPI_API_TOKEN: ${STRAPI_API_TOKEN:-}
+    ports:
+      - "3001:3001"
+    depends_on:
+      - backend
+    volumes:
+      - ./rps-frontend/nextjs-app:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - rps_network
+
+  # --------------------------------------------------------------------------
+  # Nginx Reverse Proxy
+  # --------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    container_name: rps-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_cache:/var/cache/nginx
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - rps_network
+
+  # --------------------------------------------------------------------------
+  # n8n Automation (prepared for future)
+  # --------------------------------------------------------------------------
+  # Uncomment when ready to use n8n:
+  #
+  # n8n:
+  #   image: n8nio/n8n:latest
+  #   restart: unless-stopped
+  #   container_name: rps-n8n
+  #   environment:
+  #     - N8N_BASIC_AUTH_ACTIVE=true
+  #     - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+  #     - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+  #     - N8N_HOST=n8n.local
+  #     - N8N_PORT=5678
+  #     - N8N_PROTOCOL=http
+  #     - DB_TYPE=postgresdb
+  #     - DB_POSTGRESDB_HOST=postgres
+  #     - DB_POSTGRESDB_PORT=5432
+  #     - DB_POSTGRESDB_DATABASE=${DB_NAME:-rps_db}
+  #     - DB_POSTGRESDB_USER=${DB_USER:-rps_user}
+  #     - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD:-rps_pass}
+  #   ports:
+  #     - "5678:5678"
+  #   volumes:
+  #     - n8n_data:/home/node/.n8n
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - rps_network
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+networks:
+  rps_network:
+    driver: bridge
+
+# ==============================================================================
+# Volumes
+# ==============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  nginx_cache:
+    driver: local
+  nginx_logs:
+    driver: local
+  n8n_data:
+    driver: local

@@ -1,162 +1,456 @@
 #!/usr/bin/env bash
+# ==============================================================================
+# RPS Deployment Script - Optimized for Available Tools
+# ==============================================================================
+# Tools used:
+#   - Git (version control)
+#   - Node.js LTS (runtime)
+#   - npm (package manager)
+#   - PM2 (process manager)
+#   - PostgreSQL (database - external)
+#   - Nginx (reverse proxy)
+#   - Certbot (SSL - prepared for future)
+#   - Docker/Docker Compose (optional - for future n8n)
+#
+# Usage:
+#   ./deploy.sh <branch> <environment>
+#   Example: ./deploy.sh main production
+# ==============================================================================
+
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# Script directory and repo root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Arguments
 BRANCH="${1:-main}"
 ENVIRONMENT="${2:-production}"
 
-echo "=== Deployment Debug Info ==="
-echo "Script directory: $(dirname "${BASH_SOURCE[0]}")"
-echo "Repo root calculated: $REPO_ROOT"
-echo "Branch: $BRANCH"
-echo "Environment: $ENVIRONMENT"
-echo "================================"
+# Configuration
+APP_DIR="$HOME/rps-$ENVIRONMENT"
+LOG_FILE="$APP_DIR/deployment.log"
 
-# Source scripts
-for script in "$REPO_ROOT/scripts/"*.sh; do
-  [ -f "$script" ] && source "$script"
-done
-
+# Logging function
 log() {
-  printf "[%s] %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$1"
+    local level="$1"
+    shift
+    local message="$*"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE"
 }
+
+# Error handler
+error_handler() {
+    log "ERROR" "Error at line ${LINENO}: ${BASH_COMMAND}"
+    exit 1
+}
+
+trap 'error_handler' ERR
+
+# ==============================================================================
+# Utility Functions
+# ==============================================================================
 
 require_command() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    echo "Missing required command: $1" >&2
-    exit 1
-  fi
+    if ! command -v "$1" >/dev/null 2>&1; then
+        log "ERROR" "Missing required command: $1"
+        exit 1
+    fi
+    log "INFO" "Found $1 at: $(command -v "$1")"
 }
 
-require_command git
-require_command npm
-require_command curl
-
-# Try to load nvm and set Node.js 20+ if available
-# This handles cases where Node.js is installed via nvm but not in the default PATH
-for nvm_dir in "$HOME/.nvm/versions/node/"*; do
-  if [ -d "$nvm_dir" ]; then
-    export PATH="$nvm_dir/bin:$PATH"
-    log "Loaded Node.js from nvm: $(node -v)"
-    break
-  fi
-done
-
-# Also try to load from standard nvm locations
-[ -s "$HOME/.nvm/nvm.sh" ] && source "$HOME/.nvm/nvm.sh" 2>/dev/null || true
-[ -s "$HOME/.profile" ] && source "$HOME/.profile" 2>/dev/null || true
-[ -s "$HOME/.bashrc" ] && source "$HOME/.bashrc" 2>/dev/null || true
-[ -s "$HOME/.bash_profile" ] && source "$HOME/.bash_profile" 2>/dev/null || true
-
-# Try to find node using which/command -v
-NODE_BIN=$(command -v node 2>/dev/null || echo "")
-if [ -n "$NODE_BIN" ]; then
-  log "Found node at: $NODE_BIN"
-else
-  # Try common Node.js installation paths
-  for path in /usr/local/bin/node /usr/bin/node "$HOME/.local/bin/node"; do
-    if [ -x "$path" ]; then
-      export PATH="$(dirname "$path"):$PATH"
-      log "Found Node.js at: $path"
-      break
+setup_node() {
+    log "INFO" "Setting up Node.js environment..."
+    
+    # Try to load nvm if available
+    if [ -s "$HOME/.nvm/nvm.sh" ]; then
+        # shellcheck disable=SC1090
+        source "$HOME/.nvm/nvm.sh" 2>/dev/null || true
+        log "INFO" "Loaded Node.js: $(node -v)"
     fi
-  done
-fi
+    
+    # Check common Node.js installation paths
+    local node_paths=(
+        "$HOME/.nvm/versions/node/"*/bin/node
+        "/usr/local/bin/node"
+        "/usr/bin/node"
+        "$HOME/.local/bin/node"
+    )
+    
+    for node_path in "${node_paths[@]}"; do
+        if [ -x "$node_path" ]; then
+            export PATH="$(dirname "$node_path"):$PATH"
+            log "INFO" "Found Node.js at: $node_path ($(node -v))"
+            break
+        fi
+    done
+    
+    # Verify Node.js version
+    local node_version
+    node_version=$(node -v 2>/dev/null || echo "not found")
+    local major_version
+    
+    if [ "$node_version" = "not found" ]; then
+        log "ERROR" "Node.js not found in PATH"
+        exit 1
+    fi
+    
+    major_version=$(echo "$node_version" | cut -d. -f1 | tr -d 'v')
+    
+    if [ "$major_version" -lt 20 ]; then
+        log "ERROR" "Node.js 20+ required, found: $node_version"
+        exit 1
+    fi
+    
+    log "INFO" "Node.js version: $node_version"
+    log "INFO" "npm version: $(npm -v)"
+}
 
-# Check Node.js version
-NODE_VERSION=$(node -v 2>/dev/null || echo "not found")
-log "Node.js version: $NODE_VERSION"
+setup_ssh_for_github() {
+    log "INFO" "Setting up SSH for GitHub..."
+    
+    # Start SSH agent
+    eval "$(ssh-agent -s)" >/dev/null 2>&1
+    
+    # Add SSH key
+    ssh-add "$HOME/.ssh/id_deploy" 2>/dev/null || true
+    
+    # Add GitHub to known hosts
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+    ssh-keyscan -H github.com >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
+    chmod 644 "$HOME/.ssh/known_hosts"
+    
+    # Configure Git SSH
+    export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i $HOME/.ssh/id_deploy"
+    
+    log "INFO" "SSH configured for GitHub"
+}
 
-NODE_MAJOR_VERSION=$(echo "$NODE_VERSION" | cut -d. -f1 | tr -d 'v' || echo "0")
+# ==============================================================================
+# Database Functions
+# ==============================================================================
 
-if [ "$NODE_MAJOR_VERSION" = "0" ] || [ "$NODE_MAJOR_VERSION" = "" ]; then
-  log "ERROR: Node.js not found in PATH"
-  log "PATH was: $PATH"
-  exit 1
-fi
+check_database() {
+    log "INFO" "Checking PostgreSQL database..."
+    
+    if ! command -v psql >/dev/null 2>&1; then
+        log "WARN" "psql not found - skipping database check"
+        return 0
+    fi
+    
+    # Check if database is accessible
+    if PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" >/dev/null 2>&1; then
+        log "INFO" "Database connection successful"
+    else
+        log "WARN" "Database connection failed - will use application defaults"
+    fi
+}
 
-if [ "$NODE_MAJOR_VERSION" -lt 20 ]; then
-  log "ERROR: Node.js 20+ is required but found v$NODE_MAJOR_VERSION"
-  log "Current PATH: $PATH"
-  log "Please upgrade Node.js on your VPS or configure PATH properly"
-  exit 1
-fi
+# ==============================================================================
+# Deployment Functions
+# ==============================================================================
 
-log "Using Node.js version: $NODE_VERSION"
+clone_or_update() {
+    log "INFO" "Cloning/updating repository..."
+    
+    mkdir -p "$APP_DIR"
+    cd "$APP_DIR"
+    
+    if [ -d ".git" ]; then
+        log "INFO" "Updating existing repository..."
+        git remote set-url origin git@github.com:"$REPO_NAME".git 2>/dev/null || true
+        git fetch origin "$BRANCH"
+        git reset --hard "origin/$BRANCH"
+    else
+        log "INFO" "Cloning repository..."
+        export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i $HOME/.ssh/id_deploy"
+        git clone -b "$BRANCH" git@github.com:"$REPO_NAME".git .
+    fi
+    
+    log "INFO" "Repository updated to branch: $BRANCH"
+}
 
-# Ensure npm is also using the correct version
-NPM_VERSION=$(npm -v 2>/dev/null || echo "unknown")
-log "Using npm version: $NPM_VERSION"
-
-# Setup SSH for GitHub authentication using existing id_deploy key
-# Start SSH agent and add the key
-log "Starting SSH agent..."
-eval "$(ssh-agent -s)"
-log "Adding SSH key to agent..."
-ssh-add ~/.ssh/id_deploy
-
-# Test SSH connection to GitHub
-log "Testing SSH connection to GitHub..."
-ssh -T git@github.com
-
-# Configure Git to use id_deploy for all operations with verbose output
-export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_deploy"
-
-cd "$REPO_ROOT"
-
-log "Deploying branch: $BRANCH"
-log "Environment: $ENVIRONMENT"
-log "Repository: $REPO_ROOT"
-
-git fetch -v --all --prune
-git checkout "$BRANCH"
-git pull -v --ff-only origin "$BRANCH"
-
-if [ ! -f "rps-backend/rps-backend/.env" ]; then
-  cp "rps-backend/rps-backend/.env.example" "rps-backend/rps-backend/.env"
-  log "Created rps-backend/rps-backend/.env from .env.example (adjust DB credentials)."
-fi
-
-if [ ! -f "rps-frontend/nextjs-app/.env.local" ]; then
-  cat > "rps-frontend/nextjs-app/.env.local" <<'EOF'
-NEXT_PUBLIC_API_URL=http://127.0.0.1:3000
-API_URL=http://127.0.0.1:3000
+configure_environment() {
+    log "INFO" "Configuring environment variables..."
+    
+    # Backend environment
+    cd "$APP_DIR/rps-backend/rps-backend"
+    cat > .env << EOF
+NODE_ENV=$ENVIRONMENT
+PORT=3000
+JWT_SECRET=$JWT_SECRET
+DB_HOST=$DB_HOST
+DB_PORT=$DB_PORT
+DB_USER=$DB_USER
+DB_PASSWORD=$DB_PASSWORD
+DB_NAME=$DB_NAME
+DB_SYNCHRONIZE=false
+DB_LOGGING=false
+EOF
+    log "INFO" "Backend .env configured"
+    
+    # Frontend environment
+    cd "$APP_DIR/rps-frontend/nextjs-app"
+    cat > .env.local << EOF
+NEXT_PUBLIC_API_URL=http://localhost:3000
+API_URL=http://localhost:3000
 NEXT_PUBLIC_STRAPI_URL=
 STRAPI_API_TOKEN=
 EOF
-  log "Created rps-frontend/nextjs-app/.env.local with default values."
-fi
+    log "INFO" "Frontend .env.local configured"
+}
 
-log "Installing and building backend"
-cd "$REPO_ROOT/rps-backend/rps-backend"
+build_backend() {
+    log "INFO" "Building backend..."
+    
+    cd "$APP_DIR/rps-backend/rps-backend"
+    
+    # Install dependencies
+    npm ci --omit=dev
+    
+    # Build
+    npm run build
+    
+    log "INFO" "Backend built successfully"
+}
 
-echo "=== Backend npm debug ==="
-echo "Current directory: $(pwd)"
-echo "PATH: $PATH"
-echo "NODE_ENV: ${NODE_ENV:-not set}"
+build_frontend() {
+    log "INFO" "Building frontend..."
+    
+    cd "$APP_DIR/rps-frontend/nextjs-app"
+    
+    # Install dependencies
+    npm ci --omit=dev
+    
+    # Build
+    npm run build
+    
+    log "INFO" "Frontend built successfully"
+}
 
-unset NODE_ENV
-npm ci --include=dev
+setup_pm2() {
+    log "INFO" "Configuring PM2..."
+    
+    # Check if PM2 is installed
+    if ! command -v pm2 >/dev/null 2>&1; then
+        log "INFO" "Installing PM2..."
+        sudo npm install -g pm2
+    fi
+    
+    # Create ecosystem config
+    cd "$APP_DIR"
+    cat > ecosystem.config.cjs << 'EOF'
+module.exports = {
+  apps: [
+    {
+      name: "rps-backend",
+      cwd: "./rps-backend/rps-backend",
+      script: "dist/main.js",
+      interpreter: "none",
+      env: {
+        NODE_ENV: "production",
+        PORT: 3000
+      },
+      instances: 1,
+      exec_mode: "fork",
+      watch: false,
+      max_memory_restart: "500M",
+      autorestart: true,
+      max_restarts: 10,
+      min_uptime: "10s",
+      kill_timeout: 5000,
+      wait_ready: true,
+      listen_timeout: 10000,
+      error_file: "./logs/backend-error.log",
+      out_file: "./logs/backend-out.log",
+      log_date_format: "YYYY-MM-DD HH:mm:ss Z"
+    },
+    {
+      name: "rps-frontend",
+      cwd: "./rps-frontend/nextjs-app",
+      script: "node_modules/next/dist/bin/next",
+      args: "start -p 3001",
+      interpreter: "none",
+      env: {
+        NODE_ENV: "production",
+        PORT: 3001
+      },
+      instances: 1,
+      exec_mode: "fork",
+      watch: false,
+      max_memory_restart: "500M",
+      autorestart: true,
+      max_restarts: 10,
+      min_uptime: "10s",
+      kill_timeout: 5000,
+      wait_ready: true,
+      listen_timeout: 10000,
+      error_file: "./logs/frontend-error.log",
+      out_file: "./logs/frontend-out.log",
+      log_date_format: "YYYY-MM-DD HH:mm:ss Z"
+    }
+  ]
+};
+EOF
 
-echo "Checking installed binaries..."
-ls node_modules/.bin/tsc 2>/dev/null && echo "tsc found" || echo "tsc NOT found"
+    # Create logs directory
+    mkdir -p "$APP_DIR/logs"
+    
+    # Start/Reload PM2
+    pm2 startOrReload ecosystem.config.cjs --update-env
+    pm2 save
+    
+    log "INFO" "PM2 configured successfully"
+}
 
-npm run build
+configure_nginx() {
+    log "INFO" "Configuring Nginx..."
+    
+    local nginx_config="$SCRIPT_DIR/nginx.rps.conf"
+    local nginx_target="/etc/nginx/sites-available/rps"
+    local nginx_enabled="/etc/nginx/sites-enabled/rps"
+    
+    # Check if Nginx config exists
+    if [ -f "$nginx_config" ]; then
+        # Backup existing config
+        if [ -f "$nginx_target" ]; then
+            sudo cp "$nginx_target" "$nginx_target.backup.$(date +%Y%m%d)"
+        fi
+        
+        # Copy new config
+        sudo cp "$nginx_config" "$nginx_target"
+        
+        # Enable site
+        sudo ln -sf "$nginx_target" "$nginx_enabled"
+        
+        # Test and reload
+        sudo nginx -t && sudo systemctl reload nginx
+        
+        log "INFO" "Nginx configured successfully"
+    else
+        log "WARN" "Nginx config not found: $nginx_config"
+    fi
+}
 
-log "Installing and building frontend"
-cd "$REPO_ROOT/rps-frontend/nextjs-app"
-unset NODE_ENV
-npm ci --include=dev
-npm run build
+# ==============================================================================
+# Docker Compose Functions (for future n8n)
+# ==============================================================================
 
-if ! command -v pm2 >/dev/null 2>&1; then
-  log "PM2 not found. Installing PM2 globally"
-  sudo npm install -g pm2
-fi
+create_docker_compose() {
+    log "INFO" "Creating Docker Compose configuration..."
+    
+    cd "$APP_DIR"
+    
+    cat > docker-compose.yml << 'EOF'
+version: '3.8'
 
-cd "$REPO_ROOT"
-log "Starting/reloading applications with PM2"
-pm2 startOrReload scripts/vps/ecosystem.config.cjs --update-env
-pm2 save
+services:
+  # PostgreSQL is external on the server
+  # This file is prepared for future n8n integration
 
-log "Deployment completed successfully"
+  n8n:
+    # n8n will be added in a future version
+    image: n8nio/n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${DB_HOST}
+      - DB_POSTGRESDB_PORT=${DB_PORT}
+      - DB_POSTGRESDB_DATABASE=${DB_NAME}
+      - DB_POSTGRESDB_USER=${DB_USER}
+      - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - rps_network
+
+volumes:
+  n8n_data:
+    driver: local
+
+networks:
+  rps_network:
+    driver: bridge
+EOF
+
+    log "INFO" "Docker Compose configuration created (n8n ready for future)"
+}
+
+# ==============================================================================
+# SSL Functions (prepared for Certbot)
+# ==============================================================================
+
+setup_ssl() {
+    log "INFO" "SSL setup is prepared for Certbot..."
+    log "INFO" "Run 'sudo certbot --nginx -d your-domain.com' to enable SSL"
+}
+
+# ==============================================================================
+# Main Deployment
+# ==============================================================================
+
+main() {
+    log "INFO" "=============================================="
+    log "INFO" "RPS Deployment - Starting"
+    log "INFO" "Branch: $BRANCH"
+    log "INFO" "Environment: $ENVIRONMENT"
+    log "INFO" "=============================================="
+    
+    # Prerequisites
+    require_command git
+    require_command npm
+    
+    # Setup environment
+    setup_node
+    
+    # Database check (optional)
+    if [ -n "${DB_HOST:-}" ]; then
+        check_database
+    fi
+    
+    # Setup SSH
+    setup_ssh_for_github
+    
+    # Clone/Update repository
+    clone_or_update
+    
+    # Configure environment
+    configure_environment
+    
+    # Build applications
+    build_backend
+    build_frontend
+    
+    # PM2 setup
+    setup_pm2
+    
+    # Nginx configuration
+    configure_nginx
+    
+    # Docker Compose (prepared for n8n)
+    create_docker_compose
+    
+    # Show status
+    log "INFO" "=============================================="
+    log "INFO" "PM2 Status:"
+    pm2 status
+    
+    log "INFO" "=============================================="
+    log "INFO" "Deployment completed successfully!"
+    log "INFO" "Backend API: http://localhost:3000"
+    log "INFO" "Frontend: http://localhost:3001"
+    log "INFO" "=============================================="
+}
+
+# Run main
+main "$@"
