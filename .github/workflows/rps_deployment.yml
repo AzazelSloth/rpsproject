@@ -50,7 +50,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rps-backend
-          path: dist/
+          path: rps-backend/rps-backend/dist/
           retention-days: 7
           if-no-files-found: error
 
@@ -84,7 +84,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rps-frontend
-          path: .next/
+          path: rps-frontend/nextjs-app/.next/
           retention-days: 7
           if-no-files-found: error
 
