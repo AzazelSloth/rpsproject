@@ -26,7 +26,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
           cache-dependency-path: rps-backend/rps-backend/package-lock.json
 
@@ -64,7 +64,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
           cache-dependency-path: rps-frontend/nextjs-app/package-lock.json
 
@@ -132,9 +132,9 @@ jobs:
             TARGET_BRANCH="${GITHUB_REF_NAME:-main}"
             
             if [ "$TARGET_BRANCH" = "main" ]; then
-              ENV=development
-            else
               ENV=production
+            else
+              ENV=development
             fi
 
             # Set up application directory
