@@ -166,6 +166,9 @@ jobs:
             
             cd "$APP_DIR/rps-backend/rps-backend"
             
+            # Install ALL dependencies (dev dependencies needed for build)
+            npm ci
+            
             # Build the backend
             npm run build
             
@@ -182,9 +185,6 @@ jobs:
             DB_SYNCHRONIZE=false
             DB_LOGGING=false
             ENVEOF
-
-            # Install production dependencies
-            npm ci --omit=dev --ignore-scripts
 
             echo "Backend deployed successfully"
 
@@ -203,6 +203,9 @@ jobs:
             
             cd "$APP_DIR/rps-frontend/nextjs-app"
             
+            # Install ALL dependencies (dev dependencies needed for build)
+            npm ci
+            
             # Build the frontend
             npm run build
 
@@ -213,9 +216,6 @@ jobs:
             NEXT_PUBLIC_STRAPI_URL=
             STRAPI_API_TOKEN=
             ENVEOF
-
-            # Install production dependencies
-            npm ci --omit=dev --ignore-scripts
 
             echo "Frontend deployed successfully"
 
