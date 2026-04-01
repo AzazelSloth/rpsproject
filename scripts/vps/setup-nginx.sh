@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-# Script de configuration Nginx (HTTP uniquement, addresse IP)
+# Script de configuration Nginx (optionnel)
 # Utilisation: sudo bash setup-nginx.sh
+#
+# Ce script est OPTIONNEL si vous voulez acceder directement aux services:
+#   - Backend: http://VPS_IP:3000
+#   - Frontend: http://VPS_IP:3001
+#
+# Si vous preferez utiliser Nginx comme reverse proxy, executez ce script.
 
 set -euo pipefail
 
@@ -8,9 +14,11 @@ log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
-# Verifier que nginx/certbot sont installes
+# Verifier que nginx est installe
 if ! command -v nginx >/dev/null 2>&1; then
-  echo "nginx n'est pas installe" >&2
+  echo "Nginx n'est pas installe. Pour acceder directement sans Nginx:" >&2
+  echo "  - Backend: http://VPS_IP:3000" >&2
+  echo "  - Frontend: http://VPS_IP:3001" >&2
   exit 1
 fi
 
@@ -30,8 +38,12 @@ systemctl reload nginx || systemctl start nginx
 
 # 3. Verification
 log "Configuration terminee!"
-log "Acces frontend: http://VPS_IP"
-log "Acces API backend: http://VPS_IP/api/*"
+log "Acces frontend via Nginx: http://VPS_IP"
+log "Acces API backend via Nginx: http://VPS_IP/api/*"
+log ""
+log "OU directement (sans Nginx):"
+log "  - Backend: http://VPS_IP:3000"
+log "  - Frontend: http://VPS_IP:3001"
 log ""
 log "Commandes utiles:"
 log "  sudo systemctl status nginx"
