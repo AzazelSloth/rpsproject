@@ -276,6 +276,13 @@ jobs:
             # Reload PM2 with new configuration
             cd "$APP_DIR"
             
+            # Ensure correct Node.js version is in PATH
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+            [ -s "/usr/local/bin/node" ] && export PATH="/usr/local/bin:$PATH"
+
+            echo "Node version: $(node -v)"
+
             # Check if PM2 is installed
             if ! command -v pm2 >/dev/null 2>&1; then
               echo "Installing PM2..."
