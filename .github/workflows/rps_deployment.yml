@@ -155,20 +155,18 @@ jobs:
             # ---------------------------------------------
             echo "Deploying backend..."
             
-            # Copy backend files (from artifacts)
-            cp -r build/* "$APP_DIR/rps-backend/rps-backend/" 2>/dev/null || true
+            # Clone the repo to get backend files
+            cd /tmp
+            rm -rf rps-backend-temp
+            git clone --depth 1 -b "$TARGET_BRANCH" https://github.com/${{ github.repository }}.git rps-backend-temp
             
-            # Ensure package.json exists for PM2 (needed for start:prod script)
-            if [ ! -f "$APP_DIR/rps-backend/rps-backend/package.json" ]; then
-              # Clone just to get package.json if not in artifacts
-              cd /tmp
-              rm -rf rps-backend-temp
-              git clone --depth 1 -b "$TARGET_BRANCH" https://github.com/${{ github.repository }}.git rps-backend-temp
-              cp rps-backend-temp/rps-backend/rps-backend/package.json "$APP_DIR/rps-backend/rps-backend/"
-              cp rps-backend-temp/rps-backend/rps-backend/package-lock.json "$APP_DIR/rps-backend/rps-backend/" 2>/dev/null || true
-            fi
-
+            # Copy backend files (src, package.json, etc.)
+            cp -r rps-backend-temp/rps-backend/rps-backend/* "$APP_DIR/rps-backend/rps-backend/" 2>/dev/null || true
+            
             cd "$APP_DIR/rps-backend/rps-backend"
+            
+            # Build the backend
+            npm run build
             
             # Configure environment
             cat > .env << 'ENVEOF'
@@ -199,16 +197,13 @@ jobs:
             rm -rf rps-frontend-temp
             git clone --depth 1 -b "$TARGET_BRANCH" https://github.com/${{ github.repository }}.git rps-frontend-temp
             
-            # Copy frontend files
-            cp -r rps-frontend-temp/rps-frontend/nextjs-app/.next "$APP_DIR/rps-frontend/nextjs-app/" 2>/dev/null || true
+            # Copy frontend files (package.json, etc.)
+            cp -r rps-frontend-temp/rps-frontend/nextjs-app/* "$APP_DIR/rps-frontend/nextjs-app/" 2>/dev/null || true
             
-            # Ensure package.json exists for PM2
-            if [ ! -f "$APP_DIR/rps-frontend/nextjs-app/package.json" ]; then
-              cp /tmp/rps-frontend-temp/rps-frontend/nextjs-app/package.json "$APP_DIR/rps-frontend/nextjs-app/" 2>/dev/null || true
-              cp /tmp/rps-frontend-temp/rps-frontend/nextjs-app/package-lock.json "$APP_DIR/rps-frontend/nextjs-app/" 2>/dev/null || true
-            fi
-
             cd "$APP_DIR/rps-frontend/nextjs-app"
+            
+            # Build the frontend
+            npm run build
 
             # Configure environment
             cat > .env.local << 'ENVEOF'
