@@ -96,6 +96,7 @@ jobs:
       - backend-ci
       - frontend-ci
     if: github.event_name == 'push' && (github.ref == 'refs/heads/deploy' || github.ref == 'refs/heads/main')
+    environment: rps_dev
 
     steps:
       - name: Download backend artifact
