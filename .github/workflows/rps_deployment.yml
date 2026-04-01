@@ -133,7 +133,7 @@ jobs:
             TARGET_BRANCH="${GITHUB_REF_NAME:-main}"
             
             if [ "$TARGET_BRANCH" = "main" ]; then
-              ENV=production
+              ENV=rps_dev
             else
               ENV=development
             fi
