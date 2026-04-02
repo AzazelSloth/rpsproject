@@ -22,8 +22,13 @@ Le déploiement utilise **GitHub Actions** qui se connecte au VPS via SSH et :
 
 ### Structure sur le VPS
 
-```
-$HOME/rps-production/
+Le répertoire cible est calculé par le workflow avec `APP_DIR="$HOME/rps-$ENV"` :
+
+- Push sur `main` -> `ENV=rps_dev` -> `$HOME/rps-rps_dev`
+- Push sur `deploy` -> `ENV=development` -> `$HOME/rps-development`
+
+```text
+$HOME/rps-rps_dev/            # pour la branche main
 ├── rps-backend/rps-backend/
 │   ├── src/          # Code source
 │   ├── dist/        # Build de production
@@ -60,8 +65,8 @@ Configurer ces secrets dans **Settings > Secrets and variables > Actions** :
 
 | Événement | Branche | Action |
 |-----------|---------|--------|
-| Push | `main` | Déploiement développement |
-| Push | `deploy` | Déploiement production |
+| Push | `main` | Build + déploiement sur `rps_dev` |
+| Push | `deploy` | Build + déploiement sur `development` |
 | Pull Request | `main` | Tests uniquement |
 | Manual | - | Déploiement manuel |
 
@@ -74,12 +79,12 @@ Le déploiement crée automatiquement les fichiers `.env` sur le VPS.
 ```env
 NODE_ENV=production
 PORT=3000
-JWT_SECRET=<VPS_SSH_PRIVATE_KEY secrets>
-DB_HOST=<VPS_SSH_PRIVATE_KEY secrets>
-DB_PORT=<VPS_SSH_PRIVATE_KEY secrets>
-DB_USER=<VPS_SSH_PRIVATE_KEY secrets>
-DB_PASSWORD=<VPS_SSH_PRIVATE_KEY secrets>
-DB_NAME=<VPS_SSH_PRIVATE_KEY secrets>
+JWT_SECRET=<JWT_SECRET secret>
+DB_HOST=<DB_HOST secret>
+DB_PORT=<DB_PORT secret>
+DB_USER=<DB_USER secret>
+DB_PASSWORD=<DB_PASSWORD secret>
+DB_NAME=<DB_NAME secret>
 DB_SYNCHRONIZE=false
 DB_LOGGING=false
 ```
@@ -103,12 +108,15 @@ ssh -i votre-cle ubuntu@IP_VPS
 
 # Cloner le projet
 cd $HOME
-git clone https://github.com/VOTRE_USER/rpsproject.git rps-production
-cd rps-production
+git clone https://github.com/VOTRE_USER/rpsproject.git rpsproject
+cd rpsproject
 
 # Déployer avec le script
 chmod +x scripts/vps/deploy.sh
-./scripts/vps/deploy.sh main production
+./scripts/vps/deploy.sh main
+
+# Alternative pour simuler la branche deploy
+./scripts/vps/deploy.sh deploy
 ```
 
 ## 6. Commandes PM2 Utiles
@@ -134,11 +142,13 @@ pm2 save
 ## 7. Dépannage
 
 ### Le déploiement échoue
+
 - Vérifier les logs GitHub Actions
 - Vérifier la connexion SSH : `ssh -i clef -p PORT user@host`
 - Vérifier que PM2 est installé sur le VPS
 
 ### Les services ne démarrent pas
+
 ```bash
 # Sur le VPS
 pm2 logs --err
@@ -147,12 +157,15 @@ pm2 describe rps-frontend
 ```
 
 ### Problèmes de permissions
+
 ```bash
 # Vérifier les permissions
-ls -la $HOME/rps-production/
+ls -la $HOME/rps-rps_dev/
+ls -la $HOME/rps-development/
 
 # Redémarrer avec les bons droits
-sudo chown -R $USER:$USER $HOME/rps-production/
+sudo chown -R $USER:$USER $HOME/rps-rps_dev/
+sudo chown -R $USER:$USER $HOME/rps-development/
 ```
 
 ## 8. Configuration Nginx (optionnel)
