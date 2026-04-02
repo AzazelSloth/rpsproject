@@ -336,7 +336,7 @@ EOF
     # Stop existing processes to ensure clean start
     pm2 delete all 2>/dev/null || true
     
-    # Start/Reload PM2
+    # Start PM2
     pm2 start ecosystem.config.cjs
     pm2 save
     

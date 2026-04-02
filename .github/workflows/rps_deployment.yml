@@ -297,8 +297,11 @@ jobs:
               sudo npm install -g pm2
             fi
 
-            # Start or reload applications
-            pm2 startOrReload ecosystem.config.cjs --update-env
+            # Stop existing processes to ensure clean start
+            pm2 delete all 2>/dev/null || true
+            
+            # Start PM2
+            pm2 start ecosystem.config.cjs
             pm2 save
 
             # Show status
