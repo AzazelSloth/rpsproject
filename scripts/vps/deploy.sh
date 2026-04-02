@@ -23,9 +23,18 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+# GitHub repository name (auto-detected or override)
+REPO_NAME="${REPO_NAME:-$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null | sed 's|.*github.com/||' | sed 's|\.git$||')}"
+
 # Arguments
 BRANCH="${1:-main}"
-ENVIRONMENT="${2:-production}"
+
+# Determine environment based on branch (matching workflow logic)
+if [ "$BRANCH" = "main" ]; then
+    ENVIRONMENT="rps_dev"
+else
+    ENVIRONMENT="development"
+fi
 
 # Configuration
 APP_DIR="$HOME/rps-$ENVIRONMENT"
@@ -98,8 +107,8 @@ setup_node() {
     
     major_version=$(echo "$node_version" | cut -d. -f1 | tr -d 'v')
     
-    if [ "$major_version" -lt 20 ]; then
-        log "ERROR" "Node.js 20+ required, found: $node_version"
+    if [ "$major_version" -lt 20 ] || [ "$major_version" -gt 24 ]; then
+        log "ERROR" "Node.js 20-24 required, found: $node_version"
         exit 1
     fi
     
@@ -178,7 +187,7 @@ configure_environment() {
     # Backend environment
     cd "$APP_DIR/rps-backend/rps-backend"
     cat > .env << EOF
-NODE_ENV=$ENVIRONMENT
+NODE_ENV=production
 PORT=3000
 JWT_SECRET=$JWT_SECRET
 DB_HOST=$DB_HOST
@@ -194,8 +203,8 @@ EOF
     # Frontend environment
     cd "$APP_DIR/rps-frontend/nextjs-app"
     cat > .env.local << EOF
-NEXT_PUBLIC_API_URL=http://localhost:3000
-API_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://127.0.0.1:3000
+API_URL=http://127.0.0.1:3000
 NEXT_PUBLIC_STRAPI_URL=
 STRAPI_API_TOKEN=
 EOF
@@ -205,10 +214,16 @@ EOF
 build_backend() {
     log "INFO" "Building backend..."
     
+    # Ensure Node.js v24.14.1 is available
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
+    log "INFO" "Node version: $(node -v)"
+    
     cd "$APP_DIR/rps-backend/rps-backend"
     
-    # Install dependencies
-    npm ci --omit=dev
+    # Install ALL dependencies (dev dependencies needed for build)
+    npm ci
     
     # Build
     npm run build
@@ -219,10 +234,16 @@ build_backend() {
 build_frontend() {
     log "INFO" "Building frontend..."
     
+    # Ensure Node.js v24.14.1 is available
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
+    log "INFO" "Node version: $(node -v)"
+    
     cd "$APP_DIR/rps-frontend/nextjs-app"
     
-    # Install dependencies
-    npm ci --omit=dev
+    # Install ALL dependencies (dev dependencies needed for build)
+    npm ci
     
     # Build
     npm run build
@@ -298,9 +319,29 @@ EOF
     # Create logs directory
     mkdir -p "$APP_DIR/logs"
     
+    # Use correct Node.js version from NVM
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
+    log "INFO" "Node version: $(node -v)"
+    
+    # Check if PM2 is installed
+    if ! command -v pm2 >/dev/null 2>&1; then
+        log "INFO" "Installing PM2..."
+        sudo npm install -g pm2
+    fi
+    
+    # Stop existing processes to ensure clean start
+    pm2 delete all 2>/dev/null || true
+    
     # Start/Reload PM2
-    pm2 startOrReload ecosystem.config.cjs --update-env
+    pm2 start ecosystem.config.cjs
     pm2 save
+    
+    # Verify services are running
+    log "INFO" "PM2 Status:"
+    pm2 status
+    pm2 logs --lines 10 --nostream
     
     log "INFO" "PM2 configured successfully"
 }
@@ -432,6 +473,11 @@ main() {
     build_frontend
     
     # PM2 setup
+    # Ensure Node.js v24.14.1 is available
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
+    
     setup_pm2
     
     # Nginx configuration
@@ -444,6 +490,7 @@ main() {
     log "INFO" "=============================================="
     log "INFO" "PM2 Status:"
     pm2 status
+    pm2 logs --lines 20 --nostream
     
     log "INFO" "=============================================="
     log "INFO" "Deployment completed successfully!"
