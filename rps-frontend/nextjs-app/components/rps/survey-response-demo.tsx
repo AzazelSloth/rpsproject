@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
+import { getTrpcClient } from "@/lib/trpc/client";
 
 export function SurveyResponseDemo({
   participantToken,
@@ -72,25 +73,19 @@ export function SurveyResponseDemo({
       }
 
       try {
-        const response = await fetch("/api/survey-responses", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+        await getTrpcClient().surveyResponses.submit.mutate({
             participantToken,
             employeeId,
             answers: payloadAnswers,
-          }),
         });
 
-        if (!response.ok) {
-          throw new Error("submit_failed");
-        }
-
         setSubmitted(true);
-      } catch {
-        setSubmitError("La soumission a echoue. Verifie la configuration du backend.");
+      } catch (error) {
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "La soumission a echoue. Verifie la configuration du backend.";
+        setSubmitError(message);
       }
     });
   }

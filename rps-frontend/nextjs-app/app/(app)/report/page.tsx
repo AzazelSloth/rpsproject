@@ -1,6 +1,8 @@
 import { Card, PrimaryButton, SectionHeader } from "@/components/rps/ui";
-import { getReportData } from "@/lib/repositories/rps-repository";
+import { getServerTrpcCaller } from "@/lib/trpc/server";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 
 export default async function ReportPage({
   searchParams,
@@ -8,7 +10,9 @@ export default async function ReportPage({
   searchParams: Promise<{ scenario?: string }>;
 }) {
   const { scenario } = await searchParams;
-  const reportData = await getReportData(scenario);
+  const reportData = await getServerTrpcCaller().data.report({
+    scenario: scenario ?? null,
+  });
   const exportHref = scenario
     ? `/api/report/export-docx?scenario=${encodeURIComponent(scenario)}`
     : "/api/report/export-docx";

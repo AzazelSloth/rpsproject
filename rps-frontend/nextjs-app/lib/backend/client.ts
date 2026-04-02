@@ -30,8 +30,7 @@ async function backendFetch<T>(path: string, init?: RequestInit) {
   const response = await fetch(`${backendUrl}${path}`, {
     ...init,
     headers: mergeHeaders(init?.headers),
-    cache: init?.method && init.method !== "GET" ? "no-store" : "force-cache",
-    next: init?.method && init.method !== "GET" ? undefined : { revalidate: 60 },
+    cache: "no-store",
   });
 
   if (!response.ok) {

@@ -1,5 +1,7 @@
 import { Card, Pill, SectionHeader } from "@/components/rps/ui";
-import { getResultsData } from "@/lib/repositories/rps-repository";
+import { getServerTrpcCaller } from "@/lib/trpc/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function ResultsPage({
   searchParams,
@@ -7,7 +9,9 @@ export default async function ResultsPage({
   searchParams: Promise<{ scenario?: string }>;
 }) {
   const { scenario } = await searchParams;
-  const { metrics, bars, analysis } = await getResultsData(scenario);
+  const { metrics, bars, analysis } = await getServerTrpcCaller().data.results({
+    scenario: scenario ?? null,
+  });
 
   return (
     <section className="space-y-6">

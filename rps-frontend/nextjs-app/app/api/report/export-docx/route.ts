@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { buildReportDocx } from "@/lib/reporting/docx";
-import { getReportData } from "@/lib/repositories/rps-repository";
+import { getServerTrpcCaller } from "@/lib/trpc/server";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const scenario = url.searchParams.get("scenario");
-    const report = await getReportData(scenario);
+    const report = await getServerTrpcCaller().data.report({
+      scenario: scenario ?? null,
+    });
     const buffer = await buildReportDocx(report);
     const fileName = `${slugify(report.title)}.docx`;
     const bytes = new Uint8Array(buffer);

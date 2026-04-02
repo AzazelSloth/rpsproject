@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition, type ChangeEvent } from "react";
 import * as XLSX from "xlsx";
 import { Card, Pill, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { EmployeeManagementData } from "@/lib/repositories/rps-repository";
+import { getTrpcClient } from "@/lib/trpc/client";
 
 export function EmployeesTableDemo({
   managementData,
@@ -33,28 +34,22 @@ export function EmployeesTableDemo({
     });
   }, [filter, managementData.participants, query]);
 
-  function runAdminAction(payload: object, successMessage: string) {
+  function runAdminAction(action: () => Promise<unknown>, successMessage: string) {
     setFeedback(null);
     setError(null);
 
     startTransition(async () => {
       try {
-        const response = await fetch("/api/admin/campaign-participants", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          throw new Error("request_failed");
-        }
+        await action();
 
         setFeedback(successMessage);
         router.refresh();
-      } catch {
-        setError("L'action admin a echoue. Verifie la configuration de l'API.");
+      } catch (error) {
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "L'action admin a echoue. Verifie la configuration de l'API.";
+        setError(message);
       }
     });
   }
@@ -107,13 +102,16 @@ export function EmployeesTableDemo({
       return;
     }
 
+    const campaignId = managementData.campaignId;
+    const companyId = managementData.companyId;
+
     runAdminAction(
-      {
-        action: "import",
-        campaignId: managementData.campaignId,
-        companyId: managementData.companyId,
-        csv,
-      },
+      () =>
+        getTrpcClient().campaignParticipants.importEmployees.mutate({
+          campaignId,
+          companyId,
+          csv,
+        }),
       "Import des salaries termine.",
     );
   }
@@ -124,13 +122,15 @@ export function EmployeesTableDemo({
       return;
     }
 
+    const campaignId = managementData.campaignId;
+
     runAdminAction(
-      {
-        action: "remind",
-        campaignId: managementData.campaignId,
-        minimumDaysSinceInvitation: 3,
-        force,
-      },
+      () =>
+        getTrpcClient().campaignParticipants.remind.mutate({
+          campaignId,
+          minimumDaysSinceInvitation: 3,
+          force,
+        }),
       force ? "Relance forcee envoyee." : "Relance des non-repondants terminee.",
     );
   }

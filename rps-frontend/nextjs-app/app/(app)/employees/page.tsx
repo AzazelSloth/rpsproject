@@ -1,6 +1,8 @@
 import { EmployeesTableDemo } from "@/components/rps/employees-table-demo";
 import { SectionHeader } from "@/components/rps/ui";
-import { getEmployeeManagementData } from "@/lib/repositories/rps-repository";
+import { getServerTrpcCaller } from "@/lib/trpc/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function EmployeesPage({
   searchParams,
@@ -8,7 +10,9 @@ export default async function EmployeesPage({
   searchParams: Promise<{ scenario?: string }>;
 }) {
   const { scenario } = await searchParams;
-  const managementData = await getEmployeeManagementData(scenario);
+  const managementData = await getServerTrpcCaller().data.employeeManagement({
+    scenario: scenario ?? null,
+  });
 
   return (
     <section className="space-y-6">

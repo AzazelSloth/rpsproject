@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SurveyResponseDemo } from "@/components/rps/survey-response-demo";
 import { Card } from "@/components/rps/ui";
-import { getSurveyResponseData } from "@/lib/repositories/rps-repository";
+import { getServerTrpcCaller } from "@/lib/trpc/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function SurveyResponseTokenPage({
   params,
@@ -10,7 +12,10 @@ export default async function SurveyResponseTokenPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const surveyData = await getSurveyResponseData(token);
+  const surveyData = await getServerTrpcCaller().data.surveyResponse({
+    token,
+    scenario: null,
+  });
 
   if (surveyData.status === "not-found") {
     notFound();

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, Pill, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { SurveyBuilderData } from "@/lib/repositories/rps-repository";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
+import { getTrpcClient } from "@/lib/trpc/client";
 
 const defaultCampaignDescription =
   "Campagne trimestrielle visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.";
@@ -62,7 +63,7 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
   const canEditQuestions = status !== "active";
 
   function runMutation<TResponse>(
-    payload: object,
+    mutation: () => Promise<TResponse>,
     successMessage: string,
     optimistic?: () => void,
     onSuccess?: (result: TResponse) => void,
@@ -74,24 +75,9 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
 
     startTransition(async () => {
       try {
-        const response = await fetch("/api/admin/surveys", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          const body = (await response.json().catch(() => null)) as
-            | { message?: string }
-            | null;
-          throw new Error(body?.message || "La mutation a echoue.");
-        }
-
-        const body = (await response.json()) as { result?: TResponse };
-        if (body.result !== undefined) {
-          onSuccess?.(body.result);
+        const result = await mutation();
+        if (result !== undefined) {
+          onSuccess?.(result);
         }
         setFeedback(successMessage);
         router.refresh();
@@ -113,27 +99,27 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
 
     if (campaignId) {
       runMutation(
-        {
-          action: "updateCampaign",
-          campaignId,
-          companyId,
-          title,
-          startDate,
-          endDate,
-        },
+        () =>
+          getTrpcClient().adminSurveys.updateCampaign.mutate({
+            campaignId,
+            companyId,
+            title,
+            startDate,
+            endDate,
+          }),
         "Campagne mise a jour.",
       );
       return;
     }
 
-    runMutation<{ id: number; status?: string }>(
-      {
-        action: "createCampaign",
-        companyId,
-        title,
-        startDate,
-        endDate,
-      },
+      runMutation<{ id: number; status?: string }>(
+        () =>
+          getTrpcClient().adminSurveys.createCampaign.mutate({
+            companyId,
+            title,
+            startDate,
+            endDate,
+          }),
       "Campagne creee.",
       undefined,
       (result) => {
@@ -152,10 +138,10 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
     }
 
     runMutation<{ id: number; name: string }>(
-      {
-        action: "createCompany",
-        name: trimmedName,
-      },
+      () =>
+        getTrpcClient().adminSurveys.createCompany.mutate({
+          name: trimmedName,
+        }),
       "Entreprise ajoutee.",
       undefined,
       (result) => {
@@ -188,14 +174,14 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
     const temporaryId = `tmp-${Date.now()}`;
 
     runMutation<{ id: number }>(
-      {
-        action: "createQuestion",
-        campaignId,
-        title: template.title,
-        type,
-        options: template.options,
-        orderIndex: questions.length,
-      },
+      () =>
+        getTrpcClient().adminSurveys.createQuestion.mutate({
+          campaignId,
+          title: template.title,
+          type,
+          options: template.options,
+          orderIndex: questions.length,
+        }),
       "Question ajoutee.",
       () =>
         setQuestions((current) => [
@@ -307,14 +293,14 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
     }
 
     runMutation(
-      {
-        action: "updateQuestion",
-        questionId: Number(question.id),
-        title: question.title,
-        type: question.type,
-        options: question.type === "choice" ? sanitizedOptions : undefined,
-        orderIndex: index,
-      },
+      () =>
+        getTrpcClient().adminSurveys.updateQuestion.mutate({
+          questionId: Number(question.id),
+          title: question.title,
+          type: question.type,
+          options: question.type === "choice" ? sanitizedOptions : undefined,
+          orderIndex: index,
+        }),
       "Question mise a jour.",
     );
   }
@@ -326,10 +312,10 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
     }
 
     runMutation(
-      {
-        action: "deleteQuestion",
-        questionId: Number(question.id),
-      },
+      () =>
+        getTrpcClient().adminSurveys.deleteQuestion.mutate({
+          questionId: Number(question.id),
+        }),
       "Question supprimee.",
       () => setQuestions((current) => current.filter((item) => item.id !== question.id)),
     );
@@ -352,14 +338,14 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
     const reorderableItems = reordered.filter((question) => Number.isFinite(Number(question.id)));
 
     runMutation(
-      {
-        action: "reorderQuestions",
-        campaignId,
-        items: reorderableItems.map((question) => ({
-          questionId: Number(question.id),
-          orderIndex: question.orderIndex,
-        })),
-      },
+      () =>
+        getTrpcClient().adminSurveys.reorderQuestions.mutate({
+          campaignId,
+          items: reorderableItems.map((question) => ({
+            questionId: Number(question.id),
+            orderIndex: question.orderIndex,
+          })),
+        }),
       "Ordre des questions mis a jour.",
     );
   }
@@ -378,9 +364,16 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
           : "Campagne archivee.";
 
     runMutation<{ status?: string }>(
-      {
-        action,
-        campaignId,
+      () => {
+        if (action === "activateCampaign") {
+          return getTrpcClient().adminSurveys.activateCampaign.mutate({ campaignId });
+        }
+
+        if (action === "terminateCampaign") {
+          return getTrpcClient().adminSurveys.terminateCampaign.mutate({ campaignId });
+        }
+
+        return getTrpcClient().adminSurveys.archiveCampaign.mutate({ campaignId });
       },
       successMessage,
       undefined,

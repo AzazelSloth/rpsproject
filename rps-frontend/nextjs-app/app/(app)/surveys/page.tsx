@@ -1,6 +1,8 @@
 import { SurveyBuilderDemo } from "@/components/rps/survey-builder-demo";
 import { SectionHeader } from "@/components/rps/ui";
-import { getSurveyBuilderData } from "@/lib/repositories/rps-repository";
+import { getServerTrpcCaller } from "@/lib/trpc/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function SurveysPage({
   searchParams,
@@ -8,7 +10,9 @@ export default async function SurveysPage({
   searchParams: Promise<{ scenario?: string }>;
 }) {
   const { scenario } = await searchParams;
-  const surveyBuilderData = await getSurveyBuilderData(scenario);
+  const surveyBuilderData = await getServerTrpcCaller().data.surveyBuilder({
+    scenario: scenario ?? null,
+  });
 
   return (
     <section className="space-y-6">

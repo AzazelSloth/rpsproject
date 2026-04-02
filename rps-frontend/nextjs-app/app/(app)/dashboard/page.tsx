@@ -1,6 +1,8 @@
 import { DashboardDemo } from "@/components/rps/dashboard-demo";
 import { PrimaryButton, SectionHeader } from "@/components/rps/ui";
-import { getDashboardData } from "@/lib/repositories/rps-repository";
+import { getServerTrpcCaller } from "@/lib/trpc/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage({
   searchParams,
@@ -8,7 +10,9 @@ export default async function DashboardPage({
   searchParams: Promise<{ scenario?: string }>;
 }) {
   const { scenario } = await searchParams;
-  const dashboardData = await getDashboardData(scenario);
+  const dashboardData = await getServerTrpcCaller().data.dashboard({
+    scenario: scenario ?? null,
+  });
 
   return (
     <section className="space-y-6">
