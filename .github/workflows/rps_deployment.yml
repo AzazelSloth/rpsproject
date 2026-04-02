@@ -151,6 +151,12 @@ jobs:
 
             echo "=== Starting deployment: $ENV ==="
 
+            # Use correct Node.js version from NVM (before builds!)
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
+            echo "Node version: $(node -v)"
+
             # ---------------------------------------------
             # Backend deployment
             # ---------------------------------------------
