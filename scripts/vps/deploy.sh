@@ -272,7 +272,8 @@ module.exports = {
       interpreter: "none",
       env: {
         NODE_ENV: "production",
-        PORT: 3000
+        PORT: 3000,
+        PATH: "/root/.nvm/versions/node/v24.14.1/bin:/usr/local/bin:/usr/bin:/bin"
       },
       instances: 1,
       exec_mode: "fork",
@@ -296,7 +297,8 @@ module.exports = {
       interpreter: "none",
       env: {
         NODE_ENV: "production",
-        PORT: 3001
+        PORT: 3001,
+        PATH: "/root/.nvm/versions/node/v24.14.1/bin:/usr/local/bin:/usr/bin:/bin"
       },
       instances: 1,
       exec_mode: "fork",
