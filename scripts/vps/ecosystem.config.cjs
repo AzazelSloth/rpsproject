@@ -4,7 +4,7 @@ module.exports = {
       name: "rps-backend",
       cwd: "./rps-backend/rps-backend",
       script: "./dist/main.js",
-      interpreter: "none",
+      interpreter: "node",
       env: {
         NODE_ENV: "production",
         PORT: 3000
@@ -17,7 +17,6 @@ module.exports = {
       max_restarts: 10,
       min_uptime: "10s",
       kill_timeout: 5000,
-      wait_ready: true,
       listen_timeout: 10000,
       error_file: "./logs/backend-error.log",
       out_file: "./logs/backend-out.log",
@@ -30,7 +29,7 @@ module.exports = {
       cwd: "./rps-frontend/nextjs-app",
       script: "./node_modules/next/dist/bin/next",
       args: "start -p 3001",
-      interpreter: "none",
+      interpreter: "node",
       env: {
         NODE_ENV: "production",
         PORT: 3001
@@ -43,7 +42,6 @@ module.exports = {
       max_restarts: 10,
       min_uptime: "10s",
       kill_timeout: 5000,
-      wait_ready: true,
       listen_timeout: 10000,
       error_file: "./logs/frontend-error.log",
       out_file: "./logs/frontend-out.log",
