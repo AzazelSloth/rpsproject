@@ -3,8 +3,8 @@
 
 -- Utilisateur admin par défaut
 -- Mot de passe: password (hash bcrypt)
-INSERT INTO users (name, email, password) 
-VALUES ('Admin Laroche', 'admin@laroche.ca', '$2b$10$rH0z9X.vKJH7qN8qN8qN8OYqZ9X.vKJH7qN8qN8qN8OYqZ9X.vKJH');
+INSERT INTO users (name, email, password)
+VALUES ('Admin Demo', 'admin@demo-rps.fr', '$2b$10$rH0z9X.vKJH7qN8qN8qN8OYqZ9X.vKJH7qN8qN8qN8OYqZ9X.vKJH');
 
 -- Entreprise demo
 INSERT INTO companies (name) VALUES ('Laroche Consulting');
