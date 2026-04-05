@@ -4,11 +4,6 @@
 # Dependencies
 node_modules/
 
-# Environment
-.env
-.env.local
-.env.production
-
 # Build outputs
 dist/
 build/
