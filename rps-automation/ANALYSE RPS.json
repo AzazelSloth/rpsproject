@@ -6,14 +6,14 @@
         "promptType": "define",
         "text": "=Analyse les résultats RPS  ",
         "options": {
-          "systemMessage": "=Tu es un expert en Psychologie du Travail pour Solutions Tech Québec. Voici les résultats bruts de plusieurs sondages RPS (Risques Psychosociaux) :\n\n\nTon travail est de rédiger un Rapport de Synthèse Global pour la direction.\n\n    Analyse les tendances générales (points forts et points faibles de l'équipe).\n\n    Identifie les alertes critiques si plusieurs employés mentionnent le même problème.\n\n    Donne 3 recommandations prioritaires pour l'entreprise.\n\nRédige cela de manière professionnelle et structurée (utilise des titres et des listes à puces)."
+          "systemMessage": "=Tu es un Expert Senior en Psychologie du Travail. Tu analyses les résultats du sondage RPS de \n\nMéthodologie d'analyse :\nLes employés ont répondu avec l'échelle suivante. Tu dois les interpréter ainsi :\n\n    \"Tout à fait d'accord\" ou \"Plutôt d'accord\" : Score 4-5 (Facteur de protection / Satisfaction).\n\n    \"Ni d'accord, ni pas d'accord\" : Score 3 (Zone neutre).\n\n    \"Plutôt pas d'accord\" ou \"Pas du tout d'accord\" : Score 1-2 (Alerte / Risque psychosocial).\n\nNote : Analyse l'ensemble des réponses pour dégager des moyennes et des tendances de groupe, peu importe le nombre de répondants.\n\nConsignes de formatage :\n\n    AUCUN formatage Markdown (pas de #, pas de *, pas de **).\n\n    Utilise uniquement les titres de sections ci-dessous.\n\n\nStructure du Rapport :\n\nCharge de travail\n(Analyse la quantité, le rythme et la complexité perçue).\n\nOrganisation & Étique\n(Analyse la clarté des rôles et le respect des valeurs).\n\nAutonomie et Développement\n(Analyse la liberté de décision et l'utilisation des compétences).\n\nReconnaissance & condition\n(Analyse le sentiment de justice et la valorisation du travail).\n\nRelation et Soutien\n(Analyse l'ambiance d'équipe et le soutien managérial).\n\nDemandes Émotionnelles & Valeurs\n(Analyse la charge mentale liée au public et les conflits d'éthique).\n\nConséquence sur la santé et Équilibre\n(Analyse l'impact sur le bien-être et la vie personnelle).\n\nAvis pour améliorer le bien être au travail\n(Propose 3 actions concrètes et adaptées à Solutions Tech Québec)."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        -528,
-        -288
+        -336,
+        -224
       ],
       "id": "29dacb79-0aa5-4a9b-ad93-f1ba807f248c",
       "name": "AI Agent"
@@ -26,8 +26,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
       "typeVersion": 1,
       "position": [
-        -560,
-        -96
+        -352,
+        -32
       ],
       "id": "03510aa2-4aee-424e-b5e0-53fc56e34588",
       "name": "Mistral Cloud Chat Model",
@@ -44,7 +44,7 @@
         "toEmail": "anaiarandrianantenaina@gmail.com",
         "subject": "=Rapport d'analyse RPS - {{ $now.format('') }}",
         "emailFormat": "text",
-        "text": "=Bonjour, vous trouverez ci-joint l'analyse des risques psychosociaux pour votre l'entreprise  . Le rapport complet a également été déposé sur le Drive\n ",
+        "text": "=Bonjour, vous trouverez ci-joint l'analyse des risques psychosociaux pour votre entreprise  . Le rapport complet a également été déposé sur le Drive\n ",
         "options": {
           "attachments": "=data"
         }
@@ -52,8 +52,8 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        304,
-        -288
+        704,
+        -224
       ],
       "id": "f7289293-58c3-4f0e-82b2-ea203c12a8cb",
       "name": "Send email",
@@ -62,34 +62,10 @@
       "executeOnce": false,
       "credentials": {
         "smtp": {
-          "id": "3spn4eJqsekN79ve",
+          "id": "cXE7lBmRMBj2OJwl",
           "name": "SMTP account"
         }
       }
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        -1328,
-        -288
-      ],
-      "id": "cb00d9c0-b252-40b7-b41f-34b671d6359c",
-      "name": "Execution du workflow"
-    },
-    {
-      "parameters": {
-        "jsCode": "return [\n  {\n    \"Nom\": \"Gagnon\",\n    \"Prénom\": \"Julie\",\n    \"Email\": \"julie.gagnon@test.com\",\n    \"Poste\": \"Secrétaire\",\n    \"score_charge_travail\": 3.5,\n    \"commentaires_libres\": \"Beaucoup de paperasse administrative cette semaine, j'ai du mal à suivre.\"\n  },\n  {\n    \"Nom\": \"Roy\",\n    \"Prénom\": \"Luc\",\n    \"Email\": \"luc.roy@test.com\",\n    \"Poste\": \"Personnel de soutien\",\n    \"score_charge_travail\": 4.2,\n    \"commentaires_libres\": \"Le matériel manque souvent pour intervenir rapidement chez les clients.\"\n  },\n  {\n    \"Nom\": \"Bouchard\",\n    \"Prénom\": \"Sophie\",\n    \"Email\": \"sophie.bouchard@test.com\",\n    \"Poste\": \"Gestionnaire\",\n    \"score_charge_travail\": 2.8,\n    \"commentaires_libres\": \"Bonne cohésion d'équipe globale, mais les délais de projets sont serrés.\"\n  },\n  {\n    \"Nom\": \"Tremblay\",\n    \"Prénom\": \"Jean\",\n    \"Email\": \"jean.tremblay@test.com\",\n    \"Poste\": \"Développeur\",\n    \"score_charge_travail\": 4.5,\n    \"commentaires_libres\": \"Le rythme est très soutenu, je fais beaucoup d'heures supplémentaires.\"\n  },\n  {\n    \"Nom\": \"Lavoie\",\n    \"Prénom\": \"Marc\",\n    \"Email\": \"marc.lavoie@test.com\",\n    \"Poste\": \"Technicien Réseau\",\n    \"score_charge_travail\": 3.9,\n    \"commentaires_libres\": \"Trop d'interruptions pendant les tâches critiques.\"\n  },\n  {\n    \"Nom\": \"Côté\",\n    \"Prénom\": \"Isabelle\",\n    \"Email\": \"isabelle.cote@test.com\",\n    \"Poste\": \"Analyste\",\n    \"score_charge_travail\": 2.5,\n    \"commentaires_libres\": \"Ambiance de travail agréable, les outils sont performants.\"\n  },\n  {\n    \"Nom\": \"Pelletier\",\n    \"Prénom\": \"Antoine\",\n    \"Email\": \"antoine.p@test.com\",\n    \"Poste\": \"Support Client\",\n    \"score_charge_travail\": 4.8,\n    \"commentaires_libres\": \"Alerte : Trop de fatigue accumulée, le volume d'appels est ingérable.\"\n  },\n  {\n    \"Nom\": \"Lévesque\",\n    \"Prénom\": \"Karine\",\n    \"Email\": \"karine.l@test.com\",\n    \"Poste\": \"Ressources Humaines\",\n    \"score_charge_travail\": 3.0,\n    \"commentaires_libres\": \"Les employés semblent stressés par le manque de reconnaissance.\"\n  }\n];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -1120,
-        -288
-      ],
-      "id": "1181ffae-3e27-4f2b-bc9c-fa36b07345d6",
-      "name": "Liste des réponses"
     },
     {
       "parameters": {
@@ -102,8 +78,8 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
       "position": [
-        -1376,
-        240
+        -1408,
+        304
       ],
       "id": "225f390f-46d0-4faf-ab86-7051f8ef2bb3",
       "name": "Schedule Trigger"
@@ -129,16 +105,26 @@
           "mappingMode": "defineBelow",
           "value": {
             "Email": "={{ $json.Email }}",
-            "Statut": "Répondu",
-            "Nom": "={{ $json.Nom }}",
-            "Prenom": "={{ $json[\"Prénom\"] }}",
-            "Poste": "={{ $json.Poste }}",
-            "Date d'envoie": "={{ $now.format('yyyy-MM-dd') }}"
+            "Fonction": "={{ $json.Fonction }}",
+            " Nom et Prenom": "={{ $json[\"Nom et Prenom\"] }}",
+            "Statut": "OK",
+            "Date d'envoie": "={{ $now.format('yyyy-MM-dd') }}",
+            "Employeur": "={{ $json.Employeur }}"
           },
           "matchingColumns": [
             "Email"
           ],
           "schema": [
+            {
+              "id": "Employeur",
+              "displayName": "Employeur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
             {
               "id": "Email",
               "displayName": "Email",
@@ -150,8 +136,8 @@
               "removed": false
             },
             {
-              "id": "Nom",
-              "displayName": "Nom",
+              "id": " Nom et Prenom",
+              "displayName": " Nom et Prenom",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -160,18 +146,8 @@
               "removed": false
             },
             {
-              "id": "Prenom",
-              "displayName": "Prenom",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "Poste",
-              "displayName": "Poste",
+              "id": "Fonction",
+              "displayName": "Fonction",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -197,7 +173,7 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true,
-              "removed": false
+              "removed": true
             }
           ],
           "attemptToConvertTypes": false,
@@ -208,8 +184,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        -912,
-        -288
+        -928,
+        -224
       ],
       "id": "1ec0a897-b1eb-4219-95b3-4addf15a24f3",
       "name": "Liste des employés dans google sheet",
@@ -222,26 +198,26 @@
     },
     {
       "parameters": {
-        "jsCode": "// On récupère tous les employés (3 items en entrée)\nconst allItems = $input.all();\n\n// On construit une seule grande chaîne de texte avec toutes les infos\nlet texteGlobal = \"LISTE DES RÉSULTATS DE SONDAGE POUR L'ANALYSE GLOBALE :\\n\\n\";\n\nfor (const item of allItems) {\n  texteGlobal += `--- EMPLOYÉ ---\\n`;\n  texteGlobal += `Nom: ${item.json.employe_nom}\\n`;\n  texteGlobal += `Poste: ${item.json.titre_pro}\\n`;\n  texteGlobal += `Score Charge: ${item.json.score_charge_travail}/5\\n`;\n  texteGlobal += `Commentaire: ${item.json.commentaires_libres}\\n\\n`;\n}\n\n// On retourne un SEUL item (Output: 1 item) contenant tout le texte\nreturn {\n  donnees_synthese: texteGlobal\n};"
+        "jsCode": "// On récupère la liste créée par le nœud Aggregate\nconst items = $input.all();\nconst toutesLesLignes = items[0].json.data; \n\nlet textePourIA = \"RÉSULTATS DU SONDAGE :\\n\\n\";\n\ntoutesLesLignes.forEach((ligne, index) => {\n  textePourIA += `--- RÉPONSES EMPLOYÉ #${index + 1} ---\\n`;\n  for (const [colonne, reponse] of Object.entries(ligne)) {\n    // On ajoute chaque question et sa réponse au texte\n    textePourIA += `${colonne} : ${reponse}\\n`;\n  }\n  textePourIA += \"\\n\";\n});\n\nreturn {\n  donnees_assemblees: textePourIA\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -704,
-        -288
+        -528,
+        -224
       ],
       "id": "dff83ca2-7c16-444a-9c63-0d564024041c",
       "name": "Assemblage des réponses"
     },
     {
       "parameters": {
-        "jsCode": "let text = $json.output;\n\n// 1. Enlever les doubles étoiles pour le gras\ntext = text.replace(/\\*\\*/g, '');\n\n// 2. Transformer les titres ### en lignes simples et nettes\ntext = text.replace(/###\\s?/g, '');\ntext = text.replace(/##\\s?/g, '');\n\n// 3. Optionnel : Ajouter un peu d'espace entre les sections\ntext = text.replace(/\\n/g, '\\r\\n');\n\nreturn {\n  clean_text: text\n};"
+        "jsCode": "const text = items[0].json.output;\n\n// Fonction robuste pour extraire entre deux titres ou jusqu'à la fin\nfunction extract(titleRegex, nextTitleRegex, source) {\n  const startMatch = source.match(titleRegex);\n  if (!startMatch) return \"Section non trouvée\";\n  \n  const startIndex = startMatch.index + startMatch[0].length;\n  const rest = source.substring(startIndex);\n  \n  const endMatch = rest.match(nextTitleRegex);\n  const content = endMatch ? rest.substring(0, endMatch.index) : rest;\n  \n  return content.trim();\n}\n\n// On définit les Regex pour chaque section (insensible à la casse avec 'i')\nconst reIntro = /Introduction|Charge de travail/i;\nconst reTendances = /Tendances Générales|Organisation & Éthique/i;\nconst reAlertes = /Alertes Critiques|Autonomie et Développement/i;\nconst reRecom = /Recommandations Prioritaires|Reconnaissance/i;\nconst reConclusion = /Conclusion/i;\n\nreturn {\n  introduction: extract(reIntro, /Organisation & Éthique|Tendances/i, text),\n  tendances: extract(reTendances, /Autonomie|Alertes/i, text),\n  alertes: extract(reAlertes, /Reconnaissance|Recommandations/i, text),\n  recommandations: extract(reRecom, /Conclusion/i, text),\n  conclusion: extract(reConclusion, /$^/i, text), // $^ pour aller jusqu'à la fin\n  full_text_clean: text.trim()\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -240,
-        -288
+        16,
+        -224
       ],
       "id": "ee99ddb9-af37-467b-a16a-5c6ca29d07ec",
       "name": "Néttoyage du rapport"
@@ -249,7 +225,7 @@
     {
       "parameters": {
         "operation": "createFromText",
-        "content": "={{ $json.clean_text }}",
+        "content": "={{ $json.introduction + \"\\n\\n\" + $json.tendances + \"\\n\\n\" + $json.alertes + \"\\n\\n\" + $json.recommandations + \"\\n\\n\" + $json.conclusion }}",
         "name": "=Rapport_Synthese_Global_RPS_{{ $now.format('dd-MM-yyyy') }}.docx",
         "driveId": {
           "__rl": true,
@@ -267,8 +243,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        -64,
-        -288
+        240,
+        -224
       ],
       "id": "48f82fc1-b0d0-43d7-8f8d-64b5ecfe8b8f",
       "name": "Enregistrement du rapport dans drive",
@@ -292,8 +268,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        112,
-        -288
+        480,
+        -224
       ],
       "id": "12b8efbd-a913-4635-9fd5-3bbe232c8719",
       "name": "Téléchargement du fichier pour l'email",
@@ -325,8 +301,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        -1184,
-        240
+        -1200,
+        304
       ],
       "id": "5f186f83-b9c3-4bf4-9559-e47e0e9d4470",
       "name": "Get row(s) in sheet",
@@ -342,21 +318,21 @@
         "fromEmail": "anaiarandria@gmail.com",
         "toEmail": "={{ $json.Email }}",
         "subject": "Rappel : Ton avis est précieux pour l'équipe",
-        "html": "=Bonjour {{ $json.Prenom }} {{ $json.Nom }},\n\nNous n'avons pas encore reçu ton retour pour le diagnostic RPS de Solutions Tech Québec.\nTa participation est essentielle pour nous aider à mieux comprendre la charge de travail actuelle et améliorer notre organisation.",
+        "html": "=Bonjour {{ $json[\"Nom et Prenom\"] }},\n\nNous vous contactons car votre diagnostic sur les Risques Psychosociaux (RPS) est toujours en attente de finalisation.\n\nVotre participation est essentielle pour garantir une analyse de qualité et améliorer les conditions de travail au sein de votre organisation. Ce questionnaire est rapide et vos réponses restent confidentielles.\n\nNous vous remercions par avance pour votre contribution.\n\nCordialement,\nL'équipe Solutions Tech",
         "options": {}
       },
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        -800,
-        240
+        -752,
+        304
       ],
       "id": "d8ee5c0b-e654-47bc-baca-c3df1d70b971",
       "name": "Send email1",
       "webhookId": "da2ab9a4-f885-4c49-b036-02b67454bbe1",
       "credentials": {
         "smtp": {
-          "id": "3spn4eJqsekN79ve",
+          "id": "cXE7lBmRMBj2OJwl",
           "name": "SMTP account"
         }
       }
@@ -372,7 +348,7 @@
           },
           "conditions": [
             {
-              "id": "55380075-fb22-4adf-9b99-e78df7ed0c9c",
+              "id": "31c0c48b-099e-49be-b4b4-dc9f45afe4dd",
               "leftValue": "={{ $json.Statut }}",
               "rightValue": "",
               "operator": {
@@ -388,8 +364,8 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.3,
       "position": [
-        -992,
-        240
+        -976,
+        304
       ],
       "id": "48d96644-3ce7-41c2-9704-6b88b2aff4cb",
       "name": "Filter"
@@ -397,14 +373,14 @@
     {
       "parameters": {
         "content": "ANALYSE DES RÉPONSES / RAPPORT SUR DRIVE ET EMAIL\n",
-        "height": 448,
-        "width": 1888
+        "height": 512,
+        "width": 2480
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -1392,
-        -416
+        -1488,
+        -400
       ],
       "id": "86b35e28-1279-4086-9402-2487a72756f9",
       "name": "Sticky Note"
@@ -413,16 +389,59 @@
       "parameters": {
         "content": "RELANCE \n**Double click** to edit me. [Guide](https://docs.n8n.io/workflows/components/sticky-notes/)",
         "height": 416,
-        "width": 1056
+        "width": 1072
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -1408,
-        96
+        -1488,
+        176
       ],
       "id": "6380c7db-1443-435b-afcd-eabfb12b71d8",
       "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sondage-rps-solutions-tech",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1360,
+        -224
+      ],
+      "id": "9dff756c-65f1-4bfe-b6e6-b8d218afa112",
+      "name": "Webhook",
+      "webhookId": "855fabc5-1fe4-4599-ad96-66f59cf32856"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        -224
+      ],
+      "id": "73d37a67-18c8-4289-b66a-c71e22cd7544",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const employees = items[0].json.body.body; \n\nreturn employees.map(emp => {\n  let formattedData = {\n    \"Employeur\": emp.Employeur, // Plus d'apostrophe ici !\n    \"Email\": emp.Email,\n    \"Nom et Prenom\": emp[\"Nom et Prenom\"],\n    \"Fonction\": emp.Fonction,\n    \"Statut\": \"OK\",\n    \"Date d'envoi\": new Date().toLocaleDateString('fr-FR')\n  };\n\n  for (let i = 1; i <= 28; i++) {\n    const key = `Q${i}`;\n    formattedData[key] = emp[key] || null;\n  }\n\n  return { json: formattedData };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1136,
+        -224
+      ],
+      "id": "eb282352-9334-445d-929e-808fa83152f2",
+      "name": "Code in JavaScript"
     }
   ],
   "pinData": {},
@@ -449,33 +468,11 @@
         ]
       ]
     },
-    "Execution du workflow": {
-      "main": [
-        [
-          {
-            "node": "Liste des réponses",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Liste des réponses": {
-      "main": [
-        [
-          {
-            "node": "Liste des employés dans google sheet",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Liste des employés dans google sheet": {
       "main": [
         [
           {
-            "node": "Assemblage des réponses",
+            "node": "Aggregate",
             "type": "main",
             "index": 0
           }
@@ -558,6 +555,44 @@
           }
         ]
       ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Assemblage des réponses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Liste des employés dans google sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email1": {
+      "main": [
+        []
+      ]
     }
   },
   "active": false,
@@ -565,7 +600,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "b8f90c7a-b10b-4b8d-b0ad-9a289f31b96d",
+  "versionId": "2797e3db-2816-46ad-9d00-6aa894f132bd",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "e13e6ceb71ea035352efd36881a07478385b706e1a6ef8688b92d999ba345118"
