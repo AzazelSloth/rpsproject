@@ -28,29 +28,29 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: rps-backend/rps-backend/package-lock.json
+          cache-dependency-path: rps-backend/package-lock.json
 
       - name: Install dependencies
-        working-directory: rps-backend/rps-backend
+        working-directory: rps-backend
         run: npm ci
 
       - name: Run tests
-        working-directory: rps-backend/rps-backend
+        working-directory: rps-backend
         run: npm run test -- --passWithNoTests
 
       - name: Build
-        working-directory: rps-backend/rps-backend
+        working-directory: rps-backend
         run: npm run build
 
       - name: List build output
-        working-directory: rps-backend/rps-backend
+        working-directory: rps-backend
         run: ls -la dist/
 
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4
         with:
           name: rps-backend
-          path: rps-backend/rps-backend/dist/
+          path: rps-backend/dist/
           retention-days: 7
           if-no-files-found: error
 
@@ -168,7 +168,7 @@ jobs:
             git clone --depth 1 -b "$TARGET_BRANCH" https://github.com/${{ github.repository }}.git rps-backend-temp
             
             # Copy backend files (src, package.json, etc.)
-            cp -r rps-backend-temp/rps-backend/rps-backend/* "$APP_DIR/rps-backend/" 2>/dev/null || true
+            cp -r rps-backend-temp/rps-backend/* "$APP_DIR/rps-backend/" 2>/dev/null || true
             
             cd "$APP_DIR/rps-backend"
             
