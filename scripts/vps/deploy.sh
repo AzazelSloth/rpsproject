@@ -197,6 +197,8 @@ DB_PASSWORD=$DB_PASSWORD
 DB_NAME=$DB_NAME
 DB_SYNCHRONIZE=false
 DB_LOGGING=false
+SWAGGER_ENABLED=true
+SWAGGER_PATH=api/api-docs
 EOF
     log "INFO" "Backend .env configured"
     
