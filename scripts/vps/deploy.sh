@@ -185,7 +185,7 @@ configure_environment() {
     log "INFO" "Configuring environment variables..."
     
     # Backend environment
-    cd "$APP_DIR/rps-backend/rps-backend"
+    cd "$APP_DIR/rps-backend"
     cat > .env << EOF
 NODE_ENV=production
 PORT=3000
@@ -198,15 +198,15 @@ DB_NAME=$DB_NAME
 DB_SYNCHRONIZE=false
 DB_LOGGING=false
 SWAGGER_ENABLED=true
-SWAGGER_PATH=api/api-docs
+SWAGGER_PATH=api-docs
 EOF
     log "INFO" "Backend .env configured"
     
     # Frontend environment
     cd "$APP_DIR/rps-frontend/nextjs-app"
     cat > .env.local << EOF
-NEXT_PUBLIC_API_URL=http://127.0.0.1:3000
-API_URL=http://127.0.0.1:3000
+NEXT_PUBLIC_API_URL=/api
+API_URL=/api
 NEXT_PUBLIC_STRAPI_URL=
 STRAPI_API_TOKEN=
 EOF
@@ -222,7 +222,7 @@ build_backend() {
     [ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
     log "INFO" "Node version: $(node -v)"
     
-    cd "$APP_DIR/rps-backend/rps-backend"
+    cd "$APP_DIR/rps-backend"
     
     # Install ALL dependencies (dev dependencies needed for build)
     npm ci
@@ -269,7 +269,7 @@ module.exports = {
   apps: [
     {
       name: "rps-backend",
-      cwd: "./rps-backend/rps-backend",
+      cwd: "./rps-backend",
       script: "dist/main.js",
             interpreter: "node",
       env: {

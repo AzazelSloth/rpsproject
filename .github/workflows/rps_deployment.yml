@@ -144,7 +144,7 @@ jobs:
             mkdir -p "$APP_DIR"
 
             # Create backend directory structure
-            mkdir -p "$APP_DIR/rps-backend/rps-backend"
+            mkdir -p "$APP_DIR/rps-backend"
             
             # Create frontend directory structure  
             mkdir -p "$APP_DIR/rps-frontend/nextjs-app"
@@ -168,9 +168,9 @@ jobs:
             git clone --depth 1 -b "$TARGET_BRANCH" https://github.com/${{ github.repository }}.git rps-backend-temp
             
             # Copy backend files (src, package.json, etc.)
-            cp -r rps-backend-temp/rps-backend/rps-backend/* "$APP_DIR/rps-backend/rps-backend/" 2>/dev/null || true
+            cp -r rps-backend-temp/rps-backend/rps-backend/* "$APP_DIR/rps-backend/" 2>/dev/null || true
             
-            cd "$APP_DIR/rps-backend/rps-backend"
+            cd "$APP_DIR/rps-backend"
             
             # Install ALL dependencies (dev dependencies needed for build)
             npm ci
@@ -191,7 +191,7 @@ jobs:
             DB_SYNCHRONIZE=false
             DB_LOGGING=false
             SWAGGER_ENABLED=true
-            SWAGGER_PATH=api/api-docs
+            SWAGGER_PATH=api-docs
             ENVEOF
 
             echo "Backend deployed successfully"
@@ -219,8 +219,8 @@ jobs:
 
             # Configure environment
             cat > .env.local << 'ENVEOF'
-            NEXT_PUBLIC_API_URL=http://127.0.0.1:3000
-            API_URL=http://127.0.0.1:3000
+            NEXT_PUBLIC_API_URL=/api
+            API_URL=/api
             NEXT_PUBLIC_STRAPI_URL=
             STRAPI_API_TOKEN=
             ENVEOF
@@ -238,7 +238,7 @@ jobs:
               apps: [
                 {
                   name: "rps-backend",
-                  cwd: "./rps-backend/rps-backend",
+                  cwd: "./rps-backend",
                   script: "dist/main.js",
                   interpreter: "node",
                   env: {
