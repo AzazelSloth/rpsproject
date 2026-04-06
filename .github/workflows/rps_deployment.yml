@@ -111,6 +111,20 @@ jobs:
           name: rps-frontend
           path: frontend-artifact/
 
+      - name: Transfer artifacts to VPS via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.VPS_PORT }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          timeout: 300s
+          source: "build/,frontend-artifact/"
+          target: "/tmp/rps-deploy-${{ github.sha }}"
+          strip_components: 0
+          rm: false
+          debug: true
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -120,88 +134,134 @@ jobs:
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           timeout: 300s
           command_timeout: 15m
-          envs: GITHUB_REF_NAME
+          envs: GITHUB_REF_NAME,GITHUB_SHA
           script: |
             set -e
 
             # ===============================================
-            # RPS Deployment Script - Optimized for Tools
+            # RPS Deployment Script - Uses CI Artifacts
             # ===============================================
-            # Available tools: Git, Node.js (LTS), npm, PM2, PostgreSQL, Nginx, Certbot, Docker
-            # Not yet: n8n (coming later)
+            # Deploys pre-built artifacts from CI via SCP
+            # No building on VPS - guaranteed latest version
             # ===============================================
 
             TARGET_BRANCH="${GITHUB_REF_NAME:-main}"
-            
+            COMMIT_SHA="${GITHUB_SHA}"
+
             if [ "$TARGET_BRANCH" = "main" ]; then
               ENV=rps_dev
             else
               ENV=development
             fi
 
-            # Set up application directory
             APP_DIR="$HOME/rps-$ENV"
-            mkdir -p "$APP_DIR"
-
-            # Create backend directory structure
-            mkdir -p "$APP_DIR/rps-backend"
-            
-            # Create frontend directory structure  
-            mkdir -p "$APP_DIR/rps-frontend/nextjs-app"
+            DEPLOY_TMP="/tmp/rps-deploy-${COMMIT_SHA}"
 
             echo "=== Starting deployment: $ENV ==="
+            echo "Commit: $COMMIT_SHA"
+            echo "Artifacts location: $DEPLOY_TMP"
 
-            # Use correct Node.js version from NVM (before builds!)
+            # Verify artifacts were transferred
+            if [ ! -d "$DEPLOY_TMP/build" ] || [ ! -d "$DEPLOY_TMP/frontend-artifact" ]; then
+              echo "ERROR: Artifacts not found at $DEPLOY_TMP"
+              ls -la /tmp/rps-deploy-* 2>/dev/null || echo "No deploy dirs found"
+              exit 1
+            fi
+
+            # Use correct Node.js version from NVM
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
             [ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
             echo "Node version: $(node -v)"
 
             # ---------------------------------------------
-            # Backend deployment
+            # Backup current deployment
             # ---------------------------------------------
-            echo "Deploying backend..."
-            
-            # Clone the repo to get backend files
-            cd /tmp
-            rm -rf rps-backend-temp
-            git clone --depth 1 -b "$TARGET_BRANCH" https://github.com/${{ github.repository }}.git rps-backend-temp
-            if [ ! -d "rps-backend-temp/rps-backend" ]; then
-              echo "ERROR: rps-backend source directory not found"
+            if [ -d "$APP_DIR" ]; then
+              echo "Backing up current deployment..."
+              mv "$APP_DIR" "${APP_DIR}.backup.$(date +%Y%m%d%H%M%S)" || true
+            fi
+
+            # Create application directories
+            mkdir -p "$APP_DIR/rps-backend"
+            mkdir -p "$APP_DIR/rps-frontend/nextjs-app"
+
+            # ---------------------------------------------
+            # Clone source code for package.json & config files
+            # ---------------------------------------------
+            echo "Cloning source code for package files..."
+            TEMP_SOURCE="/tmp/rps-source-${COMMIT_SHA}"
+            git clone --depth 1 -b "$TARGET_BRANCH" https://github.com/${{ github.repository }}.git "$TEMP_SOURCE"
+
+            # Copy backend source files (package.json, tsconfig, src/, etc.)
+            if [ -d "$TEMP_SOURCE/rps-backend" ]; then
+              cp -r "$TEMP_SOURCE/rps-backend/"* "$APP_DIR/rps-backend/"
+            else
+              echo "ERROR: Backend source not found in clone"
               exit 1
             fi
 
-            # Copy backend files (src, package.json, etc.)
-            cp -r rps-backend-temp/rps-backend/* "$APP_DIR/rps-backend/" || {
-              echo "ERROR: Failed to copy backend files"
-              exit 1
-            }
-
-            if [ ! -f "$APP_DIR/rps-backend/package.json" ]; then
-              echo "ERROR: package.json not found after copy"
+            # Copy frontend source files (package.json, app/, etc.)
+            if [ -d "$TEMP_SOURCE/rps-frontend/nextjs-app" ]; then
+              cp -r "$TEMP_SOURCE/rps-frontend/nextjs-app/"* "$APP_DIR/rps-frontend/nextjs-app/"
+            else
+              echo "ERROR: Frontend source not found in clone"
               exit 1
             fi
 
-            cd "$APP_DIR/rps-backend"
+            # Clean up source clone
+            rm -rf "$TEMP_SOURCE"
 
-            # Install ALL dependencies (dev dependencies needed for build)
-            npm ci
-            
-            # Build the backend
-            npm run build
+            # ---------------------------------------------
+            # Deploy CI-built artifacts (NO BUILD ON VPS)
+            # ---------------------------------------------
+            echo "Deploying backend artifact (pre-built in CI)..."
 
-            # Detect built backend entrypoint for PM2 (layout can vary)
-            BACKEND_SCRIPT="$(find dist -type f -name main.js | head -n 1 || true)"
+            # Replace dist/ with CI-built artifact
+            rm -rf "$APP_DIR/rps-backend/dist"
+            cp -r "$DEPLOY_TMP/build/" "$APP_DIR/rps-backend/dist/"
+
+            # Detect backend entrypoint
+            BACKEND_SCRIPT="$(find "$APP_DIR/rps-backend/dist" -type f -name main.js | head -n 1 || true)"
             if [ -z "$BACKEND_SCRIPT" ]; then
-              echo "ERROR: no main.js found under dist/ after build"
+              echo "ERROR: no main.js found in dist/ after artifact deployment"
               echo "Contents of dist/:"
-              ls -la dist/ || echo "dist/ directory doesn't exist"
+              ls -la "$APP_DIR/rps-backend/dist/" || echo "dist/ doesn't exist"
               exit 1
             fi
-            echo "Detected backend entrypoint: $BACKEND_SCRIPT"
+            echo "Backend entrypoint: $BACKEND_SCRIPT"
 
-            # Configure environment
-            cat > .env << 'ENVEOF'
+            echo "Deploying frontend artifact (pre-built in CI)..."
+
+            # Replace .next/ with CI-built artifact
+            rm -rf "$APP_DIR/rps-frontend/nextjs-app/.next"
+            cp -r "$DEPLOY_TMP/frontend-artifact/" "$APP_DIR/rps-frontend/nextjs-app/.next/"
+
+            # Verify deployment
+            if [ ! -f "$APP_DIR/rps-backend/package.json" ]; then
+              echo "ERROR: package.json missing after deployment"
+              exit 1
+            fi
+
+            if [ ! -d "$APP_DIR/rps-backend/dist" ]; then
+              echo "ERROR: dist/ missing after deployment"
+              exit 1
+            fi
+
+            if [ ! -d "$APP_DIR/rps-frontend/nextjs-app/.next" ]; then
+              echo "ERROR: .next/ missing after deployment"
+              exit 1
+            fi
+
+            # Clean up transferred artifacts
+            rm -rf "$DEPLOY_TMP"
+
+            # ---------------------------------------------
+            # Configure environment variables
+            # ---------------------------------------------
+            echo "Configuring environment..."
+
+            cat > "$APP_DIR/rps-backend/.env" << 'ENVEOF'
             NODE_ENV=production
             PORT=3000
             JWT_SECRET=${{ secrets.JWT_SECRET }}
@@ -216,54 +276,14 @@ jobs:
             SWAGGER_PATH=api-docs
             ENVEOF
 
-            echo "Backend deployed successfully"
-
-            # ---------------------------------------------
-            # Frontend deployment
-            # ---------------------------------------------
-            echo "Deploying frontend..."
-            
-            # Clone the repo to get frontend files
-            cd /tmp
-            rm -rf rps-frontend-temp
-            git clone --depth 1 -b "$TARGET_BRANCH" https://github.com/${{ github.repository }}.git rps-frontend-temp
-
-            if [ ! -d "/tmp/rps-frontend-temp/rps-frontend/nextjs-app" ]; then
-              echo "ERROR: frontend source directory not found"
-              exit 1
-            fi
-            cp -r /tmp/rps-frontend-temp/rps-frontend/nextjs-app/* "$APP_DIR/rps-frontend/nextjs-app/" || {
-              echo "ERROR: Failed to copy frontend files"
-              exit 1
-            }
-            if [ ! -f "$APP_DIR/rps-frontend/nextjs-app/package.json" ]; then
-              echo "ERROR: frontend package.json not found after copy"
-              exit 1
-            fi
-            cd "$APP_DIR/rps-frontend/nextjs-app"
-
-            # Install ALL dependencies (dev dependencies needed for build)
-            npm ci
-            
-            # Build the frontend
-            npm run build
-
-            # Verify .next directory was created
-            if [ ! -d ".next" ]; then
-              echo "ERROR: .next directory not found after build"
-              ls -la . | head -20
-              exit 1
-            fi
-
-            # Configure environment
-            cat > .env.local << 'ENVEOF'
+            cat > "$APP_DIR/rps-frontend/nextjs-app/.env.local" << 'ENVEOF'
             NEXT_PUBLIC_API_URL=/api
             API_URL=/api
             NEXT_PUBLIC_STRAPI_URL=
             STRAPI_API_TOKEN=
             ENVEOF
 
-            echo "Frontend deployed successfully"
+            echo "Environment configured"
 
             # ---------------------------------------------
             # PM2 Process Management
@@ -276,7 +296,7 @@ jobs:
               apps: [
                 {
                   name: "rps-backend",
-                  cwd: "./rps-backend",
+                  cwd: "$APP_DIR/rps-backend",
                   script: "$BACKEND_SCRIPT",
                   interpreter: "node",
                   env: {
@@ -296,7 +316,7 @@ jobs:
                 },
                 {
                   name: "rps-frontend",
-                  cwd: "./rps-frontend/nextjs-app",
+                  cwd: "$APP_DIR/rps-frontend/nextjs-app",
                   script: "node_modules/next/dist/bin/next",
                   args: "start -p 3001",
                   interpreter: "node",
@@ -319,15 +339,7 @@ jobs:
             };
             PM2EOF
 
-            # Reload PM2 with new configuration
             cd "$APP_DIR"
-            
-            # Use correct Node.js version from NVM
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
-            [ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
-
-            echo "Node version: $(node -v)"
 
             # Check if PM2 is installed
             if ! command -v pm2 >/dev/null 2>&1; then
@@ -337,12 +349,12 @@ jobs:
 
             # Stop existing processes to ensure clean start
             pm2 delete all 2>/dev/null || true
-            
-            # Start PM2
+
+            # Start PM2 with new artifacts
             pm2 start ecosystem.config.cjs
             pm2 save
 
-            # Enable PM2 startup on reboot and persist process list.
+            # Enable PM2 startup on reboot
             sudo env PATH="$PATH" "$(command -v pm2)" startup systemd -u "$USER" --hp "$HOME" >/dev/null 2>&1 || true
             pm2 save
 
@@ -351,5 +363,6 @@ jobs:
             pm2 logs --lines 20 --nostream
 
             echo "=== Deployment completed: $ENV ==="
+            echo "Commit deployed: $COMMIT_SHA"
             echo "Backend API: http://localhost:3000"
             echo "Frontend: http://localhost:3001"

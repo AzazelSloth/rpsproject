@@ -13,14 +13,23 @@ Ce guide permet de déployer le backend + frontend sur un VPS Ubuntu avec PM2 vi
 
 ## 2. Architecture de Déploiement
 
-### Nouveau Système Basé sur les Artefacts CI
+### Comment Fonctionne le Déploiement via SCP
 
-Le déploiement utilise désormais les **artefacts pré-construits** de GitHub Actions au lieu de reconstruire sur le VPS :
+Le workflow utilise désormais une approche **SCP + SSH** :
 
-1. GitHub Actions build et teste le code dans le cloud
-2. Les artefacts compilés sont uploadés (rps-backend, rps-frontend)
-3. Le script sur le VPS télécharge ces artefacts
-4. Déploiement du code **100% identique** à celui testé dans CI
+```
+1. GitHub Actions build et teste le code (CI)
+   ↓
+2. Artefacts uploadés (rps-backend, rps-frontend)
+   ↓
+3. SCP transfère les artefacts au VPS via SSH ✨
+   ↓
+4. SSH action déploie les artefacts (PAS de build sur VPS)
+   ↓
+5. PM2 redémarre avec le nouveau code
+```
+
+**Avantage** : Aucun token GitHub nécessaire, uniquement la clé SSH existante.
 
 ### Ancien vs Nouveau
 
@@ -66,7 +75,6 @@ Configurer ces secrets dans **Settings > Secrets and variables > Actions** :
 | `VPS_USER` | Utilisateur SSH | `ubuntu` |
 | `VPS_PORT` | Port SSH | `22` (ou port personnalisé) |
 | `VPS_SSH_PRIVATE_KEY` | Clé privée SSH | `-----BEGIN...` |
-| `GITHUB_TOKEN` | Token pour télécharger les artefacts | `ghp_xxxx` |
 | `JWT_SECRET` | Secret JWT pour le backend | Chaîne aléatoire |
 | `DB_HOST` | Hôte PostgreSQL | `localhost` ou IP externe |
 | `DB_PORT` | Port PostgreSQL | `5432` |
@@ -74,14 +82,7 @@ Configurer ces secrets dans **Settings > Secrets and variables > Actions** :
 | `DB_PASSWORD` | Mot de passe PostgreSQL | `motdepasse` |
 | `DB_NAME` | Nom de la base de données | `rps_db` |
 
-### Nouveau : GitHub Token pour Artefacts
-
-Le déploiement nécessite un **Personal Access Token** GitHub pour télécharger les artefacts CI :
-
-1. Créer un token ici: https://github.com/settings/tokens
-2. Portées requises: `repo` (accès complet au repository)
-3. Stocker le token en sécurité
-4. Ajouter comme secret `GITHUB_TOKEN` dans GitHub Actions
+**Note importante** : Aucun GitHub Personal Access Token n'est nécessaire. Le déploiement utilise uniquement la clé SSH existante.
 
 ### Déclencheurs
 
@@ -124,54 +125,34 @@ STRAPI_API_TOKEN=
 
 Pour un déploiement manuel (sans GitHub Actions) :
 
-### Option A: Script avec Artefacts CI (Recommandé)
+### Option A: Script avec Build Local (Manuel)
+
+Ce script clone le code depuis Git et build directement sur le VPS :
 
 ```bash
 # Se connecter au VPS
 ssh -i votre-cle ubuntu@IP_VPS
 
-# Accéder au répertoire du projet
-cd /home/ubuntu/rps-rps_dev  # adapter selon votre setup
-
-# Déployer avec le nouveau script (télécharge les artefacts CI)
-# Nécessite un GitHub Personal Access Token
-bash scripts/vps/deploy.sh ghp_votre_token main
-
-# Ou utiliser le script simplifié
-export GITHUB_TOKEN=ghp_votre_token
-bash scripts/vps/quick-deploy.sh main
-```
-
-### Option B: Ancienne Méthode (Déconseillée)
-
-Si vous devez absolument reconstruire sur le VPS :
-
-```bash
-# Cloner manuellement
+# Cloner le projet (première fois uniquement)
 cd $HOME
-git clone https://github.com/VOTRE_USER/rpsproject.git rpsproject
+git clone https://github.com/AzazelSloth/rpsproject.git rpsproject
 cd rpsproject
 
-# Utiliser l'ancien script de déploiement
-chmod +x scripts/vps/deploy-from-git.sh
-./scripts/vps/deploy-from-git.sh main
+# Rendre le script exécutable
+chmod +x scripts/vps/deploy.sh
+
+# Déployer (clone + build + PM2)
+./scripts/vps/deploy.sh main
+
+# Ou pour la branche deploy
+./scripts/vps/deploy.sh deploy
 ```
 
-### Créer un GitHub Personal Access Token
+**Note** : Cette méthode build sur le VPS et peut prendre 5-10 minutes. Elle est utile pour les tests manuels ou les déploiements hors CI.
 
-1. Aller sur https://github.com/settings/tokens
-2. Cliquer sur "Generate new token (classic)"
-3. Nom: `rps-deployment-vps`
-4. Expiration: 90 jours (ou personnalisé)
-5. Cocher les scopes: **repo** (toutes les sous-catégories)
-6. Générer et copier le token (commence par `ghp_`)
-7. **IMPORTANT**: Stocker le token en sécurité immédiatement
+### Option B: Automatique via GitHub Actions (Recommandé)
 
-```bash
-# Tester le token
-curl -H "Authorization: Bearer ghp_votre_token" \
-  https://api.github.com/repos/AzazelSloth/rpsproject/actions/workflows
-```
+Le workflow automatique transfère les artefacts pré-construits via SCP et les déploie sans build sur le VPS (2-3 minutes).
 
 ## 6. Commandes PM2 Utiles
 
@@ -197,29 +178,30 @@ pm2 save
 
 ### Le déploiement échoue
 
-- Vérifier les logs GitHub Actions
-- Vérifier la connexion SSH : `ssh -i clef -p PORT user@host`
+- Vérifier les logs GitHub Actions: https://github.com/AzazelSloth/rpsproject/actions
+- Vérifier la connexion SSH avec la clé `id_deploy` : `ssh -i ~/.ssh/id_deploy user@host`
 - Vérifier que PM2 est installé sur le VPS
-- **Nouveau**: Vérifier que le GitHub Token est valide et n'a pas expiré
+- Vérifier que la clé `id_deploy` est valide et autorisée
 
-### "No successful workflow run found"
+### Échec du transfert SCP
 
 ```bash
-# Cause: Aucun workflow CI n'a réussi pour cette branche
+# Cause: Problème de connexion SSH ou permissions
 # Solution:
-# 1. Vérifier les Actions GitHub: https://github.com/AzazelSloth/rpsproject/actions
-# 2. Pousser du code pour déclencher un build
-# 3. Attendre que le workflow se termine avec succès
+# 1. Tester la connexion SSH avec id_deploy: ssh -i ~/.ssh/id_deploy user@host
+# 2. Vérifier les logs GitHub Actions pour l'étape "Transfer artifacts to VPS via SCP"
+# 3. Vérifier que le VPS est accessible depuis GitHub Actions (port 22 ouvert)
+# 4. Vérifier authorized_keys sur le VPS: cat ~/.ssh/authorized_keys
 ```
 
-### "Artifact not found"
+### "Artifacts not found"
 
 ```bash
-# Cause: Les artefacts ont expiré (7 jours de rétention)
+# Cause: Le transfert SCP a échoué ou timing issue
 # Solution:
-# 1. Re-déclencher le workflow CI
-# 2. Vérifier que l'étape "Upload artifact" a réussi
-# 3. Re-lancer le déploiement rapidement après un build réussi
+# 1. Vérifier les logs du workflow pour l'étape SCP
+# 2. Se connecter au VPS et vérifier: ls -la /tmp/rps-deploy-*
+# 3. Relancer le workflow si nécessaire
 ```
 
 ### Les services ne démarrent pas
@@ -230,7 +212,7 @@ pm2 logs --err
 pm2 describe rps-backend
 pm2 describe rps-frontend
 
-# Vérifier les logs de déploiement
+# Vérifier les logs de déploiement (si déploiement manuel)
 tail -n 100 ~/rps-rps_dev/deployment.log
 ```
 
@@ -249,15 +231,16 @@ sudo chown -R $USER:$USER $HOME/rps-development/
 ### Code non mis à jour après déploiement
 
 ```bash
-# Vérifier le commit déployé
-tail -n 20 ~/rps-rps_dev/deployment.log | grep "Deploying commit"
+# Vérifier le commit déployé (dans les logs GitHub Actions)
+# Doit afficher le dernier commit de la branche
 
-# Comparer avec le dernier commit GitHub
-curl -H "Authorization: Bearer $GITHUB_TOKEN" \
-  https://api.github.com/repos/AzazelSloth/rpsproject/commits/main
+# Sur le VPS, vérifier les processus
+pm2 status
 
-# Force re-déploiement
-bash scripts/vps/deploy.sh $GITHUB_TOKEN main
+# Forcer le redémarrage
+pm2 restart all
+
+# Si nécessaire, re-déclencher le workflow manuellement depuis GitHub Actions
 ```
 
 ## 8. Configuration Nginx (optionnel)
@@ -317,66 +300,57 @@ pm2 startup systemd -u $USER --hp $HOME
 pm2 save
 ```
 
-### Étape 4: Configuration de l'Accès GitHub
+### Étape 4: Configuration de la Clé SSH pour GitHub Actions
+
+La clé utilisée est `~/.ssh/id_deploy` sur le VPS.
 
 ```bash
-# Tester la connexion à GitHub
-git ls-remote https://github.com/AzazelSloth/rpsproject.git HEAD
+# Vérifier si la clé existe sur le VPS
+ls -la ~/.ssh/id_deploy*
 
-# Si le repo est privé, configurer les credentials Git
-git config --global user.name "Votre Nom"
-git config --global user.email "votre@email.com"
+# Si elle n'existe pas, la générer
+ssh-keygen -t ed25519 -f ~/.ssh/id_deploy -C "github-actions-deployment"
+
+# Afficher la clé PUBLIQUE (à ajouter dans GitHub)
+cat ~/.ssh/id_deploy.pub
 ```
 
-### Étape 5: Créer un GitHub Personal Access Token
+**Dans GitHub** (Repo → Settings → Secrets and variables → Actions) :
 
-**Sur votre machine locale** (pas sur le VPS) :
+1. **`VPS_SSH_PRIVATE_KEY`** : Copier le contenu de `~/.ssh/id_deploy` (clé **PRIVÉE**) depuis le VPS
+2. **`VPS_HOST`** : `104.254.182.46`
+3. **`VPS_USER`** : `root` (ou votre utilisateur VPS)
+4. **`VPS_PORT`** : `22`
 
-1. Aller sur https://github.com/settings/tokens
-2. Cliquer sur **"Generate new token"** > **"Generate new token (classic)"**
-3. Configuration :
-   - **Nom**: `rps-deployment-vps`
-   - **Expiration**: 90 jours
-   - **Scopes**: Cocher `repo` (toutes les sous-catégories automatiquement)
-4. Cliquer **"Generate token"**
-5. **COPIER IMMÉDIATEMENT** le token (commence par `ghp_`)
+**Autoriser la clé publique sur le VPS** (si pas déjà fait) :
 
 ```bash
-# Tester le token (remplacer ghp_xxxx)
-curl -H "Authorization: Bearer ghp_xxxx" \
-  https://api.github.com/repos/AzazelSloth/rpsproject
+# Sur le VPS, ajouter la clé publique aux authorized_keys
+cat ~/.ssh/id_deploy.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
 ```
 
-### Étape 6: Préparer les Variables d'Environnement
-
-**Sur le VPS**, créer un fichier `.env` sécurisé :
+**Tester la connexion SSH** (depuis une machine locale avec la clé privée) :
 
 ```bash
-# Créer le fichier d'environnement
-cat > ~/.rps-env << 'EOF'
-# GitHub
-GITHUB_TOKEN=ghp_votre_token_ici
-
-# Base de données
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=rps_user
-DB_PASSWORD=votre_mot_de_passe_db
-DB_NAME=rps_db
-
-# JWT
-JWT_SECRET=votre_secret_jwt_tres_long_et_aleatoire
-EOF
-
-# Sécuriser le fichier
-chmod 600 ~/.rps-env
-
-# Charger les variables automatiquement
-echo "source ~/.rps-env" >> ~/.bashrc
-source ~/.rps-env
+ssh -i id_deploy root@104.254.182.46
 ```
 
-### Étape 7: Installer et Configurer PostgreSQL (si local)
+### Étape 5: Préparer les Variables d'Environnement
+
+Sur le VPS, les variables sont automatiquement injectées par le workflow GitHub Actions via les secrets. Pour un déploiement manuel, exporter les variables avant d'exécuter le script :
+
+```bash
+# Pour déploiement manuel uniquement
+export JWT_SECRET="votre_secret_jwt"
+export DB_HOST="localhost"
+export DB_PORT="5432"
+export DB_USER="rps_user"
+export DB_PASSWORD="votre_mot_de_passe"
+export DB_NAME="rps_db"
+```
+
+### Étape 6: Installer et Configurer PostgreSQL (si local)
 
 ```bash
 # Installer PostgreSQL
@@ -398,7 +372,7 @@ EOF
 PGPASSWORD='votre_mot_de_passe_db' psql -h localhost -p 5432 -U rps_user -d rps_db -c "SELECT 1"
 ```
 
-### Étape 8: Configurer Nginx (Optionnel mais Recommandé)
+### Étape 7: Configurer Nginx (Optionnel mais Recommandé)
 
 ```bash
 # Installer Nginx
@@ -421,22 +395,22 @@ sudo systemctl reload nginx
 sudo systemctl status nginx
 ```
 
-### Étape 9: Premier Déploiement
+### Étape 8: Premier Déploiement
 
-**Option A: Via GitHub Actions (Recommandé)**
+**Option A: Via GitHub Actions (Recommandé - Automatique)**
 
 1. Pousser du code sur `main` ou `deploy`
 2. Le workflow CI se déclenche automatiquement
-3. Le déploiement se fait via SSH automatiquement
+3. Build et tests dans GitHub Actions
+4. Transfert des artefacts au VPS via SCP
+5. Déploiement automatique via SSH
+6. PM2 redémarre avec le nouveau code
 
 **Option B: Manuellement sur le VPS**
 
 ```bash
 # Se connecter au VPS
 ssh ubuntu@104.254.182.46
-
-# Charger les variables d'environnement
-source ~/.rps-env
 
 # Cloner le projet (première fois)
 cd $HOME
@@ -446,15 +420,11 @@ cd rpsproject
 # Rendre le script exécutable
 chmod +x scripts/vps/deploy.sh
 
-# Déployer (télécharge les artefacts CI)
-bash scripts/vps/deploy.sh $GITHUB_TOKEN main
-
-# Vérifier le déploiement
-pm2 status
-pm2 logs --lines 50
+# Déployer (clone + build sur VPS)
+./scripts/vps/deploy.sh main
 ```
 
-### Étape 10: Vérification Post-Déploiement
+### Étape 9: Vérification Post-Déploiement
 
 ```bash
 # 1. Vérifier que les processus tournent
@@ -485,7 +455,7 @@ tail -n 50 ~/rps-rps_dev/deployment.log
 # [YYYY-MM-DD HH:MM:SS] [INFO] Deployment completed successfully!
 ```
 
-### Étape 11: Configuration du Firewall (Si UFW Actif)
+### Étape 10: Configuration du Firewall (Si UFW Actif)
 
 ```bash
 # Activer UFW si pas déjà fait
@@ -504,25 +474,6 @@ sudo ufw allow 443/tcp
 # Vérifier le statut
 sudo ufw status
 ```
-
-### Étape 12: Automatiser les Mises à Jour (Optionnel)
-
-Pour que le VPS se mette à jour automatiquement après chaque push :
-
-**Le workflow GitHub Actions le fait déjà automatiquement !**
-
-Mais si vous voulez un déploiement périodique ou manuel rapide :
-
-```bash
-# Créer un alias pour déploiement rapide
-echo "alias rps-deploy='cd ~/rpsproject && bash scripts/vps/deploy.sh \$GITHUB_TOKEN main'" >> ~/.bashrc
-source ~/.bashrc
-
-# Utilisation
-rps-deploy
-```
-
----
 
 ## 10. Checklist de Vérification
 
