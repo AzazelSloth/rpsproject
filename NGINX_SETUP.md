@@ -19,10 +19,7 @@ Vérifier le status:
 sudo systemctl status nginx
 ```
 
-## 2. Configuration rapide
-
-```bash
-cd /chemin/vers/ton/repo
+## 2. Configuration - Option A: Setup automatique (décommissionné)
 sudo bash scripts/vps/setup-nginx.sh
 ```
 
@@ -85,10 +82,6 @@ sudo netstat -tlnp | grep nginx
 Si tu relances l'app (PM2), Nginx continue de fonctionner.
 
 Pour recharger manuellement:
-
-```bash
-sudo systemctl reload nginx
-```
 
 ## 6. Configuration du Frontend
 
