@@ -165,41 +165,42 @@ jobs:
             # Clone the repo to get backend files
             cd /tmp
             rm -rf rps-backend-temp
-              git clone --depth 1 -b "$TARGET_BRANCH" https://github.com/${{ github.repository }}.git rps-backend-temp
-              if [ ! -d "rps-backend-temp/rps-backend" ]; then
-                echo "ERROR: rps-backend source directory not found"
-                exit 1
-              fi
-            
-              # Copy backend files (src, package.json, etc.)
-              cp -r rps-backend-temp/rps-backend/* "$APP_DIR/rps-backend/" || {
-                echo "ERROR: Failed to copy backend files"
-                exit 1
-              }
-            
-              if [ ! -f "$APP_DIR/rps-backend/package.json" ]; then
-                echo "ERROR: package.json not found after copy"
-                exit 1
-              fi
-            
-              cd "$APP_DIR/rps-backend"
-            
-              # Install ALL dependencies (dev dependencies needed for build)
-              npm ci
+            git clone --depth 1 -b "$TARGET_BRANCH" https://github.com/${{ github.repository }}.git rps-backend-temp
+            if [ ! -d "rps-backend-temp/rps-backend" ]; then
+              echo "ERROR: rps-backend source directory not found"
+              exit 1
+            fi
+
+            # Copy backend files (src, package.json, etc.)
+            cp -r rps-backend-temp/rps-backend/* "$APP_DIR/rps-backend/" || {
+              echo "ERROR: Failed to copy backend files"
+              exit 1
+            }
+
+            if [ ! -f "$APP_DIR/rps-backend/package.json" ]; then
+              echo "ERROR: package.json not found after copy"
+              exit 1
+            fi
+
+            cd "$APP_DIR/rps-backend"
+
+            # Install ALL dependencies (dev dependencies needed for build)
+            npm ci
             
             # Build the backend
             npm run build
-            
+
+            # Detect built backend entrypoint for PM2 (layout can vary)
+            BACKEND_SCRIPT="$(find dist -type f -name main.js | head -n 1 || true)"
+            if [ -z "$BACKEND_SCRIPT" ]; then
+              echo "ERROR: no main.js found under dist/ after build"
+              echo "Contents of dist/:"
+              ls -la dist/ || echo "dist/ directory doesn't exist"
+              exit 1
+            fi
+            echo "Detected backend entrypoint: $BACKEND_SCRIPT"
+
             # Configure environment
-              # Verify dist/main.js was created
-              if [ ! -f "dist/main.js" ]; then
-                echo "ERROR: dist/main.js not found after build"
-                echo "Contents of dist/:"
-                ls -la dist/ || echo "dist/ directory doesn't exist"
-                exit 1
-              fi
-            
-              # Configure environment
             cat > .env << 'ENVEOF'
             NODE_ENV=production
             PORT=3000
@@ -226,40 +227,35 @@ jobs:
             cd /tmp
             rm -rf rps-frontend-temp
             git clone --depth 1 -b "$TARGET_BRANCH" https://github.com/${{ github.repository }}.git rps-frontend-temp
-            
-            # Copy frontend files (package.json, etc.)
-            cp -r rps-frontend-temp/rps-frontend/nextjs-app/* "$APP_DIR/rps-frontend/nextjs-app/" 2>/dev/null || true
-            
+
+            if [ ! -d "/tmp/rps-frontend-temp/rps-frontend/nextjs-app" ]; then
+              echo "ERROR: frontend source directory not found"
+              exit 1
+            fi
+            cp -r /tmp/rps-frontend-temp/rps-frontend/nextjs-app/* "$APP_DIR/rps-frontend/nextjs-app/" || {
+              echo "ERROR: Failed to copy frontend files"
+              exit 1
+            }
+            if [ ! -f "$APP_DIR/rps-frontend/nextjs-app/package.json" ]; then
+              echo "ERROR: frontend package.json not found after copy"
+              exit 1
+            fi
             cd "$APP_DIR/rps-frontend/nextjs-app"
-              if [ ! -d "/tmp/rps-frontend-temp/rps-frontend/nextjs-app" ]; then
-                echo "ERROR: frontend source directory not found"
-                exit 1
-              fi
-              cp -r /tmp/rps-frontend-temp/rps-frontend/nextjs-app/* "$APP_DIR/rps-frontend/nextjs-app/" || {
-                echo "ERROR: Failed to copy frontend files"
-                exit 1
-              }
-              if [ ! -f "$APP_DIR/rps-frontend/nextjs-app/package.json" ]; then
-                echo "ERROR: frontend package.json not found after copy"
-                exit 1
-              fi
-              cd "$APP_DIR/rps-frontend/nextjs-app"
-            
-              # Install ALL dependencies (dev dependencies needed for build)
-              npm ci
+
+            # Install ALL dependencies (dev dependencies needed for build)
+            npm ci
             
             # Build the frontend
             npm run build
 
-            # Configure environment
-              # Verify .next directory was created
-              if [ ! -d ".next" ]; then
-                echo "ERROR: .next directory not found after build"
-                ls -la . | head -20
-                exit 1
-              fi
+            # Verify .next directory was created
+            if [ ! -d ".next" ]; then
+              echo "ERROR: .next directory not found after build"
+              ls -la . | head -20
+              exit 1
+            fi
 
-              # Configure environment
+            # Configure environment
             cat > .env.local << 'ENVEOF'
             NEXT_PUBLIC_API_URL=/api
             API_URL=/api
@@ -275,13 +271,13 @@ jobs:
             echo "Configuring PM2..."
 
             # Create PM2 ecosystem config
-            cat > "$APP_DIR/ecosystem.config.cjs" << 'PM2EOF'
+            cat > "$APP_DIR/ecosystem.config.cjs" << PM2EOF
             module.exports = {
               apps: [
                 {
                   name: "rps-backend",
                   cwd: "./rps-backend",
-                  script: "dist/main.js",
+                  script: "$BACKEND_SCRIPT",
                   interpreter: "node",
                   env: {
                     NODE_ENV: "production",
