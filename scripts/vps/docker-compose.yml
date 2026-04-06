@@ -80,8 +80,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      NEXT_PUBLIC_API_URL: http://localhost:3000
-      API_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:3000/api
+      API_URL: http://localhost:3000/api
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL:-}
       STRAPI_API_TOKEN: ${STRAPI_API_TOKEN:-}
     ports:

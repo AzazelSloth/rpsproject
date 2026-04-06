@@ -206,8 +206,8 @@ EOF
     # Frontend environment
     cd "$APP_DIR/rps-frontend/nextjs-app"
     cat > .env.local << EOF
-NEXT_PUBLIC_API_URL=/api
-API_URL=/api
+NEXT_PUBLIC_API_URL=http://127.0.0.1:3000/api
+API_URL=http://127.0.0.1:3000/api
 NEXT_PUBLIC_STRAPI_URL=
 STRAPI_API_TOKEN=
 EOF
@@ -513,7 +513,7 @@ main() {
     
     log "INFO" "=============================================="
     log "INFO" "Deployment completed successfully!"
-    log "INFO" "Backend API: http://localhost:3000"
+    log "INFO" "Backend API: http://localhost:3000/api"
     log "INFO" "Frontend: http://localhost:3001"
     log "INFO" "=============================================="
 }

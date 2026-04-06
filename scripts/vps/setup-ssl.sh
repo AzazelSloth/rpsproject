@@ -258,7 +258,7 @@ server {
 
     # API Backend (NestJS)
     location /api/ {
-        proxy_pass http://rps_backend/;
+        proxy_pass http://rps_backend;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
         proxy_set_header Host \$host;
@@ -274,7 +274,7 @@ server {
 
     # Health check
     location /health {
-        proxy_pass http://rps_backend/;
+        proxy_pass http://rps_backend/api;
         access_log off;
     }
 
