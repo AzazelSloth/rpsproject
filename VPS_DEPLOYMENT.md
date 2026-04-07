@@ -5,40 +5,50 @@ Ce guide permet de déployer le backend + frontend sur un VPS Ubuntu avec PM2 vi
 ## 1. Pré-requis Serveur
 
 - Ubuntu Server 22.04+ avec sudo
-- Node.js 20-24 (installé sur le VPS)
-- git (uniquement pour le clone minimal des fichiers source)
+- **Git** (clone du code depuis GitHub)
+- **Node.js 24** (installé via NVM sur le VPS)
+- **npm** (gestion des dépendances + build)
+- **PM2** (gestion des processus)
 - PostgreSQL accessible par le backend
-- SSH configuré pour GitHub Actions
-- **curl** et **unzip** (pour télécharger les artefacts CI)
+- SSH configuré avec la clé `~/.ssh/id_deploy`
 
 ## 2. Architecture de Déploiement
 
-### Comment Fonctionne le Déploiement via SCP
+### Approche Simplifiée - Git + npm + PM2
 
-Le workflow utilise désormais une approche **SCP + SSH** :
+Le workflow utilise les outils déjà installés sur le VPS :
 
 ```
-1. GitHub Actions build et teste le code (CI)
+1. Push sur GitHub → main/deploy
    ↓
-2. Artefacts uploadés (rps-backend, rps-frontend)
+2. GitHub Actions build et teste (CI uniquement)
    ↓
-3. SCP transfère les artefacts au VPS via SSH ✨
+3. SSH dans le VPS via clé id_deploy
    ↓
-4. SSH action déploie les artefacts (PAS de build sur VPS)
+4. git clone --depth 1 (code frais garanti)
    ↓
-5. PM2 redémarre avec le nouveau code
+5. npm ci + npm run build (sur le VPS)
+   ↓
+6. PM2 redémarre avec le nouveau code
 ```
 
-**Avantage** : Aucun token GitHub nécessaire, uniquement la clé SSH existante.
+### Outils Utilisés
 
-### Ancien vs Nouveau
+| Outil | Usage |
+|-------|-------|
+| **Git** | Clone le dernier code depuis GitHub |
+| **Node.js 24** | Runtime pour npm et l'app |
+| **npm** | Installe les dépendances + build |
+| **PM2** | Gère les processus backend/frontend |
+| **Nginx** | Reverse proxy (optionnel) |
+| **PostgreSQL** | Base de données |
 
-| Aspect | Ancien Système | Nouveau Système |
-|--------|----------------|-----------------|
-| Build | Sur le VPS (lent) | Dans GitHub Actions (rapide) |
-| Code déployé | Clone Git (peut être obsolète) | Artefact CI (garanti最新) |
-| Temps de déploiement | 5-10 min | 2-3 min |
-| Fiabilité | Variable (dépend du VPS) | Garantie (même build que CI) |
+**Avantages** :
+- ✅ Pas de SCP, pas de transfert de fichiers
+- ✅ Pas de GitHub Token nécessaire
+- ✅ Code garanti : `git clone --depth 1` = dernier commit
+- ✅ Build reproductible sur le VPS
+- ✅ Utilise uniquement les outils existants
 
 ### Structure sur le VPS
 
@@ -50,17 +60,17 @@ Le répertoire cible est calculé par le workflow avec `APP_DIR="$HOME/rps-$ENV"
 ```text
 $HOME/rps-rps_dev/            # pour la branche main
 ├── rps-backend/
-│   ├── src/          # Code source (pour référence)
-│   ├── dist/        # Build de production (artefact CI)
+│   ├── src/          # Code source (depuis Git)
+│   ├── dist/        # Build de production (npm run build sur VPS)
 │   ├── package.json
 │   └── .env         # Variables d'environnement
 ├── rps-frontend/nextjs-app/
-│   ├── app/         # Code source (pour référence)
-│   ├── .next/      # Build de production (artefact CI)
+│   ├── app/         # Code source (depuis Git)
+│   ├── .next/      # Build de production (npm run build sur VPS)
 │   ├── package.json
 │   └── .env.local  # Variables d'environnement
 ├── ecosystem.config.cjs  # Configuration PM2
-└── deployment.log        # Logs de déploiement
+└── deployment.log        # Logs de déploiement (si manuel)
 ```
 
 ## 3. Configuration GitHub Actions
@@ -71,10 +81,10 @@ Configurer ces secrets dans **Settings > Secrets and variables > Actions** :
 
 | Secret | Description | Exemple |
 |--------|-------------|---------|
-| `VPS_HOST` | IP publique du VPS | `192.168.1.100` |
-| `VPS_USER` | Utilisateur SSH | `ubuntu` |
-| `VPS_PORT` | Port SSH | `22` (ou port personnalisé) |
-| `VPS_SSH_PRIVATE_KEY` | Clé privée SSH | `-----BEGIN...` |
+| `VPS_HOST` | IP publique du VPS | `104.254.182.46` |
+| `VPS_USER` | Utilisateur SSH | `root` |
+| `VPS_PORT` | Port SSH | `22` |
+| `VPS_SSH_PRIVATE_KEY` | Clé privée SSH (`~/.ssh/id_deploy`) | `-----BEGIN...` |
 | `JWT_SECRET` | Secret JWT pour le backend | Chaîne aléatoire |
 | `DB_HOST` | Hôte PostgreSQL | `localhost` ou IP externe |
 | `DB_PORT` | Port PostgreSQL | `5432` |
@@ -82,7 +92,7 @@ Configurer ces secrets dans **Settings > Secrets and variables > Actions** :
 | `DB_PASSWORD` | Mot de passe PostgreSQL | `motdepasse` |
 | `DB_NAME` | Nom de la base de données | `rps_db` |
 
-**Note importante** : Aucun GitHub Personal Access Token n'est nécessaire. Le déploiement utilise uniquement la clé SSH existante.
+**Note** : Aucun GitHub Personal Access Token n'est nécessaire. Le déploiement utilise uniquement la clé SSH `id_deploy`.
 
 ### Déclencheurs
 
@@ -179,29 +189,25 @@ pm2 save
 ### Le déploiement échoue
 
 - Vérifier les logs GitHub Actions: https://github.com/AzazelSloth/rpsproject/actions
-- Vérifier la connexion SSH avec la clé `id_deploy` : `ssh -i ~/.ssh/id_deploy user@host`
-- Vérifier que PM2 est installé sur le VPS
-- Vérifier que la clé `id_deploy` est valide et autorisée
+- Vérifier la connexion SSH avec `id_deploy` : `ssh -i ~/.ssh/id_deploy root@104.254.182.46`
+- Vérifier que Git, Node.js, npm, PM2 sont installés sur le VPS
+- Vérifier que la clé `id_deploy` est valide et dans `authorized_keys`
 
-### Échec du transfert SCP
-
-```bash
-# Cause: Problème de connexion SSH ou permissions
-# Solution:
-# 1. Tester la connexion SSH avec id_deploy: ssh -i ~/.ssh/id_deploy user@host
-# 2. Vérifier les logs GitHub Actions pour l'étape "Transfer artifacts to VPS via SCP"
-# 3. Vérifier que le VPS est accessible depuis GitHub Actions (port 22 ouvert)
-# 4. Vérifier authorized_keys sur le VPS: cat ~/.ssh/authorized_keys
-```
-
-### "Artifacts not found"
+### Échec du build sur le VPS
 
 ```bash
-# Cause: Le transfert SCP a échoué ou timing issue
+# Cause: Dépendances manquantes ou erreur de compilation
 # Solution:
-# 1. Vérifier les logs du workflow pour l'étape SCP
-# 2. Se connecter au VPS et vérifier: ls -la /tmp/rps-deploy-*
-# 3. Relancer le workflow si nécessaire
+# 1. Vérifier les logs du workflow dans GitHub Actions
+# 2. Sur le VPS, tester manuellement:
+cd ~/rps-rps_dev/rps-backend
+npm ci && npm run build
+
+cd ~/rps-rps_dev/rps-frontend/nextjs-app
+npm ci && npm run build
+
+# 3. Vérifier la version Node.js:
+node -v  # Doit être 24.x
 ```
 
 ### Les services ne démarrent pas
@@ -212,8 +218,8 @@ pm2 logs --err
 pm2 describe rps-backend
 pm2 describe rps-frontend
 
-# Vérifier les logs de déploiement (si déploiement manuel)
-tail -n 100 ~/rps-rps_dev/deployment.log
+# Redémarrer manuellement
+pm2 restart all
 ```
 
 ### Problèmes de permissions
@@ -234,8 +240,9 @@ sudo chown -R $USER:$USER $HOME/rps-development/
 # Vérifier le commit déployé (dans les logs GitHub Actions)
 # Doit afficher le dernier commit de la branche
 
-# Sur le VPS, vérifier les processus
-pm2 status
+# Sur le VPS, vérifier le HEAD du clone
+cd ~/rps-rps_dev
+git log -1 --oneline
 
 # Forcer le redémarrage
 pm2 restart all
@@ -338,10 +345,12 @@ ssh -i id_deploy root@104.254.182.46
 
 ### Étape 5: Préparer les Variables d'Environnement
 
-Sur le VPS, les variables sont automatiquement injectées par le workflow GitHub Actions via les secrets. Pour un déploiement manuel, exporter les variables avant d'exécuter le script :
+Les variables d'environnement sont automatiquement injectées par le workflow GitHub Actions via les secrets. Aucune configuration manuelle nécessaire sur le VPS pour le déploiement automatique.
+
+Pour un déploiement **manuel** uniquement :
 
 ```bash
-# Pour déploiement manuel uniquement
+# Backend
 export JWT_SECRET="votre_secret_jwt"
 export DB_HOST="localhost"
 export DB_PORT="5432"
@@ -401,16 +410,17 @@ sudo systemctl status nginx
 
 1. Pousser du code sur `main` ou `deploy`
 2. Le workflow CI se déclenche automatiquement
-3. Build et tests dans GitHub Actions
-4. Transfert des artefacts au VPS via SCP
-5. Déploiement automatique via SSH
-6. PM2 redémarre avec le nouveau code
+3. Build et tests dans GitHub Actions (validation)
+4. SSH dans le VPS via clé `id_deploy`
+5. `git clone` du dernier code
+6. `npm ci` + `npm run build` sur le VPS
+7. PM2 redémarre avec le nouveau code
 
 **Option B: Manuellement sur le VPS**
 
 ```bash
 # Se connecter au VPS
-ssh ubuntu@104.254.182.46
+ssh -i ~/.ssh/id_deploy root@104.254.182.46
 
 # Cloner le projet (première fois)
 cd $HOME
@@ -420,7 +430,7 @@ cd rpsproject
 # Rendre le script exécutable
 chmod +x scripts/vps/deploy.sh
 
-# Déployer (clone + build sur VPS)
+# Déployer (clone + build + PM2)
 ./scripts/vps/deploy.sh main
 ```
 
@@ -434,8 +444,8 @@ pm2 status
 # ┌────┬─────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
 # │ id │ name            │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
 # ├────┼─────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
-# │ 0  │ rps-backend     │ default     │ N/A     │ fork    │ 12345    │ 10m    │ 0    │ online    │ 0%       │ 50mb     │ ubuntu   │ disabled │
-# │ 1  │ rps-frontend    │ default     │ N/A     │ fork    │ 12346    │ 10m    │ 0    │ online    │ 0%       │ 80mb     │ ubuntu   │ disabled │
+# │ 0  │ rps-backend     │ default     │ N/A     │ fork    │ 12345    │ 10m    │ 0    │ online    │ 0%       │ 50mb     │ root     │ disabled │
+# │ 1  │ rps-frontend    │ default     │ N/A     │ fork    │ 12346    │ 10m    │ 0    │ online    │ 0%       │ 80mb     │ root     │ disabled │
 # └────┴─────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
 
 # 2. Tester le backend
@@ -447,12 +457,10 @@ curl http://localhost:3001
 # 4. Tester via Nginx (si configuré)
 curl http://localhost:8786/login
 
-# 5. Voir les logs de déploiement
-tail -n 50 ~/rps-rps_dev/deployment.log
-
-# Doit contenir:
-# [YYYY-MM-DD HH:MM:SS] [INFO] Deploying commit: abc12345
-# [YYYY-MM-DD HH:MM:SS] [INFO] Deployment completed successfully!
+# 5. Vérifier le commit déployé
+cd ~/rps-rps-dev
+git log -1 --oneline
+# Doit correspondre au dernier commit de la branche main
 ```
 
 ### Étape 10: Configuration du Firewall (Si UFW Actif)
@@ -479,24 +487,27 @@ sudo ufw status
 
 Après avoir suivi toutes les étapes, vérifier :
 
-- [ ] Node.js 24.14.1 installé et fonctionnel
+- [ ] Git installé et fonctionnel (`git --version`)
+- [ ] Node.js 24.14.1 installé (`node -v`)
+- [ ] npm installé (`npm -v`)
 - [ ] PM2 installé et configuré au démarrage
-- [ ] GitHub Token créé et stocké sécurisé
+- [ ] Clé `id_deploy` créée et dans `authorized_keys`
+- [ ] Secrets GitHub configurés (surtout `VPS_SSH_PRIVATE_KEY`)
 - [ ] PostgreSQL accessible et configuré
 - [ ] Nginx installé et configuré (optionnel)
-- [ ] Premier déploiement réussi
+- [ ] Premier déploiement réussi (workflow vert)
 - [ ] `pm2 status` montre les 2 processus "online"
 - [ ] Application accessible à `http://104.254.182.46:8786/login`
 - [ ] Les changements des développeurs apparaissent après push
-- [ ] Logs de déploiement propres (pas d'erreurs)
+- [ ] `git log -1` sur le VPS correspond au dernier commit GitHub
 
 ---
 
 ## 11. Support et Ressources
 
-- **Logs de déploiement**: `~/rps-rps_dev/deployment.log`
+- **Logs GitHub Actions**: https://github.com/AzazelSloth/rpsproject/actions
 - **Logs PM2**: `pm2 logs`
 - **Logs Nginx**: `/var/log/nginx/rps_error.log`
-- **GitHub Actions**: https://github.com/AzazelSloth/rpsproject/actions
+- **Code déployé sur VPS**: `cd ~/rps-rps_dev && git log -1`
 - **Documentation complète**: `scripts/vps/DEPLOYMENT.md`
 - **Résumé en français**: `scripts/vps/RESUME.md`
