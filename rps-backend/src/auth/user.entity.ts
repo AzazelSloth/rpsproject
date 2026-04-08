@@ -10,14 +10,14 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  name: string;
+  @Column({ type: 'varchar', nullable: true })
+  name: string | null;
 
-  @Column({ unique: true })
-  email: string;
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  email: string | null;
 
-  @Column()
-  password: string;
+  @Column({ type: 'varchar', nullable: true })
+  password: string | null;
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;

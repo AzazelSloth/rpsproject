@@ -10,9 +10,14 @@ export default async function EmployeesPage({
   searchParams: Promise<{ scenario?: string }>;
 }) {
   const { scenario } = await searchParams;
-  const managementData = await getServerTrpcCaller().data.employeeManagement({
-    scenario: scenario ?? null,
-  });
+  const [managementData, surveyBuilderData] = await Promise.all([
+    getServerTrpcCaller().data.employeeManagement({
+      scenario: scenario ?? null,
+    }),
+    getServerTrpcCaller().data.surveyBuilder({
+      scenario: scenario ?? null,
+    }),
+  ]);
 
   return (
     <section className="space-y-6">
@@ -21,7 +26,12 @@ export default async function EmployeesPage({
         title="Suivi des collaborateurs invites"
         description="Vue table simple pour l'import, le statut de reponse et les prochaines actions de relance."
       />
-      <EmployeesTableDemo managementData={managementData} />
+      <EmployeesTableDemo
+        managementData={managementData}
+        companies={surveyBuilderData.companies}
+        defaultCompanyId={surveyBuilderData.companyId ?? managementData.companyId}
+        defaultCampaignName={surveyBuilderData.title}
+      />
     </section>
   );
 }

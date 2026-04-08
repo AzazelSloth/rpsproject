@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { CampaignService } from './campaign.service';
 import { Campaign } from './campaign.entity';
 
-describe('CampaignService', () => {
+describe('ServiceCampagne', () => {
   let service: CampaignService;
 
   beforeEach(async () => {
@@ -26,7 +26,7 @@ describe('CampaignService', () => {
     service = module.get<CampaignService>(CampaignService);
   });
 
-  it('should be defined', () => {
+  it('devrait être défini', () => {
     expect(service).toBeDefined();
   });
 });

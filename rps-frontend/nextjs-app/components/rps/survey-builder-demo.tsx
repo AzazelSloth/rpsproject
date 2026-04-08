@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, Pill, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { SurveyBuilderData } from "@/lib/repositories/rps-repository";
@@ -91,6 +92,29 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
     });
   }
 
+  function createCompany() {
+    const trimmedName = newCompanyName.trim();
+
+    if (trimmedName.length < 2) {
+      setError("Saisis un nom d'entreprise valide.");
+      return;
+    }
+
+    runMutation<{ id: number; name: string }>(
+      () =>
+        getTrpcClient().adminSurveys.createCompany.mutate({
+          name: trimmedName,
+        }),
+      "Entreprise creee.",
+      undefined,
+      (result) => {
+        setCompanies((current) => [...current, result]);
+        setCompanyId(result.id);
+        setNewCompanyName("");
+      },
+    );
+  }
+
   function saveCampaign() {
     if (!companyId) {
       setError("Choisis une entreprise avant d'enregistrer la campagne.");
@@ -125,29 +149,6 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
       (result) => {
         setCampaignId(result.id);
         setStatus(result.status ?? "preparation");
-      },
-    );
-  }
-
-  function createCompany() {
-    const trimmedName = newCompanyName.trim();
-
-    if (trimmedName.length < 2) {
-      setError("Saisis un nom d'entreprise valide.");
-      return;
-    }
-
-    runMutation<{ id: number; name: string }>(
-      () =>
-        getTrpcClient().adminSurveys.createCompany.mutate({
-          name: trimmedName,
-        }),
-      "Entreprise ajoutee.",
-      undefined,
-      (result) => {
-        setCompanies((current) => [...current, result]);
-        setCompanyId(result.id);
-        setNewCompanyName("");
       },
     );
   }
@@ -396,7 +397,10 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_0.9fr]">
           <div className="space-y-4">
-            <div className="rounded-[16px] border border-slate-200 bg-slate-50 p-4">
+            <div className="relative rounded-[16px] border border-slate-200 bg-slate-50 p-4">
+              <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+                1
+              </span>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Entreprise</p>
               <select
                 value={companyId ?? ""}
@@ -420,42 +424,72 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
                   placeholder="Ajouter une nouvelle entreprise"
                 />
                 <SecondaryButton disabled={isPending} onClick={createCompany}>
-                  Ajouter
+                  Creer
                 </SecondaryButton>
               </div>
             </div>
 
-            <input
-              className="w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-            />
-            <textarea
-              className="min-h-28 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-          </div>
-
-          <div className="space-y-4 rounded-[16px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Calendrier</p>
-            <div className="grid gap-4">
+            <div className="relative rounded-[16px] border border-slate-200 bg-white p-4">
+              <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+                3
+              </span>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Sondage</p>
               <input
-                type="date"
-                value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
-                className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+                className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
               />
-              <input
-                type="date"
-                value={endDate}
-                onChange={(event) => setEndDate(event.target.value)}
-                className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+              <textarea
+                className="mt-3 min-h-28 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
               />
             </div>
-            <p className="text-sm leading-6 text-slate-600">
-              Choisis d&apos;abord l&apos;entreprise, enregistre la campagne, puis ajoute les questions et leurs choix.
-            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="relative rounded-[16px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-4">
+              <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+                2
+              </span>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Calendrier</p>
+              <div className="grid gap-4">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+                />
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+                />
+              </div>
+              <p className="text-sm leading-6 text-slate-600">
+                Choisis d&apos;abord l&apos;entreprise, enregistre la campagne, puis ajoute les questions et leurs choix.
+              </p>
+            </div>
+
+            <div className="relative rounded-[16px] border border-slate-200 bg-white p-4">
+              <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+                4
+              </span>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+                Importer la liste des contacts
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Importe un fichier Excel ou CSV pour ajouter les employes lies a cette campagne.
+              </p>
+              <Link
+                href="/employees"
+                className="mt-4 inline-flex items-center justify-center rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-amber-300 hover:text-slate-900"
+              >
+                Importer
+              </Link>
+              <p className="mt-3 text-xs text-slate-500">Amenne a la page gestion des employes.</p>
+            </div>
           </div>
         </div>
 

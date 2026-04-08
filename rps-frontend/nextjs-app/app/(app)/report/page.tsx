@@ -1,6 +1,6 @@
 import { Card, PrimaryButton, SectionHeader } from "@/components/rps/ui";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
-import Link from "next/link";
+import DownloadReportButton from "./DownloadReportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -20,13 +20,11 @@ export default async function ReportPage({
   return (
     <section className="space-y-6">
       <SectionHeader
-        eyebrow="Report"
-        title="Rapport pret a etre partage"
-        description="Un format lisible pour comite de direction, DRH et managers avec synthese, zones de risque et recommandations operationnelles."
+        eyebrow="Rapport"
+        title="Rapport"
+        description="Synthese et recommandations du sondage selectionne."
         action={
-          <Link href={exportHref}>
-            <PrimaryButton>Telecharger Word</PrimaryButton>
-          </Link>
+          <DownloadReportButton href={exportHref} />
         }
       />
 

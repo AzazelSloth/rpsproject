@@ -1,4 +1,5 @@
 import {
+  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
@@ -7,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { Campaign } from '../campaign/campaign.entity';
 import { Employee } from '../employee/employee.entity';
 
@@ -36,7 +38,7 @@ export class CampaignParticipant {
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   participation_token: string;
 
   @Column({
@@ -56,4 +58,11 @@ export class CampaignParticipant {
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
+
+  @BeforeInsert()
+  ensureParticipationToken() {
+    if (!this.participation_token) {
+      this.participation_token = randomUUID();
+    }
+  }
 }

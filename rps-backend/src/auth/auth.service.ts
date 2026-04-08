@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,6 +16,11 @@ const bcrypt = bcryptModule as unknown as {
   hash(data: string, saltOrRounds: number): Promise<string>;
 };
 
+const allowedAdminEmails = new Set([
+  'isabelle@laroche360.ca',
+  'roxanne@laroche360.ca',
+]);
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -24,8 +30,13 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
+    const normalizedEmail = registerDto.email.trim().toLowerCase();
+    if (!allowedAdminEmails.has(normalizedEmail)) {
+      throw new ForbiddenException('Registration not allowed for this email');
+    }
+
     const existingUser = await this.userRepository.findOne({
-      where: { email: registerDto.email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
@@ -35,6 +46,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
     const user = this.userRepository.create({
       ...registerDto,
+      email: normalizedEmail,
       password: hashedPassword,
     });
 
@@ -56,10 +68,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      loginDto.password,
-      user.password,
-    );
+    const isPasswordValid = user.password
+      ? await bcrypt.compare(loginDto.password, user.password)
+      : false;
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');

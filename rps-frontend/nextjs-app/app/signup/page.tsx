@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
-import { login, saveAuth } from "@/lib/backend/auth";
+import { register, saveAuth } from "@/lib/backend/auth";
 
-export default function LoginPage() {
+const allowedEmails = ["isabelle@laroche360.ca", "roxanne@laroche360.ca"];
+
+export default function SignupPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@laroche.fr");
-  const [password, setPassword] = useState("password");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -20,24 +23,22 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await login({ email, password });
+      const response = await register({ name, email, password });
       saveAuth(response);
       router.push("/dashboard");
     } catch (err) {
-      setError("Identifiants invalides. Veuillez reessayer.");
+      setError(
+        "Inscription impossible. Utilisez un email autorise ou verifiez les informations."
+      );
       console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDemoLogin = () => {
-    router.push("/dashboard");
-  };
-
   return (
     <div className="flex min-h-screen items-center justify-center px-5 py-12">
-      <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+      <div className="grid w-full max-w-5xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div className="space-y-6">
           <div className="space-y-4">
             <p className="inline-flex rounded-full bg-[rgba(255,252,246,0.92)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[#8a651f] ring-1 ring-[#e6cf9f]">
@@ -45,43 +46,43 @@ export default function LoginPage() {
             </p>
             <BrandLogo />
           </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#8a651f]">
-            Prevention, pilotage et restitution consultant
-          </p>
-          <h1 className="font-[family-name:var(--font-manrope)] text-5xl font-extrabold tracking-tight text-slate-900">
-            Une interface plus sobre, plus nette, centree sur les decisions RH.
+          <h1 className="font-[family-name:var(--font-manrope)] text-4xl font-extrabold tracking-tight text-slate-900">
+            Creer un compte admin
           </h1>
           <p className="max-w-2xl text-base leading-7 text-slate-600">
-            Laroche 360 structure la campagne RPS, la collecte terrain et la production d&apos;un rapport Word modifiable par les consultants.
+            Inscription reservee aux administrateurs internes Laroche 360.
           </p>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={handleDemoLogin}
-              className="rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
-            >
-              Acceder a la demo admin
-            </button>
-            <Link
-              href="/survey-response"
-              className="rounded-[12px] border border-[#d8ccba] bg-[rgba(255,252,246,0.92)] px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-[#faf4eb]"
-            >
-              Voir le parcours salarie
-            </Link>
+          <div className="rounded-[12px] border border-[#e6cf9f] bg-[rgba(255,252,246,0.92)] px-4 py-3 text-sm text-slate-600">
+            Emails autorises: {allowedEmails.join(", ")}
           </div>
         </div>
 
         <Card className="mx-auto w-full max-w-md p-6 sm:p-8">
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
-            Bienvenue
+            Inscription
           </p>
           <h2 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold tracking-tight">
-            Acces a l&apos;espace Laroche
+            Nouvel acces admin
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Pilotage des campagnes RPS et revue des rapports consultants
+            Renseignez le nom, l&apos;email autorise et un mot de passe.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <div>
+              <label htmlFor="name" className="sr-only">
+                Nom
+              </label>
+              <input
+                id="name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f7f2ea] px-4 py-3 text-sm outline-none focus:border-[#c9a86c] focus:ring-1 focus:ring-[#c9a86c]"
+                placeholder="Isabelle Tremblay"
+              />
+            </div>
             <div>
               <label htmlFor="email" className="sr-only">
                 Email
@@ -93,7 +94,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f7f2ea] px-4 py-3 text-sm outline-none focus:border-[#c9a86c] focus:ring-1 focus:ring-[#c9a86c]"
-                placeholder="admin@laroche.fr"
+                placeholder="isabelle@laroche360.ca"
               />
             </div>
             <div>
@@ -104,10 +105,11 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 required
+                minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f7f2ea] px-4 py-3 text-sm outline-none focus:border-[#c9a86c] focus:ring-1 focus:ring-[#c9a86c]"
-                placeholder="........"
+                placeholder="Minimum 6 caracteres"
               />
             </div>
 
@@ -118,14 +120,14 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? "Connexion..." : "Se connecter"}
+              {isLoading ? "Creation..." : "Creer le compte"}
             </button>
           </form>
 
-          <div className="mt-4 space-y-2 text-center text-xs text-slate-500">
-            <p>Demo: admin@laroche.fr / password</p>
-            <Link href="/signup" className="text-[#8a651f] underline-offset-4 hover:underline">
-              Creer un compte admin
+          <div className="mt-4 text-center text-xs text-slate-500">
+            Deja un compte ?{" "}
+            <Link href="/login" className="text-[#8a651f] underline-offset-4 hover:underline">
+              Se connecter
             </Link>
           </div>
         </Card>

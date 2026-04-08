@@ -240,6 +240,7 @@ export class CampaignParticipantService {
       relations: { employee: true },
       order: { id: 'ASC' },
     });
+    await this.ensureParticipationTokens(participants);
 
     const total = participants.length;
     const completed = participants.filter(
@@ -262,6 +263,24 @@ export class CampaignParticipantService {
         total === 0 ? 0 : Number(((completed / total) * 100).toFixed(2)),
       participants,
     };
+  }
+
+  private async ensureParticipationTokens(
+    participants: CampaignParticipant[],
+  ) {
+    const missingTokens = participants.filter(
+      (participant) => !participant.participation_token,
+    );
+
+    if (!missingTokens.length) {
+      return;
+    }
+
+    for (const participant of missingTokens) {
+      participant.participation_token = randomUUID();
+    }
+
+    await this.campaignParticipantRepository.save(missingTokens);
   }
 
   async importEmployeesForCampaign(

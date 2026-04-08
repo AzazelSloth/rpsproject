@@ -231,11 +231,12 @@ const dynamicInsights = [
 ] satisfies StrapiInsight[];
 
 export const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/surveys", label: "Sondages" },
-  { href: "/employees", label: "Employes" },
+  { href: "/dashboard", label: "Tableau de bord" },
+  { href: "/surveys?tab=list", label: "Liste des sondages" },
+  { href: "/surveys?tab=create", label: "Creer un sondage" },
+  { href: "/surveys?tab=edit", label: "Modifier un sondage" },
+  { href: "/employees", label: "Gestion des employes" },
   { href: "/results", label: "Resultats" },
-  { href: "/report", label: "Rapports" },
 ];
 
 export const notifications = dynamicNotifications;

@@ -10,11 +10,20 @@ import { getTrpcClient } from "@/lib/trpc/client";
 
 export function EmployeesTableDemo({
   managementData,
+  companies,
+  defaultCompanyId,
+  defaultCampaignName,
 }: {
   managementData: EmployeeManagementData;
+  companies: { id: number; name: string }[];
+  defaultCompanyId: number | null;
+  defaultCampaignName: string;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [companyFilter, setCompanyFilter] = useState<string>(
+    defaultCompanyId ? String(defaultCompanyId) : "all",
+  );
   const [filter, setFilter] = useState<"all" | "completed" | "pending" | "reminded">("all");
   const [csv, setCsv] = useState(
     "Nom,Prenom,Adresse courriel,Fonction\nLefebvre,Anne,anne.lefebvre@test.com,gestionnaire\nTremblay,Marc,marc.tremblay@test.com,cadre",
@@ -29,10 +38,13 @@ export function EmployeesTableDemo({
       const haystack = `${participant.name} ${participant.email} ${participant.department}`.toLowerCase();
       const matchesQuery = haystack.includes(query.toLowerCase());
       const matchesFilter = filter === "all" || participant.status === filter;
+      const matchesCompany =
+        companyFilter === "all" ||
+        (managementData.companyId !== null && String(managementData.companyId) === companyFilter);
 
-      return matchesQuery && matchesFilter;
+      return matchesQuery && matchesFilter && matchesCompany;
     });
-  }, [filter, managementData.participants, query]);
+  }, [companyFilter, filter, managementData.companyId, managementData.participants, query]);
 
   function runAdminAction(action: () => Promise<unknown>, successMessage: string) {
     setFeedback(null);
@@ -154,7 +166,7 @@ export function EmployeesTableDemo({
         ))}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+      <div className="grid gap-5 xl:grid-cols-[3fr_1fr]">
         <Card className="p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
             Import campagne
@@ -202,9 +214,6 @@ export function EmployeesTableDemo({
             <SecondaryButton disabled={isPending} onClick={() => handleRemind(false)}>
               Relancer les en attente
             </SecondaryButton>
-            <SecondaryButton disabled={isPending} onClick={() => handleRemind(true)}>
-              Forcer une relance
-            </SecondaryButton>
           </div>
           {feedback ? <p className="mt-4 text-sm font-medium text-emerald-700">{feedback}</p> : null}
           {error ? <p className="mt-4 text-sm font-medium text-rose-700">{error}</p> : null}
@@ -212,29 +221,42 @@ export function EmployeesTableDemo({
 
         <Card className="p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-            Pilotage campagne
+            Selection
           </p>
           <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold">
-            Etat des invitations
+            Entreprise et sondage
           </h3>
-          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <div className="mt-5 space-y-4">
+            <div>
+              <p className="text-sm text-slate-500">Entreprise</p>
+              <select
+                value={companyFilter}
+                onChange={(event) => setCompanyFilter(event.target.value)}
+                className="mt-2 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+              >
+                <option value="all">Toutes les entreprises</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={String(company.id)}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Sondage</p>
+              <select
+                value={defaultCampaignName}
+                onChange={() => null}
+                className="mt-2 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+              >
+                <option value={defaultCampaignName}>{defaultCampaignName}</option>
+              </select>
+            </div>
             <div className="rounded-[12px] bg-slate-50 p-4">
               <p className="text-sm text-slate-500">Statut</p>
               <p className="mt-2 text-lg font-bold capitalize">{managementData.campaignStatus}</p>
             </div>
-            <div className="rounded-[12px] bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">Relances</p>
-              <p className="mt-2 text-lg font-bold">{managementData.remindedParticipants}</p>
-            </div>
-            <div className="rounded-[12px] bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">Campagne ID</p>
-              <p className="mt-2 text-lg font-bold">{managementData.campaignId ?? "-"}</p>
-            </div>
           </div>
-          <p className="mt-5 text-sm leading-6 text-slate-600">
-            Chaque participant dispose d&apos;un lien personnel vers son questionnaire, visible
-            dans le tableau ci-dessous.
-          </p>
         </Card>
       </div>
 
@@ -255,6 +277,18 @@ export function EmployeesTableDemo({
               placeholder="Rechercher un participant"
               className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
             />
+            <select
+              value={companyFilter}
+              onChange={(event) => setCompanyFilter(event.target.value)}
+              className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+            >
+              <option value="all">Toutes les entreprises</option>
+              {companies.map((company) => (
+                <option key={company.id} value={String(company.id)}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
             <select
               value={filter}
               onChange={(event) =>
