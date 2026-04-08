@@ -55,10 +55,10 @@ export default function LoginPage() {
             <BrandLogo />
           </div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#8a651f]">
-            Prevention, pilotage et restitution consultant
+            Mesurez, comprenez, agissez
           </p>
           <h1 className="font-[family-name:var(--font-manrope)] text-5xl font-extrabold tracking-tight text-slate-900">
-            Une interface plus sobre, plus nette, centree sur les decisions RH.
+            Votre solution complete pour evaluer les risques psychosociaux.
           </h1>
           <p className="max-w-2xl text-base leading-7 text-slate-600">
             Laroche 360 structure la campagne RPS, la collecte terrain et la production d&apos;un rapport Word modifiable par les consultants.

@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { join } from 'path';
 import { DataSource } from 'typeorm';
 import { User } from '../auth/user.entity';
 import { CampaignParticipant } from '../campaign-participant/campaign-participant.entity';
@@ -28,10 +29,8 @@ export const AppDataSource = new DataSource({
     SurveyResponse,
     CampaignParticipant,
   ],
-  migrations: [
-    'src/database/migrations/*.ts',
-    'dist/database/migrations/*.js',
-  ],
+  // Use runtime-relative path so TypeORM loads migrations once (src in ts-node, dist in node).
+  migrations: [join(__dirname, 'migrations/*{.ts,.js}')],
 });
 
 export default AppDataSource;
