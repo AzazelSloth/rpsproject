@@ -205,6 +205,14 @@ jobs:
             # Install ALL dependencies (dev deps needed for build)
             npm ci
 
+            # Configure frontend environment BEFORE build so NEXT_PUBLIC_* variables are baked correctly
+            cat > .env.local << 'ENVEOF'
+            NEXT_PUBLIC_API_URL=/api
+            API_URL=http://127.0.0.1:3000/api
+            NEXT_PUBLIC_STRAPI_URL=
+            STRAPI_API_TOKEN=
+            ENVEOF
+
             # Build frontend
             npm run build
 
@@ -214,14 +222,6 @@ jobs:
               ls -la . | head -20
               exit 1
             fi
-
-            # Configure frontend environment
-            cat > .env.local << 'ENVEOF'
-            NEXT_PUBLIC_API_URL=/api
-            API_URL=http://127.0.0.1:3000/api
-            NEXT_PUBLIC_STRAPI_URL=
-            STRAPI_API_TOKEN=
-            ENVEOF
 
             echo "Frontend built successfully"
 
@@ -297,6 +297,14 @@ jobs:
             # Enable PM2 startup on reboot
             sudo env PATH="$PATH" "$(command -v pm2)" startup systemd -u "$USER" --hp "$HOME" >/dev/null 2>&1 || true
             pm2 save
+
+            # Apply Nginx configuration from repository (frontend + backend + trpc routing)
+            if [ -f "$APP_DIR/scripts/vps/nginx.rps.conf" ]; then
+              sudo cp "$APP_DIR/scripts/vps/nginx.rps.conf" /etc/nginx/sites-available/rps
+              sudo ln -sf /etc/nginx/sites-available/rps /etc/nginx/sites-enabled/rps
+              sudo nginx -t
+              sudo systemctl reload nginx
+            fi
 
             # Show status
             pm2 status

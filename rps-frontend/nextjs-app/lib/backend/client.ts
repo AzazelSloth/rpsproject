@@ -11,7 +11,7 @@ function resolveBackendUrl() {
     }
   }
 
-  return undefined;
+  return isServer ? "http://127.0.0.1:3000/api" : "/api";
 }
 
 const backendUrl = resolveBackendUrl();
