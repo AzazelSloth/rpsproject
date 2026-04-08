@@ -8,7 +8,7 @@ export function getTrpcClient() {
     trpcClient = createTRPCProxyClient<AppRouter>({
       links: [
         httpBatchLink({
-          url: "/api/trpc",
+          url: "/trpc",
         }),
       ],
     });
