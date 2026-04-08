@@ -171,12 +171,18 @@ export function SurveyBuilderDemo({
       return;
     }
 
+    const selectedCompanyId = companyId;
+    if (selectedCompanyId === null) {
+      setError("Choisis une entreprise avant d'enregistrer la campagne.");
+      return;
+    }
+
     if (campaignId) {
       runMutation(
         () =>
           getTrpcClient().adminSurveys.updateCampaign.mutate({
             campaignId,
-            companyId,
+            companyId: selectedCompanyId,
             title: trimmedTitle,
             startDate,
             endDate,
@@ -189,7 +195,7 @@ export function SurveyBuilderDemo({
     runMutation<{ id: number; status?: string }>(
       () =>
         getTrpcClient().adminSurveys.createCampaign.mutate({
-          companyId,
+          companyId: selectedCompanyId,
           title: trimmedTitle,
           startDate,
           endDate,
