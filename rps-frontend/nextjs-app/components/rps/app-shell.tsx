@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { getDemoDataset, resolveDemoScenario } from "@/lib/demo-data";
 import { Card } from "@/components/rps/ui";
-import { logout, getUser } from "@/lib/backend/auth";
+import { logout, getUser, type User as AuthUser } from "@/lib/backend/auth";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Bonjour, Admin",
@@ -23,11 +23,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const scenario = resolveDemoScenario(searchParams.get("scenario"));
   const demoDataset = getDemoDataset(scenario);
   const title = pageTitles[pathname] ?? "RPS";
-  const user = getUser();
+  const [user, setUser] = useState<AuthUser | null>(null);
   const activeSurveyTab = searchParams.get("tab") ?? "create";
   const isSurveyRoute = pathname === "/surveys";
   const [surveysOpen, setSurveysOpen] = useState(isSurveyRoute);
   const showSurveyMenu = surveysOpen || isSurveyRoute;
+  const displayName = user?.name?.trim() || "Admin";
+  const displayEmail = user?.email?.trim() || "isabelle@laroche360.ca";
+  const initials =
+    displayName
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((name) => name[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "A";
+
+  useEffect(() => {
+    setUser(getUser());
+  }, []);
 
   function buildHref(path: string) {
     const [pathPart, queryString] = path.split("?");
@@ -196,18 +210,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex flex-wrap items-center gap-3">
               <div className="card-surface flex items-center gap-3 rounded-[12px] px-4 py-2.5">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d5ba85] bg-[#181818] font-bold text-[#f7f1e6]">
-                  {(user?.name || "Admin")
-                    .split(" ")
-                    .map((name) => name[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2)}
+                  {initials}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">{user?.name || "Admin"}</p>
-                  <p className="text-xs text-slate-500">
-                    {user?.email || "isabelle@laroche360.ca"}
-                  </p>
+                  <p className="text-sm font-semibold">{displayName}</p>
+                  <p className="text-xs text-slate-500">{displayEmail}</p>
                 </div>
                 <button
                   onClick={handleLogout}
