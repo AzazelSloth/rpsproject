@@ -199,7 +199,7 @@ EOF
     # Frontend environment
     cd "$APP_DIR/rps-frontend/nextjs-app"
     cat > .env.local << EOF
-NEXT_PUBLIC_API_URL=http://127.0.0.1:3000/api
+NEXT_PUBLIC_API_URL=/api
 API_URL=http://127.0.0.1:3000/api
 NEXT_PUBLIC_STRAPI_URL=
 STRAPI_API_TOKEN=
@@ -235,6 +235,10 @@ build_backend() {
 
     BACKEND_SCRIPT="$detected_script"
     log "INFO" "Detected backend entrypoint: $BACKEND_SCRIPT"
+
+    # Apply database migrations on every deployment
+    npm run migration:run
+    log "INFO" "Database migrations applied"
 
     log "INFO" "Backend built successfully"
 }

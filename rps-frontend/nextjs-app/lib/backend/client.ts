@@ -1,5 +1,8 @@
 function resolveBackendUrl() {
-  const candidates = [process.env.NEXT_PUBLIC_API_URL, process.env.API_URL];
+  const isServer = typeof window === "undefined";
+  const candidates = isServer
+    ? [process.env.API_URL, process.env.NEXT_PUBLIC_API_URL]
+    : [process.env.NEXT_PUBLIC_API_URL, process.env.API_URL];
 
   for (const candidate of candidates) {
     const normalized = candidate?.trim();

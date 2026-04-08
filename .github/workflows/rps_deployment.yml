@@ -190,6 +190,9 @@ jobs:
             SWAGGER_PATH=api-docs
             ENVEOF
 
+            # Apply database migrations before starting services
+            npm run migration:run
+
             echo "Backend built successfully"
 
             # ---------------------------------------------
@@ -215,7 +218,7 @@ jobs:
             # Configure frontend environment
             cat > .env.local << 'ENVEOF'
             NEXT_PUBLIC_API_URL=/api
-            API_URL=/api
+            API_URL=http://127.0.0.1:3000/api
             NEXT_PUBLIC_STRAPI_URL=
             STRAPI_API_TOKEN=
             ENVEOF

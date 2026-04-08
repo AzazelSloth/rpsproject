@@ -27,7 +27,7 @@ Le workflow utilise les outils déjà installés sur le VPS :
    ↓
 4. git clone --depth 1 (code frais garanti)
    ↓
-5. npm ci + npm run build (sur le VPS)
+5. npm ci + npm run build + npm run migration:run (sur le VPS)
    ↓
 6. PM2 redémarre avec le nouveau code
 ```
@@ -125,7 +125,7 @@ DB_LOGGING=false
 ### Frontend (.env.local)
 
 ```env
-NEXT_PUBLIC_API_URL=http://127.0.0.1:3000/api
+NEXT_PUBLIC_API_URL=/api
 API_URL=http://127.0.0.1:3000/api
 NEXT_PUBLIC_STRAPI_URL=
 STRAPI_API_TOKEN=
@@ -162,7 +162,7 @@ chmod +x scripts/vps/deploy.sh
 
 ### Option B: Automatique via GitHub Actions (Recommandé)
 
-Le workflow automatique transfère les artefacts pré-construits via SCP et les déploie sans build sur le VPS (2-3 minutes).
+Le workflow automatique clone la branche ciblée sur le VPS, exécute `npm ci`, build, puis redémarre PM2.
 
 ## 6. Commandes PM2 Utiles
 
@@ -458,7 +458,7 @@ curl http://localhost:3001
 curl http://localhost:8786/login
 
 # 5. Vérifier le commit déployé
-cd ~/rps-rps-dev
+cd ~/rps-rps_dev
 git log -1 --oneline
 # Doit correspondre au dernier commit de la branche main
 ```
