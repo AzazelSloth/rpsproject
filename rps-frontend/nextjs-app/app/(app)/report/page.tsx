@@ -15,8 +15,8 @@ export default async function ReportPage({
     scenario: scenario ?? null,
   });
   const exportHref = scenario
-    ? `/api/report/export-docx?scenario=${encodeURIComponent(scenario)}`
-    : "/api/report/export-docx";
+    ? `/report/export-docx?scenario=${encodeURIComponent(scenario)}`
+    : "/report/export-docx";
 
   return (
     <section className="space-y-6">

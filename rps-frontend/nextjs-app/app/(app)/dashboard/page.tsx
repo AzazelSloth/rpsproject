@@ -38,7 +38,7 @@ export default async function DashboardPage({
       <SectionHeader
         eyebrow="Tableau de bord"
         title="Liste des entreprises"
-        description="Accede aux campagnes par entreprise, avec statut, taux de completion et acces direct aux resultats."
+        description="Accede aux sondages par entreprise, avec statut, taux de completion et acces direct aux resultats."
         action={
           <Link href="/surveys?tab=create" className="inline-flex">
             <PrimaryButton>Creer un sondage</PrimaryButton>
@@ -50,10 +50,10 @@ export default async function DashboardPage({
         <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h3 className="font-[family-name:var(--font-manrope)] text-xl font-bold">
-              Tableau des campagnes
+              Tableau des sondages
             </h3>
             <p className="mt-1 text-sm text-slate-500">
-              Recherche par entreprise et filtre par statut pour retrouver rapidement une campagne.
+              Recherche par entreprise et filtre par statut pour retrouver rapidement un sondage.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -107,7 +107,7 @@ export default async function DashboardPage({
                 <td className="px-6 py-4">
                   <Link
                     href={resultsHref}
-                    className="inline-flex items-center justify-center rounded-[12px] border border-[#d5ba85] bg-[#181818] px-4 py-2 text-xs font-semibold text-[#f7f1e6] shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
+                    className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold text-white no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
                   >
                     Voir les resultats
                   </Link>

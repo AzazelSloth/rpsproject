@@ -309,26 +309,42 @@ export class CampaignParticipantService {
 
     for (const row of normalizedRows) {
       const email = row.email.trim();
+      
+      // Search globally by email (not scoped to company)
       let employee = await this.employeeRepository.findOne({
-        where: {
-          email,
-          company: { id: payload.company_id },
-        },
+        where: { email },
         relations: { company: true },
       });
 
       if (!employee) {
-        employee = await this.employeeRepository.save(
-          this.employeeRepository.create({
-            first_name: row.first_name?.trim() || 'N/A',
-            last_name: row.last_name?.trim() || 'N/A',
-            email,
-            phone: row.phone?.trim() || undefined,
-            department: row.department?.trim() || undefined,
-            survey_token: randomUUID(),
-            company: { id: payload.company_id } as Campaign['company'],
-          }),
+        try {
+          // Create new employee for this company
+          employee = await this.employeeRepository.save(
+            this.employeeRepository.create({
+              first_name: row.first_name?.trim() || 'N/A',
+              last_name: row.last_name?.trim() || 'N/A',
+              email,
+              phone: row.phone?.trim() || undefined,
+              department: row.department?.trim() || undefined,
+              survey_token: randomUUID(),
+              company: { id: payload.company_id } as Campaign['company'],
+            }),
+          );
+        } catch (error) {
+          // Handle duplicate email error gracefully
+          if (error.code === '23505') { // PostgreSQL unique violation
+            console.warn(`Duplicate email skipped: ${email}`);
+            continue;
+          }
+          throw error;
+        }
+      } else if (employee.company.id !== payload.company_id) {
+        // Employee exists but belongs to a different company
+        // Skip this employee to avoid conflicts
+        console.warn(
+          `Employee with email ${email} already exists for company ${employee.company.id}. Skipping.`,
         );
+        continue;
       }
 
       employees.push(employee);

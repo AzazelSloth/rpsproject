@@ -170,7 +170,7 @@ export async function POST(request: Request) {
     const message =
       error instanceof Error && error.message
         ? error.message
-        : "La mutation campagne/question a echoue.";
+        : "La mutation sondage/question a echoue.";
 
     return NextResponse.json(
       { message },

@@ -247,7 +247,7 @@ export const campaignsResponse: { data: StrapiCampaign[] } = {
       ...meta(10, "campaign-rps-march-2026"),
       title: "Evaluation RPS Mars 2026",
       description:
-        "Campagne trimestrielle visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.",
+        "Sondage trimestriel visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.",
       status: "active",
       startDate: campaignStartDate.toISOString().slice(0, 10),
       endDate: campaignEndDate.toISOString().slice(0, 10),
@@ -276,7 +276,7 @@ export const campaignsResponse: { data: StrapiCampaign[] } = {
           ...meta(102, "question-comment"),
           title: "Quels changements pourraient ameliorer votre environnement de travail ?",
           type: "text",
-          helpText: "Votre reponse sera analysee avec le reste de la campagne.",
+          helpText: "Votre reponse sera analysee avec le reste du sondage.",
           orderIndex: 3,
         },
       ],
@@ -331,10 +331,10 @@ export const reportTemplateResponse: { data: StrapiReportTemplate } = {
     templateName: "Modele consultant standard",
     executiveSummaryTitle: "Synthese executive",
     executiveSummaryBody:
-      "Cette synthese presente les principaux indicateurs de la campagne et les tensions prioritaires a adresser dans les equipes les plus exposees.",
+      "Cette synthese presente les principaux indicateurs du sondage et les tensions prioritaires a adresser dans les equipes les plus exposees.",
     methodologyTitle: "Methodologie",
     methodologyBody:
-      "Les resultats s'appuient sur les reponses collectees pendant la campagne active, consolidees par departement puis interpretees au regard des dimensions RPS suivies.",
+      "Les resultats s'appuient sur les reponses collectees pendant le sondage actif, consolidees par departement puis interpretees au regard des dimensions RPS suivies.",
     recommendationsTitle: "Recommandations",
     recommendationsIntro:
       "Les pistes ci-dessous constituent une base de travail pour les consultants avant restitution finale au client.",

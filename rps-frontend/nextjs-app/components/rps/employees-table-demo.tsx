@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition, type ChangeEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState, type ChangeEvent } from "react";
 import * as XLSX from "xlsx";
-import { Card, Pill, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
+import { Card, Pill, PrimaryButton } from "@/components/rps/ui";
 import type { EmployeeManagementData } from "@/lib/repositories/rps-repository";
 import { getTrpcClient } from "@/lib/trpc/client";
 
@@ -13,25 +13,30 @@ export function EmployeesTableDemo({
   companies,
   defaultCompanyId,
   defaultCampaignName,
+  campaignId: propCampaignId,
+  companyId: propCompanyId,
 }: {
   managementData: EmployeeManagementData;
   companies: { id: number; name: string }[];
   defaultCompanyId: number | null;
   defaultCampaignName: string;
+  campaignId?: number | null;
+  companyId?: number | null;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [companyFilter, setCompanyFilter] = useState<string>(
     defaultCompanyId ? String(defaultCompanyId) : "all",
   );
   const [filter, setFilter] = useState<"all" | "completed" | "pending" | "reminded">("all");
   const [csv, setCsv] = useState(
-    "Nom,Prenom,Adresse courriel,Fonction\nLefebvre,Anne,anne.lefebvre@test.com,gestionnaire\nTremblay,Marc,marc.tremblay@test.com,cadre",
+    "Nom,Prénom,Adresse courriel,Fonction\nLefebvre,Anne,anne.lefebvre@test.com,gestionnaire\nTremblay,Marc,marc.tremblay@test.com,cadre",
   );
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
 
   const filteredParticipants = useMemo(() => {
     return managementData.participants.filter((participant) => {
@@ -46,24 +51,16 @@ export function EmployeesTableDemo({
     });
   }, [companyFilter, filter, managementData.companyId, managementData.participants, query]);
 
-  function runAdminAction(action: () => Promise<unknown>, successMessage: string) {
-    setFeedback(null);
-    setError(null);
+  function buildSurveyCreateHref() {
+    const params = new URLSearchParams();
+    params.set("tab", "create");
 
-    startTransition(async () => {
-      try {
-        await action();
+    const scenario = searchParams.get("scenario");
+    if (scenario) {
+      params.set("scenario", scenario);
+    }
 
-        setFeedback(successMessage);
-        router.refresh();
-      } catch (error) {
-        const message =
-          error instanceof Error && error.message
-            ? error.message
-            : "L'action admin a echoue. Verifie la configuration de l'API.";
-        setError(message);
-      }
-    });
+    return `/surveys?${params.toString()}`;
   }
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -82,7 +79,7 @@ export function EmployeesTableDemo({
       if (extension === "csv" || extension === "txt") {
         const text = await file.text();
         setCsv(normalizeCsv(text));
-        setFeedback(`Fichier charge: ${file.name}`);
+        setFeedback(`Fichier chargé : ${file.name}`);
         return;
       }
 
@@ -98,10 +95,10 @@ export function EmployeesTableDemo({
       const parsedCsv = XLSX.utils.sheet_to_csv(firstSheet);
 
       setCsv(normalizeCsv(parsedCsv));
-      setFeedback(`Fichier charge: ${file.name}`);
+      setFeedback(`Fichier chargé : ${file.name}`);
     } catch {
       setError(
-        "Le fichier n'a pas pu etre lu. Utilise un fichier .xlsx, .xls, .csv ou colle les lignes dans la zone de texte.",
+        "Le fichier n'a pas pu être lu. Utilise un fichier .xlsx, .xls, .csv ou colle les lignes dans la zone de texte.",
       );
     } finally {
       event.target.value = "";
@@ -109,74 +106,57 @@ export function EmployeesTableDemo({
   }
 
   function handleImport() {
-    if (!managementData.campaignId || !managementData.companyId) {
-      setError("Aucune campagne active exploitable n'est disponible.");
+    // Use props if provided, otherwise fallback to managementData
+    const campaignId = propCampaignId ?? managementData.campaignId;
+    const companyId = propCompanyId ?? managementData.companyId;
+    
+    if (!campaignId || !companyId) {
+      setError("Aucun sondage actif exploitable n'est disponible. Veuillez d'abord créer un sondage.");
       return;
     }
 
-    const campaignId = managementData.campaignId;
-    const companyId = managementData.companyId;
-
-    runAdminAction(
-      () =>
-        getTrpcClient().campaignParticipants.importEmployees.mutate({
-          campaignId,
-          companyId,
-          csv,
-        }),
-      "Import des salaries termine.",
-    );
-  }
-
-  function handleRemind(force = false) {
-    if (!managementData.campaignId) {
-      setError("Aucune campagne active exploitable n'est disponible.");
+    if (!csv.trim()) {
+      setError("Le fichier CSV est vide. Veuillez ajouter des données.");
       return;
     }
 
-    const campaignId = managementData.campaignId;
+    setFeedback(null);
+    setError(null);
+    setIsPending(true);
 
-    runAdminAction(
-      () =>
-        getTrpcClient().campaignParticipants.remind.mutate({
-          campaignId,
-          minimumDaysSinceInvitation: 3,
-          force,
-        }),
-      force ? "Relance forcee envoyee." : "Relance des non-repondants terminee.",
-    );
+    getTrpcClient().campaignParticipants.importEmployees.mutate({
+      campaignId,
+      companyId,
+      csv,
+    })
+      .then(() => {
+        setFeedback("Import des salariés terminé avec succès !");
+        setTimeout(() => {
+          router.push(buildSurveyCreateHref());
+        }, 1000);
+      })
+      .catch((err) => {
+        const errorMessage = err?.message || "L'import a échoué. Vérifiez le format du CSV et réessayez.";
+        setError(errorMessage);
+      })
+      .finally(() => {
+        setIsPending(false);
+      });
   }
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
-        {[
-          ["Campagne active", managementData.campaignName],
-          ["Participation", `${managementData.participationRate}%`],
-          ["Invites", String(managementData.totalParticipants)],
-          ["Completes", String(managementData.completedParticipants)],
-          ["A relancer", String(managementData.pendingParticipants)],
-        ].map(([label, value]) => (
-          <Card key={label} className="p-5">
-            <p className="text-sm text-slate-500">{label}</p>
-            <p className="mt-3 font-[family-name:var(--font-manrope)] text-2xl font-extrabold">
-              {value}
-            </p>
-          </Card>
-        ))}
-      </div>
-
       <div className="grid gap-5 xl:grid-cols-[3fr_1fr]">
         <Card className="p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-            Import campagne
+            Import sondage
           </p>
           <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold">
-            Ajouter des salaries a la campagne
+            Ajouter des salariés au sondage
           </h3>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Charge un fichier Excel ou colle un CSV simple pour creer les participants et generer
-            leurs liens uniques. Le format attendu est: Nom, Prenom, Adresse courriel, Fonction.
+            Charge un fichier Excel ou colle un CSV simple pour créer les participants et générer
+            leurs liens uniques. Le format attendu est : Nom, Prénom, Adresse courriel, Fonction.
           </p>
 
           <div className="mt-5 rounded-[12px] border border-dashed border-slate-300 bg-slate-50/80 p-4">
@@ -184,7 +164,7 @@ export function EmployeesTableDemo({
               <div>
                 <p className="text-sm font-semibold text-slate-800">Import direct depuis Excel</p>
                 <p className="mt-1 text-xs text-slate-500">
-                  Formats acceptes: .xlsx, .xls, .csv
+                  Formats acceptés : .xlsx, .xls, .csv
                 </p>
               </div>
               <label className="inline-flex cursor-pointer items-center justify-center rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-amber-300 hover:text-slate-900">
@@ -198,7 +178,7 @@ export function EmployeesTableDemo({
               </label>
             </div>
             {selectedFileName ? (
-              <p className="mt-3 text-xs text-slate-500">Fichier selectionne: {selectedFileName}</p>
+              <p className="mt-3 text-xs text-slate-500">Fichier sélectionné : {selectedFileName}</p>
             ) : null}
           </div>
 
@@ -209,11 +189,8 @@ export function EmployeesTableDemo({
           />
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <PrimaryButton disabled={isPending} onClick={handleImport}>
-              {isPending ? "Traitement..." : "Importer dans la campagne"}
+              {isPending ? "Traitement..." : "Importer dans le sondage"}
             </PrimaryButton>
-            <SecondaryButton disabled={isPending} onClick={() => handleRemind(false)}>
-              Relancer les en attente
-            </SecondaryButton>
           </div>
           {feedback ? <p className="mt-4 text-sm font-medium text-emerald-700">{feedback}</p> : null}
           {error ? <p className="mt-4 text-sm font-medium text-rose-700">{error}</p> : null}
@@ -221,7 +198,7 @@ export function EmployeesTableDemo({
 
         <Card className="p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-            Selection
+            Sélection
           </p>
           <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold">
             Entreprise et sondage
@@ -264,10 +241,10 @@ export function EmployeesTableDemo({
         <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h3 className="font-[family-name:var(--font-manrope)] text-xl font-bold">
-              Participants a la campagne
+              Participants au sondage
             </h3>
             <p className="mt-1 text-sm text-slate-500">
-              Liens individuels, statut de completion et relances.
+              Liens individuels et statut de complétion.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -297,9 +274,9 @@ export function EmployeesTableDemo({
               className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
             >
               <option value="all">Tous</option>
-              <option value="completed">Completes</option>
+              <option value="completed">Complétés</option>
               <option value="pending">En attente</option>
-              <option value="reminded">Relances</option>
+              <option value="reminded">Relancés</option>
             </select>
           </div>
         </div>
@@ -343,7 +320,7 @@ export function EmployeesTableDemo({
                     <p>{formatShortDate(participant.invitationSentAt)}</p>
                     {participant.reminderSentAt ? (
                       <p className="mt-1 text-xs text-amber-700">
-                        Relance: {formatShortDate(participant.reminderSentAt)}
+                        Relance : {formatShortDate(participant.reminderSentAt)}
                       </p>
                     ) : null}
                   </td>

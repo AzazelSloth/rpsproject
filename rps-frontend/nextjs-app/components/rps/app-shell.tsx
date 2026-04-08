@@ -4,15 +4,13 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/rps/brand-logo";
-import { getDemoDataset, resolveDemoScenario } from "@/lib/demo-data";
-import { Card } from "@/components/rps/ui";
 import { logout, getUser, type User as AuthUser } from "@/lib/backend/auth";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Bonjour, Admin",
   "/surveys": "Gestion des sondages",
-  "/employees": "Gestion des employes",
-  "/results": "Resultats",
+  "/employees": "Gestion des employés",
+  "/results": "Résultats",
   "/report": "Rapport",
 };
 
@@ -20,8 +18,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const scenario = resolveDemoScenario(searchParams.get("scenario"));
-  const demoDataset = getDemoDataset(scenario);
   const title = pageTitles[pathname] ?? "RPS";
   const [user, setUser] = useState<AuthUser | null>(null);
   const activeSurveyTab = searchParams.get("tab") ?? "create";
@@ -43,29 +39,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setUser(getUser());
   }, []);
 
-  function buildHref(path: string) {
-    const [pathPart, queryString] = path.split("?");
-    const params = new URLSearchParams(queryString ?? "");
-    const currentParams = new URLSearchParams(searchParams.toString());
-
-    currentParams.forEach((value, key) => {
-      if (!params.has(key)) {
-        params.set(key, value);
-      }
-    });
-
-    params.set("scenario", scenario);
-
-    const serialized = params.toString();
-    return serialized ? `${pathPart}?${serialized}` : pathPart;
-  }
-
-  function handleScenarioChange(nextScenario: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("scenario", nextScenario);
-    router.push(`${pathname}?${params.toString()}`);
-  }
-
   function handleLogout() {
     logout();
     router.push("/login");
@@ -83,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <nav className="flex gap-2 overflow-x-auto px-4 py-4 lg:flex-col lg:overflow-visible">
             <Link
-              href={buildHref("/dashboard")}
+              href="/dashboard"
               className={`flex items-center justify-between rounded-[12px] px-4 py-3 text-sm font-semibold no-underline transition visited:no-underline ${
                 pathname === "/dashboard"
                   ? "bg-slate-900 text-white visited:text-white shadow-lg shadow-slate-300/60 ring-1 ring-slate-800"
@@ -118,7 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="flex flex-col gap-2 pl-4">
                 {[
                   { href: "/surveys?tab=list", label: "Liste des sondages", tab: "list" },
-                  { href: "/surveys?tab=create", label: "Creer un sondage", tab: "create" },
+                  { href: "/surveys?tab=create", label: "Créer un sondage", tab: "create" },
                   { href: "/surveys?tab=edit", label: "Modifier un sondage", tab: "edit" },
                 ].map((item) => {
                   const active = isSurveyRoute && activeSurveyTab === item.tab;
@@ -126,7 +99,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   return (
                     <Link
                       key={item.href}
-                      href={buildHref(item.href)}
+                      href={item.href}
                       className={`flex items-center justify-between rounded-[10px] px-3 py-2 text-xs font-semibold no-underline transition visited:no-underline ${
                         active
                           ? "bg-[#f1e4cb] text-slate-900 ring-1 ring-[#e6cf9f]"
@@ -142,7 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ) : null}
 
             <Link
-              href={buildHref("/employees")}
+              href="/employees"
               className={`flex items-center justify-between rounded-[12px] px-4 py-3 text-sm font-semibold no-underline transition visited:no-underline ${
                 pathname === "/employees"
                   ? "bg-slate-900 text-white visited:text-white shadow-lg shadow-slate-300/60 ring-1 ring-slate-800"
@@ -150,7 +123,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }`}
             >
               <span className={pathname === "/employees" ? "text-white" : "text-inherit"}>
-                Gestion des employes
+                Gestion des employés
               </span>
               {pathname === "/employees" ? (
                 <span className="h-2.5 w-2.5 rounded-full bg-[#f0c36d]" />
@@ -158,7 +131,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
 
             <Link
-              href={buildHref("/results")}
+              href="/results"
               className={`flex items-center justify-between rounded-[12px] px-4 py-3 text-sm font-semibold no-underline transition visited:no-underline ${
                 pathname === "/results"
                   ? "bg-slate-900 text-white visited:text-white shadow-lg shadow-slate-300/60 ring-1 ring-slate-800"
@@ -166,36 +139,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }`}
             >
               <span className={pathname === "/results" ? "text-white" : "text-inherit"}>
-                Resultats
+                Résultats
               </span>
               {pathname === "/results" ? (
                 <span className="h-2.5 w-2.5 rounded-full bg-[#f0c36d]" />
               ) : null}
             </Link>
           </nav>
-
-          <div className="hidden px-6 pb-6 pt-4 lg:block">
-            <Card className="grid-pattern p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8a651f]">
-                Demo mode
-              </p>
-              <h3 className="mt-3 font-[family-name:var(--font-manrope)] text-lg font-bold">
-                {demoDataset.scenarioLabel}
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Donnees de test dynamiques, coherentes entre les pages, pour simuler plusieurs contextes RPS.
-              </p>
-              <select
-                value={scenario}
-                onChange={(event) => handleScenarioChange(event.target.value)}
-                className="mt-4 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-              >
-                <option value="baseline">Equilibre fragile</option>
-                <option value="tension">Tension operationnelle</option>
-                <option value="critical">Alerte critique</option>
-              </select>
-            </Card>
-          </div>
         </div>
       </aside>
 
@@ -219,7 +169,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <button
                   onClick={handleLogout}
                   className="ml-2 text-xs text-slate-500 hover:text-red-600"
-                  title="Se deconnecter"
+                  title="Se déconnecter"
                 >
                   X
                 </button>
