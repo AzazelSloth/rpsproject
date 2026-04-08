@@ -425,10 +425,10 @@ export function SurveyBuilderDemo({
 
     const successMessage =
       action === "activateCampaign"
-        ? "Sondage active."
+        ? "Sondage activé."
         : action === "terminateCampaign"
-          ? "Sondage termine."
-          : "Sondage archive.";
+          ? "Sondage désactivé."
+          : "Sondage archivé.";
 
     runMutation<{ status?: string }>(
       () => {
@@ -581,15 +581,22 @@ export function SurveyBuilderDemo({
           >
             {isPending ? "Enregistrement..." : campaignId ? "Mettre a jour" : "Creer le sondage"}
           </PrimaryButton>
-          <SecondaryButton
-            disabled={isPending || !campaignId || !canSaveCampaign || questions.length === 0}
-            onClick={() => changeCampaignStatus("activateCampaign")}
-          >
-            Activer
-          </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => changeCampaignStatus("terminateCampaign")}>
-            Terminer
-          </SecondaryButton>
+          {status === "active" ? (
+            <SecondaryButton 
+              disabled={isPending || !campaignId} 
+              onClick={() => changeCampaignStatus("terminateCampaign")}
+              className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
+            >
+              Désactiver
+            </SecondaryButton>
+          ) : (
+            <SecondaryButton
+              disabled={isPending || !campaignId || !canSaveCampaign || questions.length === 0}
+              onClick={() => changeCampaignStatus("activateCampaign")}
+            >
+              Activer
+            </SecondaryButton>
+          )}
           <SecondaryButton disabled={isPending || !campaignId} onClick={() => changeCampaignStatus("archiveCampaign")}>
             Archiver
           </SecondaryButton>

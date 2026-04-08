@@ -450,22 +450,41 @@ export class CampaignParticipantService {
       .split(',')
       .map((header) => this.normalizeCsvHeader(header));
 
-    return dataLines.map((line) => {
-      const values = line.split(',').map((value) => value.trim());
-      const row: Record<string, string> = {};
+    console.log('CSV Headers detected:', headers);
 
-      headers.forEach((header, index) => {
-        row[header] = values[index] ?? '';
-      });
+    const rows: ImportCampaignEmployeeRowDto[] = [];
 
-      return {
-        email: row.email ?? row.adresse_courriel ?? row.courriel,
-        first_name: row.first_name ?? row.prenom,
-        last_name: row.last_name ?? row.nom,
-        phone: row.phone,
-        department: row.department ?? row.fonction ?? row.titre_professionnel,
-      };
-    });
+    for (let i = 0; i < dataLines.length; i++) {
+      try {
+        const line = dataLines[i];
+        const values = line.split(',').map((value) => value.trim());
+        const row: Record<string, string> = {};
+
+        headers.forEach((header, idx) => {
+          row[header] = values[idx] ?? '';
+        });
+
+        const email = (row.email ?? row.adresse_courriel ?? row.courriel ?? '').trim();
+        
+        // Skip rows without valid email
+        if (!email || !email.includes('@')) {
+          console.warn(`Row ${i + 2}: Missing or invalid email '${email}', skipping`);
+          continue;
+        }
+
+        rows.push({
+          email,
+          first_name: (row.first_name ?? row.prenom ?? '').trim() || undefined,
+          last_name: (row.last_name ?? row.nom ?? '').trim() || undefined,
+          phone: (row.phone ?? '').trim() || undefined,
+          department: (row.department ?? row.fonction ?? row.titre_professionnel ?? '').trim() || undefined,
+        });
+      } catch (error) {
+        console.error(`Error parsing CSV row ${i + 2}:`, error);
+      }
+    }
+
+    return rows;
   }
 
   private normalizeCsvHeader(header: string) {
