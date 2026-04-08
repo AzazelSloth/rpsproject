@@ -40,9 +40,9 @@
     },
     {
       "parameters": {
-        "fromEmail": "anaiarandria62@gmail.com",
-        "toEmail": "anaiarandrianantenaina@gmail.com",
-        "subject": "=Rapport d'analyse RPS - {{ $now.format('') }}",
+        "fromEmail": "cathynomeniavo@gmail.com",
+        "toEmail": "cathynomeniavo@gmail.com",
+        "subject": "=Rapport d'analyse RPS - {{ $now.format('yyyy-MM-dd') }}",
         "emailFormat": "text",
         "text": "=Bonjour, vous trouverez ci-joint l'analyse des risques psychosociaux pour votre entreprise  . Le rapport complet a également été déposé sur le Drive\n ",
         "options": {
@@ -315,7 +315,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "anaiarandria@gmail.com",
+        "fromEmail": "cathynomeniavo@gmail.com",
         "toEmail": "={{ $json.Email }}",
         "subject": "Rappel : Ton avis est précieux pour l'équipe",
         "html": "=Bonjour {{ $json[\"Nom et Prenom\"] }},\n\nNous vous contactons car votre diagnostic sur les Risques Psychosociaux (RPS) est toujours en attente de finalisation.\n\nVotre participation est essentielle pour garantir une analyse de qualité et améliorer les conditions de travail au sein de votre organisation. Ce questionnaire est rapide et vos réponses restent confidentielles.\n\nNous vous remercions par avance pour votre contribution.\n\nCordialement,\nL'équipe Solutions Tech",
@@ -442,6 +442,35 @@
       ],
       "id": "eb282352-9334-445d-929e-808fa83152f2",
       "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/reports",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "campaign_id",
+              "value": "={{ $node['Webhook'].json.body.campaign_id }}"
+            },
+            {
+              "name": "report_path",
+              "value": "={{ $json.webViewLink || ('https://drive.google.com/file/d/' + $json.id + '/view') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        -224
+      ],
+      "id": "e18e7cf2-2a0a-4f27-b892-3f99d2f8a6a0",
+      "name": "Enregistrer rapport dans backend"
     }
   ],
   "pinData": {},
@@ -505,7 +534,7 @@
       "main": [
         [
           {
-            "node": "Téléchargement du fichier pour l'email",
+            "node": "Enregistrer rapport dans backend",
             "type": "main",
             "index": 0
           }
@@ -593,9 +622,20 @@
       "main": [
         []
       ]
+    },
+    "Enregistrer rapport dans backend": {
+      "main": [
+        [
+          {
+            "node": "Téléchargement du fichier pour l'email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "availableInMCP": false

@@ -20,7 +20,7 @@ export class Report {
   @JoinColumn({ name: 'campaign_id' })
   campaign: Campaign;
 
-  @Column('text')
+  @Column('text', { nullable: true })
   report_path: string;
 
   @CreateDateColumn({ type: 'timestamp' })

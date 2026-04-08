@@ -1,4 +1,5 @@
-import { Card, PrimaryButton, SectionHeader } from "@/components/rps/ui";
+import Link from "next/link";
+import { Card, SectionHeader } from "@/components/rps/ui";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
 import DownloadReportButton from "./DownloadReportButton";
 
@@ -24,7 +25,19 @@ export default async function ReportPage({
         title="Rapport"
         description="Synthese et recommandations du sondage selectionne."
         action={
-          <DownloadReportButton href={exportHref} />
+          <div className="flex flex-wrap gap-3">
+            {reportData.archivedReportPath ? (
+              <Link
+                href={reportData.archivedReportPath}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-[12px] border border-[#d8ccba] bg-[rgba(255,252,246,0.92)] px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-[#faf4eb]"
+              >
+                Ouvrir rapport archive
+              </Link>
+            ) : null}
+            <DownloadReportButton href={exportHref} />
+          </div>
         }
       />
 

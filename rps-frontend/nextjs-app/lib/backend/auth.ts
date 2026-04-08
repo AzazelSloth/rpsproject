@@ -23,12 +23,22 @@ export type RegisterCredentials = {
   password: string;
 };
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
-  return postBackend<AuthResponse, LoginCredentials>("/auth/login", credentials);
+  return postBackend<AuthResponse, LoginCredentials>("/auth/login", {
+    ...credentials,
+    email: normalizeEmail(credentials.email),
+  });
 }
 
 export async function register(credentials: RegisterCredentials): Promise<AuthResponse> {
-  return postBackend<AuthResponse, RegisterCredentials>("/auth/register", credentials);
+  return postBackend<AuthResponse, RegisterCredentials>("/auth/register", {
+    ...credentials,
+    email: normalizeEmail(credentials.email),
+  });
 }
 
 export async function logout() {

@@ -38,7 +38,7 @@ export class CampaignParticipant {
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;
 
-  @Column({ unique: true, nullable: true })
+  @Column({ type: 'varchar', unique: true, nullable: true })
   participation_token: string;
 
   @Column({

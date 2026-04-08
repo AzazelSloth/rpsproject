@@ -1,13 +1,25 @@
-const backendUrl =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ??
-  process.env.API_URL?.replace(/\/$/, "");
+function resolveBackendUrl() {
+  const candidates = [process.env.NEXT_PUBLIC_API_URL, process.env.API_URL];
+
+  for (const candidate of candidates) {
+    const normalized = candidate?.trim();
+    if (normalized) {
+      return normalized.replace(/\/$/, "");
+    }
+  }
+
+  return undefined;
+}
+
+const backendUrl = resolveBackendUrl();
 
 export function isBackendConfigured() {
   return Boolean(backendUrl);
 }
 
 function getAuthHeaders() {
-  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -22,9 +34,15 @@ function mergeHeaders(initHeaders?: HeadersInit) {
   return headers;
 }
 
+function logBackendWarning(message: string) {
+  if (process.env.NODE_ENV === "development") {
+    console.warn(`[Backend] ${message}`);
+  }
+}
+
 async function backendFetch<T>(path: string, init?: RequestInit) {
   if (!backendUrl) {
-    console.error("❌ Backend API URL is not configured");
+    logBackendWarning("API URL is not configured.");
     throw new Error(
       "Backend API URL is not configured. Check NEXT_PUBLIC_API_URL environment variable."
     );
@@ -38,12 +56,11 @@ async function backendFetch<T>(path: string, init?: RequestInit) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error(`❌ Backend request failed:`, {
-        status: response.status,
-        path,
-        error: errorData,
-      });
+      const errorText = await response.text().catch(() => "");
+      const errorPreview = errorText ? ` - ${errorText.slice(0, 180)}` : "";
+      logBackendWarning(
+        `Request failed ${response.status} ${response.statusText} on ${path}${errorPreview}`
+      );
       throw new Error(
         `Backend request failed: ${response.status} ${response.statusText}`
       );
@@ -51,7 +68,25 @@ async function backendFetch<T>(path: string, init?: RequestInit) {
 
     return (await response.json()) as T;
   } catch (error) {
-    console.error(`❌ Fetch error for ${path}:`, error);
+    const message =
+      error instanceof Error ? error.message : "Unknown backend fetch error";
+    const isNetworkFailure =
+      error instanceof TypeError ||
+      /fetch failed|ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|ETIMEDOUT/i.test(
+        message
+      );
+
+    if (isNetworkFailure) {
+      logBackendWarning(
+        `Unable to reach backend at ${backendUrl}. Verify API is running before opening protected pages.`
+      );
+      throw new Error("Backend unavailable");
+    }
+
+    if (!message.startsWith("Backend request failed:")) {
+      logBackendWarning(`Unexpected error on ${path}: ${message}`);
+    }
+
     throw error;
   }
 }

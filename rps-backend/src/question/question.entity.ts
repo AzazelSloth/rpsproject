@@ -22,16 +22,16 @@ export class Question {
   @JoinColumn({ name: 'campaign_id' })
   campaign: Campaign;
 
-  @Column('text')
+  @Column('text', { nullable: true })
   question_text: string;
 
-  @Column({ nullable: true })
-  question_type: string;
+  @Column({ type: 'varchar', nullable: true })
+  question_type: string | null;
 
-  @Column({ nullable: true })
-  rps_dimension: string;
+  @Column({ type: 'varchar', nullable: true })
+  rps_dimension: string | null;
 
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   order_index: number;
 
   @Column('simple-array', { nullable: true })

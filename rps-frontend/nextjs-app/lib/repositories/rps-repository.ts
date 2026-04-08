@@ -131,6 +131,7 @@ export type ReportDocumentData = {
   alertCount: number;
   riskAreas: string[];
   recommendations: string[];
+  archivedReportPath?: string | null;
   template: ReportTemplateData;
 };
 
@@ -436,6 +437,7 @@ export async function getReportData(scenario?: string | null) {
   if (!isBackendConfigured()) {
     return {
       ...demoDataset.reportData,
+      archivedReportPath: null,
       template,
     };
   }
@@ -455,6 +457,7 @@ export async function getReportData(scenario?: string | null) {
   } catch {
     return {
       ...demoDataset.reportData,
+      archivedReportPath: null,
       template,
     };
   }
@@ -736,6 +739,20 @@ function buildReportData(
 ) {
   const activeCampaign =
     campaigns.find((campaignEntry) => campaignEntry.status === "active") ?? campaigns[0];
+  const latestReport = [...reports]
+    .filter((entry) =>
+      activeCampaign ? entry.campaign?.id === activeCampaign.id : true,
+    )
+    .sort((left, right) => {
+      const leftDate = Date.parse(left.created_at);
+      const rightDate = Date.parse(right.created_at);
+
+      if (Number.isFinite(leftDate) && Number.isFinite(rightDate)) {
+        return rightDate - leftDate;
+      }
+
+      return right.id - left.id;
+    })[0];
   const resultsData = buildResultsData(employeeEntries, responses);
   const dashboardData = buildDashboardData(campaigns, employeeEntries, responses);
   const riskAreas = resultsData.bars
@@ -755,6 +772,7 @@ function buildReportData(
     alertCount: dashboardData.metrics.alertsDetected,
     riskAreas: riskAreas.length ? riskAreas : reportData.riskAreas,
     recommendations: buildRecommendations(riskAreas, dashboardData.metrics.participationRate),
+    archivedReportPath: latestReport?.report_path ?? null,
   };
 }
 

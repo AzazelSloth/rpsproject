@@ -11,7 +11,8 @@ async function bootstrap() {
 
   app.setGlobalPrefix(apiPrefix);
 
-  const corsOrigin = process.env.CORS_ORIGIN?.split(',') || 'http://localhost:3001';
+  const corsOrigin =
+    process.env.CORS_ORIGIN?.split(',') || 'http://localhost:3001';
   app.enableCors({
     origin: corsOrigin,
     credentials: true,
@@ -30,9 +31,7 @@ async function bootstrap() {
     response.setHeader('Content-Type', 'application/json; charset=utf-8');
     next();
   });
-  app.useGlobalInterceptors(
-    new ClassSerializerInterceptor(app.get(Reflector)),
-  );
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

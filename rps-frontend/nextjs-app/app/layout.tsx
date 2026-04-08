@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RPS Platform",
-  description: "Psychosocial Risk Management SaaS UI",
+  title: "Laroche 360",
+  description: "Plateforme de gestion des risques psychosociaux",
 };
 
 export default function RootLayout({

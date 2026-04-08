@@ -2,18 +2,18 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { getDemoDataset, resolveDemoScenario } from "@/lib/demo-data";
-import { Card, Pill } from "@/components/rps/ui";
+import { Card } from "@/components/rps/ui";
 import { logout, getUser } from "@/lib/backend/auth";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Bonjour, Admin",
   "/surveys": "Gestion des sondages",
   "/employees": "Gestion des employes",
-  "/results": "Resultats et analyses",
-  "/report": "Rapports et recommandations",
+  "/results": "Resultats",
+  "/report": "Rapport",
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -22,17 +22,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const scenario = resolveDemoScenario(searchParams.get("scenario"));
   const demoDataset = getDemoDataset(scenario);
-  const title = pageTitles[pathname] ?? "RPS Platform";
+  const title = pageTitles[pathname] ?? "RPS";
   const user = getUser();
   const activeSurveyTab = searchParams.get("tab") ?? "create";
   const isSurveyRoute = pathname === "/surveys";
   const [surveysOpen, setSurveysOpen] = useState(isSurveyRoute);
-
-  useEffect(() => {
-    if (isSurveyRoute) {
-      setSurveysOpen(true);
-    }
-  }, [isSurveyRoute]);
+  const showSurveyMenu = surveysOpen || isSurveyRoute;
 
   function buildHref(path: string) {
     const [pathPart, queryString] = path.split("?");
@@ -97,15 +92,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   ? "bg-slate-900 text-white shadow-lg shadow-slate-300/60 ring-1 ring-slate-800"
                   : "text-slate-600 hover:bg-[#f2e7d4] hover:text-slate-900"
               }`}
-              aria-expanded={surveysOpen}
+              aria-expanded={showSurveyMenu}
             >
               <span className={isSurveyRoute ? "text-white" : "text-inherit"}>
                 Gestion des sondages
               </span>
-              <span className="text-xs">{surveysOpen ? "v" : ">"}</span>
+              <span className="text-xs">{showSurveyMenu ? "v" : ">"}</span>
             </button>
 
-            {surveysOpen ? (
+            {showSurveyMenu ? (
               <div className="flex flex-col gap-2 pl-4">
                 {[
                   { href: "/surveys?tab=list", label: "Liste des sondages", tab: "list" },
@@ -210,7 +205,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
                 <div>
                   <p className="text-sm font-semibold">{user?.name || "Admin"}</p>
-                  <p className="text-xs text-slate-500">{user?.email || "admin@laroche.fr"}</p>
+                  <p className="text-xs text-slate-500">
+                    {user?.email || "isabelle@laroche360.ca"}
+                  </p>
                 </div>
                 <button
                   onClick={handleLogout}

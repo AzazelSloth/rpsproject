@@ -13,8 +13,8 @@ export class Company {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  name: string;
+  @Column({ type: 'varchar', nullable: true })
+  name: string | null;
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;

@@ -265,9 +265,7 @@ export class CampaignParticipantService {
     };
   }
 
-  private async ensureParticipationTokens(
-    participants: CampaignParticipant[],
-  ) {
+  private async ensureParticipationTokens(participants: CampaignParticipant[]) {
     const missingTokens = participants.filter(
       (participant) => !participant.participation_token,
     );

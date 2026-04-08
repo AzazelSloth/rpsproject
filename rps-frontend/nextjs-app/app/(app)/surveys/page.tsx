@@ -129,11 +129,14 @@ export default async function SurveysPage({
         }
         description={
           activeTab === "edit"
-            ? "Ajuste la campagne existante, mets a jour les questions et valide la nouvelle version."
+            ? "Ajuste la campagne existante, mets a jour les questions et valide la nouvelle version. L'ajout d'entreprise est bloque en mode modification."
             : "Un builder minimal oriente RH, avec structure, typologie de questions et apercu du futur questionnaire salarie."
         }
       />
-      <SurveyBuilderDemo initialData={surveyBuilderData} />
+      <SurveyBuilderDemo
+        initialData={surveyBuilderData}
+        mode={activeTab === "edit" ? "edit" : "create"}
+      />
     </section>
   );
 }

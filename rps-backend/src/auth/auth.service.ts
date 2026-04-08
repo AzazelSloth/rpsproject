@@ -21,6 +21,10 @@ const allowedAdminEmails = new Set([
   'roxanne@laroche360.ca',
 ]);
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -30,7 +34,7 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const normalizedEmail = registerDto.email.trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(registerDto.email);
     if (!allowedAdminEmails.has(normalizedEmail)) {
       throw new ForbiddenException('Registration not allowed for this email');
     }
@@ -60,8 +64,13 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
+    const normalizedEmail = normalizeEmail(loginDto.email);
+    if (!allowedAdminEmails.has(normalizedEmail)) {
+      throw new ForbiddenException('Login not allowed for this email');
+    }
+
     const user = await this.userRepository.findOne({
-      where: { email: loginDto.email },
+      where: { email: normalizedEmail },
     });
 
     if (!user) {

@@ -24,8 +24,8 @@ export class Campaign {
   @JoinColumn({ name: 'company_id' })
   company: Company;
 
-  @Column()
-  name: string;
+  @Column({ type: 'varchar', nullable: true })
+  name: string | null;
 
   @Column({ type: 'date', nullable: true })
   start_date: Date;
@@ -33,8 +33,8 @@ export class Campaign {
   @Column({ type: 'date', nullable: true })
   end_date: Date;
 
-  @Column({ default: 'active' })
-  status: string;
+  @Column({ type: 'varchar', default: 'active', nullable: true })
+  status: string | null;
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;

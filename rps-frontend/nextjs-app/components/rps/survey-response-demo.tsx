@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
 import { getTrpcClient } from "@/lib/trpc/client";
@@ -30,18 +30,6 @@ export function SurveyResponseDemo({
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setAnswers((current) => {
-      const next = { ...current };
-      for (const question of questions) {
-        if (!(question.id in next)) {
-          next[question.id] = "";
-        }
-      }
-      return next;
-    });
-  }, [questions]);
 
   const completion = useMemo(() => {
     if (!questions.length) {

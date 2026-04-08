@@ -28,7 +28,7 @@ export class SurveyResponse {
   @JoinColumn({ name: 'question_id' })
   question: Question;
 
-  @Column('text')
+  @Column('text', { nullable: true })
   answer: string;
 
   @CreateDateColumn({ type: 'timestamp' })

@@ -41,7 +41,15 @@ const templateByType: Record<"scale" | "choice" | "text", SurveyQuestion> = {
   },
 };
 
-export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderData }) {
+type SurveyBuilderMode = "create" | "edit";
+
+export function SurveyBuilderDemo({
+  initialData,
+  mode,
+}: {
+  initialData: SurveyBuilderData;
+  mode: SurveyBuilderMode;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [companies, setCompanies] = useState(initialData.companies);
@@ -62,6 +70,11 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const canEditQuestions = status !== "active";
+  const isCreateMode = mode === "create";
+  const trimmedTitle = title.trim();
+  const isDateRangeInvalid = isEndDateBeforeStartDate(startDate, endDate);
+  const canSaveCampaign =
+    Boolean(companyId) && trimmedTitle.length >= 3 && !isDateRangeInvalid;
 
   function runMutation<TResponse>(
     mutation: () => Promise<TResponse>,
@@ -93,10 +106,24 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
   }
 
   function createCompany() {
+    if (!isCreateMode) {
+      setError("L'ajout d'entreprise est desactive en mode modification.");
+      return;
+    }
+
     const trimmedName = newCompanyName.trim();
 
-    if (trimmedName.length < 2) {
-      setError("Saisis un nom d'entreprise valide.");
+    if (trimmedName.length < 2 || trimmedName.length > 150) {
+      setError("Le nom de l'entreprise doit contenir entre 2 et 150 caracteres.");
+      return;
+    }
+
+    const alreadyExists = companies.some(
+      (company) => company.name.trim().toLowerCase() === trimmedName.toLowerCase(),
+    );
+
+    if (alreadyExists) {
+      setError("Cette entreprise existe deja. Selectionne-la dans la liste.");
       return;
     }
 
@@ -105,7 +132,7 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
         getTrpcClient().adminSurveys.createCompany.mutate({
           name: trimmedName,
         }),
-      "Entreprise creee.",
+      "Entreprise creee et selectionnee.",
       undefined,
       (result) => {
         setCompanies((current) => [...current, result]);
@@ -115,9 +142,32 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
     );
   }
 
-  function saveCampaign() {
+  function validateCampaignBeforeSave() {
     if (!companyId) {
       setError("Choisis une entreprise avant d'enregistrer la campagne.");
+      return false;
+    }
+
+    if (trimmedTitle.length < 3) {
+      setError("Le nom du sondage doit contenir au moins 3 caracteres.");
+      return false;
+    }
+
+    if (isDateRangeInvalid) {
+      setError("La date de fin doit etre posterieure ou egale a la date de debut.");
+      return false;
+    }
+
+    if (mode === "edit" && !campaignId) {
+      setError("Aucune campagne existante a modifier.");
+      return false;
+    }
+
+    return true;
+  }
+
+  function saveCampaign() {
+    if (!validateCampaignBeforeSave()) {
       return;
     }
 
@@ -127,7 +177,7 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
           getTrpcClient().adminSurveys.updateCampaign.mutate({
             campaignId,
             companyId,
-            title,
+            title: trimmedTitle,
             startDate,
             endDate,
           }),
@@ -136,14 +186,14 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
       return;
     }
 
-      runMutation<{ id: number; status?: string }>(
-        () =>
-          getTrpcClient().adminSurveys.createCampaign.mutate({
-            companyId,
-            title,
-            startDate,
-            endDate,
-          }),
+    runMutation<{ id: number; status?: string }>(
+      () =>
+        getTrpcClient().adminSurveys.createCampaign.mutate({
+          companyId,
+          title: trimmedTitle,
+          startDate,
+          endDate,
+        }),
       "Campagne creee.",
       undefined,
       (result) => {
@@ -154,10 +204,15 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
   }
 
   function startNewCampaign() {
+    if (!isCreateMode) {
+      return;
+    }
+
     setCampaignId(null);
     setStatus("draft");
     setTitle("Nouvelle campagne RPS");
     setDescription(defaultCampaignDescription);
+    setCompanyId(companies[0]?.id ?? null);
     setStartDate("");
     setEndDate("");
     setQuestions([]);
@@ -166,6 +221,11 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
   }
 
   function addQuestion(type: "scale" | "choice" | "text") {
+    if (!canEditQuestions) {
+      setError("Impossible d'ajouter des questions quand la campagne est active.");
+      return;
+    }
+
     if (!campaignId) {
       setError("La campagne doit exister avant d'ajouter des questions.");
       return;
@@ -286,6 +346,12 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
       return;
     }
 
+    const trimmedQuestionTitle = question.title.trim();
+    if (trimmedQuestionTitle.length < 5) {
+      setError("Le texte de la question doit contenir au moins 5 caracteres.");
+      return;
+    }
+
     const sanitizedOptions = sanitizeOptions(question.options);
 
     if (question.type === "choice" && sanitizedOptions.length < 2) {
@@ -297,7 +363,7 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
       () =>
         getTrpcClient().adminSurveys.updateQuestion.mutate({
           questionId: Number(question.id),
-          title: question.title,
+          title: trimmedQuestionTitle,
           type: question.type,
           options: question.type === "choice" ? sanitizedOptions : undefined,
           orderIndex: index,
@@ -355,6 +421,17 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
     if (!campaignId) {
       setError("Aucune campagne active n'est disponible.");
       return;
+    }
+
+    if (action === "activateCampaign") {
+      if (!canSaveCampaign) {
+        setError("Corrige les informations de campagne avant activation.");
+        return;
+      }
+      if (questions.length === 0) {
+        setError("Ajoute au moins une question avant d'activer la campagne.");
+        return;
+      }
     }
 
     const successMessage =
@@ -416,17 +493,30 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
                   </option>
                 ))}
               </select>
-              <div className="mt-3 flex gap-3">
-                <input
-                  value={newCompanyName}
-                  onChange={(event) => setNewCompanyName(event.target.value)}
-                  className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-                  placeholder="Ajouter une nouvelle entreprise"
-                />
-                <SecondaryButton disabled={isPending} onClick={createCompany}>
-                  Creer
-                </SecondaryButton>
-              </div>
+              {isCreateMode ? (
+                <div className="mt-3 flex gap-3">
+                  <input
+                    value={newCompanyName}
+                    onChange={(event) => setNewCompanyName(event.target.value)}
+                    className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+                    placeholder="Ajouter une nouvelle entreprise"
+                  />
+                  <SecondaryButton
+                    disabled={
+                      isPending ||
+                      newCompanyName.trim().length < 2 ||
+                      newCompanyName.trim().length > 150
+                    }
+                    onClick={createCompany}
+                  >
+                    Creer
+                  </SecondaryButton>
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-slate-500">
+                  En mode modification, l&apos;ajout d&apos;entreprise est bloque pour eviter les erreurs.
+                </p>
+              )}
             </div>
 
             <div className="relative rounded-[16px] border border-slate-200 bg-white p-4">
@@ -470,6 +560,11 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
               <p className="text-sm leading-6 text-slate-600">
                 Choisis d&apos;abord l&apos;entreprise, enregistre la campagne, puis ajoute les questions et leurs choix.
               </p>
+              {isDateRangeInvalid ? (
+                <p className="mt-2 text-sm font-medium text-rose-700">
+                  La date de fin doit etre posterieure ou egale a la date de debut.
+                </p>
+              ) : null}
             </div>
 
             <div className="relative rounded-[16px] border border-slate-200 bg-white p-4">
@@ -494,13 +589,21 @@ export function SurveyBuilderDemo({ initialData }: { initialData: SurveyBuilderD
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <PrimaryButton disabled={isPending} onClick={saveCampaign}>
+          <PrimaryButton
+            disabled={isPending || !canSaveCampaign || (mode === "edit" && !campaignId)}
+            onClick={saveCampaign}
+          >
             {isPending ? "Enregistrement..." : campaignId ? "Mettre a jour" : "Creer la campagne"}
           </PrimaryButton>
-          <SecondaryButton disabled={isPending} onClick={startNewCampaign}>
-            Nouvelle campagne
-          </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => changeCampaignStatus("activateCampaign")}>
+          {isCreateMode ? (
+            <SecondaryButton disabled={isPending} onClick={startNewCampaign}>
+              Nouvelle campagne
+            </SecondaryButton>
+          ) : null}
+          <SecondaryButton
+            disabled={isPending || !campaignId || !canSaveCampaign || questions.length === 0}
+            onClick={() => changeCampaignStatus("activateCampaign")}
+          >
             Activer
           </SecondaryButton>
           <SecondaryButton disabled={isPending || !campaignId} onClick={() => changeCampaignStatus("terminateCampaign")}>
@@ -702,4 +805,12 @@ function toDateInputValue(value: string) {
   }
 
   return value.slice(0, 10);
+}
+
+function isEndDateBeforeStartDate(startDate: string, endDate: string) {
+  if (!startDate || !endDate) {
+    return false;
+  }
+
+  return new Date(`${endDate}T00:00:00`) < new Date(`${startDate}T00:00:00`);
 }

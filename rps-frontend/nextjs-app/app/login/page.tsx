@@ -7,9 +7,11 @@ import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
 import { login, saveAuth } from "@/lib/backend/auth";
 
+const allowedEmails = ["isabelle@laroche360.ca", "roxanne@laroche360.ca"];
+
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@laroche.fr");
+  const [email, setEmail] = useState(allowedEmails[0]);
   const [password, setPassword] = useState("password");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,7 +22,14 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await login({ email, password });
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!allowedEmails.includes(normalizedEmail)) {
+        setError(`Utilisez un email autorise: ${allowedEmails.join(" ou ")}`);
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await login({ email: normalizedEmail, password });
       saveAuth(response);
       router.push("/dashboard");
     } catch (err) {
@@ -80,6 +89,9 @@ export default function LoginPage() {
           <p className="mt-3 text-sm leading-6 text-slate-600">
             Pilotage des campagnes RPS et revue des rapports consultants
           </p>
+          <div className="mt-4 rounded-[12px] border border-[#e6cf9f] bg-[rgba(255,252,246,0.92)] px-4 py-3 text-xs text-slate-600">
+            Emails autorises: {allowedEmails.join(", ")}
+          </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
@@ -93,8 +105,20 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f7f2ea] px-4 py-3 text-sm outline-none focus:border-[#c9a86c] focus:ring-1 focus:ring-[#c9a86c]"
-                placeholder="admin@laroche.fr"
+                placeholder="isabelle@laroche360.ca"
               />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {allowedEmails.map((allowedEmail) => (
+                <button
+                  key={allowedEmail}
+                  type="button"
+                  onClick={() => setEmail(allowedEmail)}
+                  className="rounded-[10px] border border-[#d8ccba] bg-[rgba(255,252,246,0.92)] px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-[#faf4eb]"
+                >
+                  {allowedEmail}
+                </button>
+              ))}
             </div>
             <div>
               <label htmlFor="password" className="sr-only">
@@ -123,7 +147,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-4 space-y-2 text-center text-xs text-slate-500">
-            <p>Demo: admin@laroche.fr / password</p>
+            <p>Comptes autorises: isabelle@laroche360.ca / roxanne@laroche360.ca</p>
             <Link href="/signup" className="text-[#8a651f] underline-offset-4 hover:underline">
               Creer un compte admin
             </Link>

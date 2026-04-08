@@ -32,11 +32,11 @@ export class Employee {
   @Column({ type: 'varchar', unique: true, nullable: true })
   email: string | null;
 
-  @Column({ nullable: true })
-  phone: string;
+  @Column({ type: 'varchar', nullable: true })
+  phone: string | null;
 
-  @Column({ nullable: true })
-  department: string;
+  @Column({ type: 'varchar', nullable: true })
+  department: string | null;
 
   @Column({ unique: true, nullable: true })
   survey_token: string;
