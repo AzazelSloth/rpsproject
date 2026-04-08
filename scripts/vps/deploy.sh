@@ -368,27 +368,36 @@ configure_nginx() {
     local nginx_config="$SCRIPT_DIR/nginx.rps.conf"
     local nginx_target="/etc/nginx/sites-available/rps"
     local nginx_enabled="/etc/nginx/sites-enabled/rps"
+    local nginx_conf_d_target="/etc/nginx/conf.d/rps.conf"
 
-    # Check if Nginx config exists
-    if [ -f "$nginx_config" ]; then
-        # Backup existing config
+    if ! command -v nginx >/dev/null 2>&1; then
+        log "WARN" "Nginx not installed; skipping Nginx configuration"
+        return 0
+    fi
+
+    if [ ! -f "$nginx_config" ]; then
+        log "WARN" "Nginx config not found: $nginx_config"
+        return 0
+    fi
+
+    if [ -d /etc/nginx/sites-available ] && [ -d /etc/nginx/sites-enabled ]; then
         if [ -f "$nginx_target" ]; then
             sudo cp "$nginx_target" "$nginx_target.backup.$(date +%Y%m%d)"
         fi
-
-        # Copy new config
         sudo cp "$nginx_config" "$nginx_target"
-
-        # Enable site
         sudo ln -sf "$nginx_target" "$nginx_enabled"
-
-        # Test and reload
-        sudo nginx -t && sudo systemctl reload nginx
-
-        log "INFO" "Nginx configured successfully"
+    elif [ -d /etc/nginx/conf.d ]; then
+        if [ -f "$nginx_conf_d_target" ]; then
+            sudo cp "$nginx_conf_d_target" "$nginx_conf_d_target.backup.$(date +%Y%m%d)"
+        fi
+        sudo cp "$nginx_config" "$nginx_conf_d_target"
     else
-        log "WARN" "Nginx config not found: $nginx_config"
+        log "WARN" "No known Nginx config directory found; skipping Nginx update"
+        return 0
     fi
+
+    sudo nginx -t && sudo systemctl reload nginx
+    log "INFO" "Nginx configured successfully"
 }
 
 # ==============================================================================
