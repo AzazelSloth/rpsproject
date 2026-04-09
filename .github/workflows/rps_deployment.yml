@@ -301,15 +301,21 @@ jobs:
 
             # Apply Nginx configuration from repository (optional, distro-dependent layout)
             if [ -f "$APP_DIR/scripts/vps/nginx.rps.conf" ] && command -v nginx >/dev/null 2>&1; then
+              # Start nginx if not running
+              if ! systemctl is-active --quiet nginx; then
+                echo "Starting nginx..."
+                sudo systemctl start nginx || sudo service nginx start || true
+              fi
+              
               if [ -d /etc/nginx/sites-available ] && [ -d /etc/nginx/sites-enabled ]; then
                 sudo cp "$APP_DIR/scripts/vps/nginx.rps.conf" /etc/nginx/sites-available/rps
                 sudo ln -sf /etc/nginx/sites-available/rps /etc/nginx/sites-enabled/rps
                 sudo nginx -t
-                sudo systemctl reload nginx
+                sudo systemctl reload nginx || sudo service nginx reload || true
               elif [ -d /etc/nginx/conf.d ]; then
                 sudo cp "$APP_DIR/scripts/vps/nginx.rps.conf" /etc/nginx/conf.d/rps.conf
                 sudo nginx -t
-                sudo systemctl reload nginx
+                sudo systemctl reload nginx || sudo service nginx reload || true
               else
                 echo "WARN: nginx config directory not found; skipping nginx update."
               fi
