@@ -62,8 +62,7 @@ export default async function SurveysPage({
               />
               <select className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none">
                 <option value="active">active</option>
-                <option value="draft">brouillon</option>
-                <option value="archived">archive</option>
+               
               </select>
             </div>
           </div>
@@ -127,11 +126,6 @@ export default async function SurveysPage({
         eyebrow="Gestion des sondages"
         title={
           activeTab === "edit" ? "Modifier un sondage" : "Creer un sondage"
-        }
-        description={
-          activeTab === "edit"
-            ? "Ajuste le sondage existant, mets a jour les questions et valide la nouvelle version. L'ajout d'entreprise est bloque en mode modification."
-            : "Un builder minimal oriente RH, avec structure, typologie de questions et apercu du futur questionnaire salarie."
         }
       />
       <SurveyBuilderDemo

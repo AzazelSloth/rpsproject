@@ -580,7 +580,7 @@ export function SurveyBuilderDemo({
             disabled={isPending || !canSaveCampaign || (mode === "edit" && !campaignId)}
             onClick={saveCampaign}
           >
-            {isPending ? "Enregistrement..." : campaignId ? "Mettre a jour" : "Creer le sondage"}
+            {isPending ? "Enregistrement..." : campaignId ? "Ajout section" : "Creer le sondage"}
           </PrimaryButton>
           {status === "active" ? (
             <SecondaryButton 

@@ -18,7 +18,7 @@ export function SectionHeader({
 }: {
   eyebrow: string;
   title: string;
-  description: string;
+  description?: string;
   action?: ReactNode;
 }) {
   return (
@@ -30,7 +30,9 @@ export function SectionHeader({
         <h1 className="font-[family-name:var(--font-manrope)] text-3xl font-extrabold tracking-tight text-slate-900">
           {title}
         </h1>
-        <p className="max-w-3xl text-sm leading-6 text-slate-600">{description}</p>
+        {description ? (
+          <p className="max-w-3xl text-sm leading-6 text-slate-600">{description}</p>
+        ) : null}
       </div>
       {action}
     </div>
