@@ -37,6 +37,10 @@ export function EmployeesTableDemo({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [importSuccess, setImportSuccess] = useState<{
+    count: number;
+    participants: Array<{ name: string; email: string; link: string }>;
+  } | null>(null);
 
   const filteredParticipants = useMemo(() => {
     return managementData.participants.filter((participant) => {
@@ -129,11 +133,16 @@ export function EmployeesTableDemo({
       companyId,
       csv,
     })
-      .then(() => {
-        setFeedback("Import des salariés terminé avec succès !");
-        setTimeout(() => {
-          router.push(buildSurveyCreateHref());
-        }, 1000);
+      .then((result: any) => {
+        setImportSuccess({
+          count: result.imported_employees || 0,
+          participants: (result.participants || []).map((p: any) => ({
+            name: p.employee?.first_name + ' ' + p.employee?.last_name,
+            email: p.employee?.email,
+            link: `${window.location.origin}/survey-response/${p.participation_token}`,
+          })),
+        });
+        setFeedback(`Import réussi ! ${result.imported_employees || 0} employé(s) ajouté(s).`);
       })
       .catch((err) => {
         const errorMessage = err?.message || "L'import a échoué. Vérifiez le format du CSV et réessayez.";
@@ -144,8 +153,101 @@ export function EmployeesTableDemo({
       });
   }
 
+  function copyAllLinks() {
+    if (!importSuccess) return;
+    const links = importSuccess.participants.map(p => `${p.name}: ${p.link}`).join('\n');
+    navigator.clipboard.writeText(links);
+    setFeedback('Tous les liens ont été copiés dans le presse-papiers !');
+  }
+
+  function createNewSurvey() {
+    const params = new URLSearchParams();
+    params.set("tab", "create");
+    params.set("campaignId", String(propCampaignId ?? managementData.campaignId));
+    params.set("companyId", String(propCompanyId ?? managementData.companyId));
+    
+    const scenario = searchParams.get("scenario");
+    if (scenario) {
+      params.set("scenario", scenario);
+    }
+
+    router.push(`/surveys?${params.toString()}`);
+  }
+
   return (
     <div className="space-y-6">
+      {/* Import Success Confirmation */}
+      {importSuccess && (
+        <Card className="p-6 border-emerald-200 bg-emerald-50">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-white text-xl font-bold">
+              ✓
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-emerald-900">
+                Import terminé avec succès !
+              </h3>
+              <p className="mt-2 text-sm text-emerald-700">
+                {importSuccess.count} employé(s) ont été importé(s) dans le sondage.
+              </p>
+              
+              <div className="mt-4 space-y-3">
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={copyAllLinks}
+                    className="rounded-[12px] bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+                  >
+                    Copier tous les liens
+                  </button>
+                  <button
+                    onClick={createNewSurvey}
+                    className="rounded-[12px] bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    Créer un nouveau sondage
+                  </button>
+                  <button
+                    onClick={() => setImportSuccess(null)}
+                    className="rounded-[12px] border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    Retour à la liste
+                  </button>
+                </div>
+
+                <div className="mt-4 rounded-[12px] bg-white p-4">
+                  <p className="text-sm font-semibold text-slate-700 mb-3">
+                    Liens individuels à partager avec chaque employé :
+                  </p>
+                  <div className="max-h-64 overflow-y-auto space-y-2">
+                    {importSuccess.participants.map((participant, index) => (
+                      <div key={index} className="flex items-center gap-3 p-3 rounded-[8px] bg-slate-50">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-900">{participant.name}</p>
+                          <p className="text-xs text-slate-500">{participant.email}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs text-slate-600 truncate max-w-[200px]">
+                            {participant.link}
+                          </code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(participant.link);
+                              setFeedback(`Lien copié pour ${participant.name} !`);
+                            }}
+                            className="text-xs text-white bg-emerald-700 px-2 py-1 rounded hover:bg-emerald-800 font-semibold"
+                          >
+                            Copier
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div className="grid gap-5 xl:grid-cols-[3fr_1fr]">
         <Card className="p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
@@ -167,7 +269,7 @@ export function EmployeesTableDemo({
                   Formats acceptés : .xlsx, .xls, .csv
                 </p>
               </div>
-              <label className="inline-flex cursor-pointer items-center justify-center rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-amber-300 hover:text-slate-900">
+              <label className="inline-flex cursor-pointer items-center justify-center rounded-[12px] border border-slate-200 bg-[#181818] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#242424]">
                 Choisir un fichier
                 <input
                   type="file"

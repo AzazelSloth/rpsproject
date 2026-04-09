@@ -566,7 +566,7 @@ export function SurveyBuilderDemo({
             </p>
             <Link
               href={campaignId && companyId ? `/employees?campaignId=${campaignId}&companyId=${companyId}` : "/employees"}
-              className="mt-4 inline-flex items-center justify-center rounded-[12px] border border-slate-200 bg-white px-6 py-2 text-sm font-semibold text-slate-700 transition hover:border-amber-300 hover:text-slate-900"
+              className="mt-4 inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-6 py-2 text-sm font-semibold text-white transition hover:bg-[#242424]"
             >
               Importer
             </Link>
@@ -585,7 +585,7 @@ export function SurveyBuilderDemo({
             <SecondaryButton 
               disabled={isPending || !campaignId} 
               onClick={() => changeCampaignStatus("terminateCampaign")}
-              className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
+              className="bg-red-700 hover:bg-red-800 text-white"
             >
               Désactiver
             </SecondaryButton>
