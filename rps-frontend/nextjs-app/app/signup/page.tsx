@@ -6,8 +6,11 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
 import { register, saveAuth } from "@/lib/backend/auth";
-
-const allowedEmails = ["isabelle@laroche360.ca", "roxanne@laroche360.ca"];
+import {
+  allowedAdminEmails,
+  isAllowedAdminEmail,
+  normalizeAdminEmail,
+} from "@/lib/backend/auth-config";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -23,7 +26,14 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const response = await register({ name, email, password });
+      const normalizedEmail = normalizeAdminEmail(email);
+      if (!isAllowedAdminEmail(normalizedEmail)) {
+        setError(`Utilisez un e-mail autorisé : ${allowedAdminEmails.join(" ou ")}`);
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await register({ name: name.trim(), email: normalizedEmail, password });
       saveAuth(response);
       router.push("/dashboard");
     } catch (err) {
@@ -53,7 +63,7 @@ export default function SignupPage() {
             Inscription reservee aux administrateurs internes Laroche 360.
           </p>
           <div className="rounded-[12px] border border-[#e6cf9f] bg-[rgba(255,252,246,0.92)] px-4 py-3 text-sm text-slate-600">
-            Emails autorises: {allowedEmails.join(", ")}
+            Emails autorises: {allowedAdminEmails.join(", ")}
           </div>
         </div>
 

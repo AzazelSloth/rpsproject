@@ -6,12 +6,15 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
 import { login, saveAuth } from "@/lib/backend/auth";
-
-const allowedEmails = ["isabelle@laroche360.ca", "roxanne@laroche360.ca"];
+import {
+  allowedAdminEmails,
+  isAllowedAdminEmail,
+  normalizeAdminEmail,
+} from "@/lib/backend/auth-config";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState(allowedEmails[0]);
+  const [email, setEmail] = useState(allowedAdminEmails[0]);
   const [password, setPassword] = useState("password");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,9 +25,9 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const normalizedEmail = email.trim().toLowerCase();
-      if (!allowedEmails.includes(normalizedEmail)) {
-        setError(`Utilisez un e-mail autorisé : ${allowedEmails.join(" ou ")}`);
+      const normalizedEmail = normalizeAdminEmail(email);
+      if (!isAllowedAdminEmail(normalizedEmail)) {
+        setError(`Utilisez un e-mail autorisé : ${allowedAdminEmails.join(" ou ")}`);
         setIsLoading(false);
         return;
       }
@@ -118,6 +121,21 @@ export default function LoginPage() {
                 className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f8f3ea] px-4 py-3 text-sm outline-none transition focus:border-[#c9a86c] focus:ring-2 focus:ring-[#c9a86c]/30"
                 placeholder="........"
               />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <Link
+                href="/signup"
+                className="font-medium text-[#8a651f] underline-offset-4 transition hover:underline"
+              >
+                Créer un compte
+              </Link>
+              <Link
+                href="/forgot-password"
+                className="font-medium text-slate-600 underline-offset-4 transition hover:text-slate-900 hover:underline"
+              >
+                Mot de passe oublié ?
+              </Link>
             </div>
 
             {error ? (

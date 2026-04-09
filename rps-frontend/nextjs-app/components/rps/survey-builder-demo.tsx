@@ -119,7 +119,9 @@ export function SurveyBuilderDemo({
   const isSurveyStepCompleted = Boolean(
     campaignId && companyId && status === "active" && questions.length > 0,
   );
-  const hasImportedEmployees = Boolean(importSuccess?.participants.length);
+  const hasImportedEmployees = Boolean(
+    importSuccess && (importSuccess.count > 0 || importSuccess.participants.length > 0),
+  );
   const statusLabel = formatSurveyStatus(status);
   const progressTone = hasDownloadedLinks
     ? "success"
@@ -127,12 +129,12 @@ export function SurveyBuilderDemo({
       ? "warning"
       : "neutral";
   const progressLabel = hasDownloadedLinks
-    ? "Parcours complete"
+    ? "Parcours complété"
     : hasImportedEmployees
-      ? "Etape 3 en cours"
+      ? "Étape 3 en cours"
       : isSurveyStepCompleted || isImportModalOpen
-        ? "Etape 2 en cours"
-        : "Etape 1 en cours";
+        ? "Étape 2 en cours"
+        : "Étape 1 en cours";
 
   function runMutation<TResponse>(
     mutation: () => Promise<TResponse>,
@@ -748,7 +750,7 @@ export function SurveyBuilderDemo({
               1. Configurer le sondage, 2. Enregistrer les questions, 3. Activer le sondage, 4. Importer les employés
             </h2>
             <h2 className="mt-2 font-[family-name:var(--font-manrope)] text-2xl font-bold text-slate-900">
-              Faites ces 3 choses dans l&apos;ordre
+              Parcours de création du sondage
             </h2>
             <p className="hidden mt-2 max-w-3xl text-sm leading-6 text-slate-600">
               Commencez par renseigner l&apos;entreprise et les dates, enregistrez ensuite les
@@ -756,7 +758,8 @@ export function SurveyBuilderDemo({
               liste avec les liens du sondage.
             </p>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-              1. Cree le sondage. 2. Importe les employes. 3. Telecharge la liste finale avec les liens.
+              Suivez ces trois étapes pour publier le sondage, importer les employés, puis
+              télécharger la liste finale avec les liens individuels.
             </p>
           </div>
           <div className="hidden">
@@ -818,19 +821,19 @@ export function SurveyBuilderDemo({
             {
               step: 1,
               title: "Créer le sondage",
-              body: "Choisis l'entreprise. Mets les dates. Ecris le texte. Ajoute les questions. Puis clique sur Activer.",
+              body: "Sélectionnez l'entreprise, renseignez les dates et la description, ajoutez les questions puis activez le sondage.",
               done: isSurveyStepCompleted,
             },
             {
               step: 2,
               title: "Importer les employés",
-              body: "Quand le sondage est actif, clique sur Importer les employes. Puis ajoute ton fichier Excel ou CSV.",
+              body: "Une fois le sondage activé, ouvrez l'import et chargez votre fichier Excel ou CSV.",
               done: hasImportedEmployees,
             },
             {
               step: 3,
               title: "Télécharger la liste",
-              body: "Quand l'import est fini, clique sur Telecharger la liste. Tu recuperes alors les liens de chaque employe.",
+              body: "Après l'import, téléchargez la liste des employés avec leurs liens individuels.",
               done: hasDownloadedLinks,
             },
           ].map((item) => (
@@ -1001,7 +1004,8 @@ export function SurveyBuilderDemo({
                   Créer le sondage
                 </h3>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                  Remplissez d&apos;abord cette partie. Quand tout est prêt, cliquez sur Activer.
+                  Renseignez ici les informations du sondage, puis activez-le lorsque la
+                  configuration et les questions sont finalisées.
                 </p>
               </div>
               <Pill tone={isSurveyStepCompleted ? "success" : "warning"}>
@@ -1124,8 +1128,8 @@ export function SurveyBuilderDemo({
               </button>
               <p className="mt-3 text-xs text-slate-500">
                 {isSurveyReadyForImport
-                  ? "Cliquez sur le bouton noir pour ouvrir l'import."
-                  : "Cliquer d'abord sur Activer."}
+                  ? "Ouvrez l'import pour charger le fichier des employés."
+                  : "Le sondage doit être activé avant de lancer l'import."}
               </p>
             </div>
 
@@ -1139,7 +1143,7 @@ export function SurveyBuilderDemo({
                     Télécharger la liste des employés avec leurs liens
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Fais cette etape a la fin. C&apos;est ici que tu recuperes tous les liens.
+                    Cette étape permet de récupérer la liste finale des liens individuels.
                   </p>
                 </div>
                 <Pill tone={hasDownloadedLinks ? "success" : "neutral"}>
@@ -1163,7 +1167,7 @@ export function SurveyBuilderDemo({
                 </>
               ) : (
                 <p className="mt-4 text-sm text-slate-500">
-                  Cette etape apparait juste apres l&apos;import des employes.
+                  Cette étape sera disponible après un import réussi.
                 </p>
               )}
             </div>
@@ -1412,7 +1416,8 @@ export function SurveyBuilderDemo({
                   {effectiveCampaignTitle || "Sondage"} - {selectedCompanyName || "Entreprise"}
                 </h3>
                 <p className="mt-2 text-sm text-slate-600">
-                  Ici, tu ajoutes la liste des employes. Quand c&apos;est fini, tu pourras telecharger les liens.
+                  Chargez ici le fichier des employés. Une fois l&apos;import terminé, vous pourrez
+                  télécharger la liste des liens individuels.
                 </p>
               </div>
               <button
@@ -1430,19 +1435,19 @@ export function SurveyBuilderDemo({
                   {
                     step: 1,
                     title: "Sondage créé",
-                    body: "C'est bon. Le sondage est pret.",
+                    body: "Le sondage est prêt et peut maintenant recevoir les employés.",
                     done: Boolean(campaignId),
                   },
                   {
                     step: 2,
                     title: "Importer les employés",
-                    body: "Ajoute ici ton fichier Excel ou CSV.",
-                    done: Boolean(importSuccess),
+                    body: "Chargez votre fichier Excel ou CSV dans la zone prévue.",
+                    done: hasImportedEmployees,
                   },
                   {
                     step: 3,
                     title: "Télécharger la liste",
-                    body: "Quand l'import est fini, telecharge la liste avec les liens.",
+                    body: "Téléchargez la liste des employés avec leurs liens individuels une fois l'import terminé.",
                     done: hasDownloadedLinks,
                   },
                 ].map((item) => (
@@ -1473,9 +1478,9 @@ export function SurveyBuilderDemo({
                 <div className="mt-4 rounded-[12px] border border-dashed border-slate-300 bg-slate-50/80 p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">Ajoute ton fichier</p>
+                      <p className="text-sm font-semibold text-slate-800">Ajouter un fichier</p>
                       <p className="mt-1 text-xs text-slate-500">
-                        Tu peux utiliser un fichier .xlsx, .xls ou .csv
+                        Formats acceptés : .xlsx, .xls, .csv
                       </p>
                     </div>
                     <label className="inline-flex cursor-pointer items-center justify-center rounded-[12px] border border-slate-200 bg-[#181818] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#242424]">
@@ -1495,14 +1500,16 @@ export function SurveyBuilderDemo({
 
                 <div className="mt-5">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold text-slate-700">Colle aussi les donnees ici si besoin</label>
+                    <label className="text-sm font-semibold text-slate-700">
+                      Données CSV
+                    </label>
                     {importCsv.trim() ? (
                       <button
                         type="button"
                         onClick={validateImportCsv}
                         className="text-xs font-semibold text-amber-700 hover:text-amber-800"
                       >
-                        Verifier
+                        Vérifier le format
                       </button>
                     ) : null}
                   </div>
@@ -1548,7 +1555,7 @@ export function SurveyBuilderDemo({
                     disabled={isPending || !importCsv.trim() || importValidationErrors.length > 0}
                     onClick={handleImportEmployees}
                   >
-                    {isPending ? "Import en cours..." : "Importer les employes"}
+                    {isPending ? "Import en cours..." : "Importer les employés"}
                   </PrimaryButton>
                   <SecondaryButton onClick={closeImportModal} disabled={isPending}>
                     Fermer
@@ -1565,13 +1572,13 @@ export function SurveyBuilderDemo({
                     {importSuccess.count} employé(s) importé(s)
                   </h4>
                   <p className="mt-2 text-sm text-slate-600">
-                    Bravo. Maintenant, clique sur le bouton pour telecharger la liste.
+                    L&apos;import est terminé. Vous pouvez maintenant télécharger la liste des liens.
                   </p>
                   <div className="mt-4 flex flex-wrap gap-3">
                     <PrimaryButton onClick={downloadLinksList}>
                       Télécharger la liste des employés avec leurs liens
                     </PrimaryButton>
-                    <SecondaryButton onClick={copyAllLinks}>Copier les liens</SecondaryButton>
+                    <SecondaryButton onClick={copyAllLinks}>Copier tous les liens</SecondaryButton>
                   </div>
                   <div className="mt-5 max-h-72 space-y-3 overflow-y-auto">
                     {importSuccess.participants.map((participant, index) => (
