@@ -8,12 +8,14 @@ export const dynamic = "force-dynamic";
 export default async function SurveysPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scenario?: string; tab?: string }>;
+  searchParams: Promise<{ scenario?: string; tab?: string; campaignId?: string }>;
 }) {
-  const { scenario, tab } = await searchParams;
+  const { scenario, tab, campaignId } = await searchParams;
   const activeTab = tab ?? "create";
+  const requestedCampaignId = campaignId ? Number(campaignId) : null;
   const surveyBuilderData = await getServerTrpcCaller().data.surveyBuilder({
     scenario: scenario ?? null,
+    campaignId: requestedCampaignId,
   });
   const managementData =
     activeTab === "list"

@@ -8,9 +8,6 @@ import type { SurveyBuilderData } from "@/lib/repositories/rps-repository";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
 import { getTrpcClient } from "@/lib/trpc/client";
 
-const defaultCampaignDescription =
-  "Sondage trimestriel visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.";
-
 const defaultChoiceOptions = ["Oui", "Partiellement", "Non"];
 
 const templateByType: Record<"scale" | "choice" | "text", SurveyQuestion> = {
@@ -71,10 +68,13 @@ export function SurveyBuilderDemo({
   const [error, setError] = useState<string | null>(null);
   const canEditQuestions = status !== "active";
   const isCreateMode = mode === "create";
+  const selectedCompanyName =
+    companies.find((company) => company.id === companyId)?.name?.trim() ?? "";
   const trimmedTitle = title.trim();
+  const effectiveCampaignTitle = selectedCompanyName || trimmedTitle;
   const isDateRangeInvalid = isEndDateBeforeStartDate(startDate, endDate);
   const canSaveCampaign =
-    Boolean(companyId) && trimmedTitle.length >= 3 && !isDateRangeInvalid;
+    Boolean(companyId) && effectiveCampaignTitle.length >= 3 && !isDateRangeInvalid;
 
   function runMutation<TResponse>(
     mutation: () => Promise<TResponse>,
@@ -137,6 +137,7 @@ export function SurveyBuilderDemo({
       (result) => {
         setCompanies((current) => [...current, result]);
         setCompanyId(result.id);
+        setTitle(result.name);
         setNewCompanyName("");
       },
     );
@@ -148,8 +149,8 @@ export function SurveyBuilderDemo({
       return false;
     }
 
-    if (trimmedTitle.length < 3) {
-      setError("Le nom du sondage doit contenir au moins 3 caracteres.");
+    if (effectiveCampaignTitle.length < 3) {
+      setError("Le nom de l'entreprise doit contenir au moins 3 caracteres.");
       return false;
     }
 
@@ -164,6 +165,17 @@ export function SurveyBuilderDemo({
     }
 
     return true;
+  }
+
+  function handleCompanySelection(nextCompanyId: number) {
+    setCompanyId(nextCompanyId);
+
+    const nextCompanyName =
+      companies.find((company) => company.id === nextCompanyId)?.name?.trim() ?? "";
+
+    if (!campaignId || !trimmedTitle || trimmedTitle === selectedCompanyName) {
+      setTitle(nextCompanyName);
+    }
   }
 
   function saveCampaign() {
@@ -183,7 +195,7 @@ export function SurveyBuilderDemo({
           getTrpcClient().adminSurveys.updateCampaign.mutate({
             campaignId,
             companyId: selectedCompanyId,
-            title: trimmedTitle,
+            title: effectiveCampaignTitle,
             startDate,
             endDate,
           }),
@@ -196,7 +208,7 @@ export function SurveyBuilderDemo({
       () =>
         getTrpcClient().adminSurveys.createCampaign.mutate({
           companyId: selectedCompanyId,
-          title: trimmedTitle,
+          title: effectiveCampaignTitle,
           startDate,
           endDate,
         }),
@@ -205,6 +217,10 @@ export function SurveyBuilderDemo({
       (result) => {
         setCampaignId(result.id);
         setStatus(result.status ?? "preparation");
+        const params = new URLSearchParams();
+        params.set("tab", "edit");
+        params.set("campaignId", String(result.id));
+        router.push(`/surveys?${params.toString()}`);
       },
     );
   }
@@ -471,7 +487,7 @@ export function SurveyBuilderDemo({
             <p className="mt-2 text-sm text-slate-500">nom de l&apos;entreprise</p>
             <select
               value={companyId ?? ""}
-              onChange={(event) => setCompanyId(Number(event.target.value))}
+              onChange={(event) => handleCompanySelection(Number(event.target.value))}
               className="mt-3 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
             >
               <option value="" disabled>
@@ -541,9 +557,9 @@ export function SurveyBuilderDemo({
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Sondage</p>
             <input
               className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Titre du sondage"
+              value={effectiveCampaignTitle}
+              readOnly
+              placeholder="Le titre reprend le nom de l'entreprise"
             />
             <textarea
               className="mt-3 min-h-24 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
@@ -731,7 +747,9 @@ export function SurveyBuilderDemo({
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
               Sondage
             </p>
-            <p className="mt-2 text-lg font-semibold">{title}</p>
+            <p className="mt-2 text-lg font-semibold">
+              {effectiveCampaignTitle || "Entreprise a definir"}
+            </p>
             <p className="mt-2 text-sm text-slate-500">
               {companies.find((company) => company.id === companyId)?.name ?? "Entreprise a definir"}
             </p>

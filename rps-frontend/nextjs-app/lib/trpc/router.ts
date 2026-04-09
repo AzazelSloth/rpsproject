@@ -315,8 +315,13 @@ const dataRouter = t.router({
 		)
 		.query(({ input }) => getEmployeeManagementData(input.scenario, input.campaignId)),
 	surveyBuilder: t.procedure
-		.input(z.object({ scenario: scenarioSchema }))
-		.query(({ input }) => getSurveyBuilderData(input.scenario)),
+		.input(
+			z.object({
+				scenario: scenarioSchema,
+				campaignId: z.number().int().positive().optional().nullable(),
+			}),
+		)
+		.query(({ input }) => getSurveyBuilderData(input.scenario, input.campaignId)),
 	listSurveys: t.procedure
 		.input(z.object({ scenario: scenarioSchema }))
 		.query(({ input }) => getAllSurveys(input.scenario)),

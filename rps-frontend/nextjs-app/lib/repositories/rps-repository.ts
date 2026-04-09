@@ -200,7 +200,10 @@ export async function getAllSurveys(scenario?: string | null): Promise<SurveyOpt
   }
 }
 
-export async function getSurveyBuilderData(scenario?: string | null): Promise<SurveyBuilderData> {
+export async function getSurveyBuilderData(
+  scenario?: string | null,
+  campaignId?: number | null,
+): Promise<SurveyBuilderData> {
   const demoDataset = getDemoDataset(scenario);
 
   if (isBackendConfigured()) {
@@ -210,7 +213,9 @@ export async function getSurveyBuilderData(scenario?: string | null): Promise<Su
         getBackendCollection<BackendCompany>("/companies"),
       ]);
       const activeCampaign =
-        campaigns.find((item) => item.status === "active") ?? campaigns[0];
+        (campaignId ? campaigns.find((item) => item.id === campaignId) : null) ??
+        campaigns.find((item) => item.status === "active") ??
+        campaigns[0];
       const companyOptions = companies.map((company) => ({
         id: company.id,
         name: company.name,

@@ -1,4 +1,4 @@
-import { createTRPCProxyClient, httpBatchLink, httpLink } from "@trpc/client";
+import { createTRPCProxyClient, httpLink } from "@trpc/client";
 import type { AppRouter } from "@/lib/trpc/router";
 
 let trpcClient: ReturnType<typeof createTRPCProxyClient<AppRouter>> | null = null;

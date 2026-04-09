@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { campaignId, companyId, remindPending, message } = body;
+    const { campaignId, companyId, message } = body;
 
     if (!campaignId || !companyId) {
       return NextResponse.json(

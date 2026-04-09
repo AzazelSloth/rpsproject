@@ -11,7 +11,7 @@ const pageTitles: Record<string, string> = {
   "/surveys": "",
   "/employees": "Gestion des employés",
   "/results": "Résultats",
-  "/report": "Rapport",
+  "/report": "Synthèse",
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {

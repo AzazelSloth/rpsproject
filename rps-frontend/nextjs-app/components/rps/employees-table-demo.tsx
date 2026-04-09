@@ -461,8 +461,12 @@ export function EmployeesTableDemo({
     params.set("tab", "edit");
     
     const campaignId = propCampaignId ?? managementData.campaignId;
+    const companyId = propCompanyId ?? managementData.companyId;
     if (campaignId) {
       params.set("campaignId", String(campaignId));
+    }
+    if (companyId) {
+      params.set("companyId", String(companyId));
     }
     
     const scenario = searchParams.get("scenario");
