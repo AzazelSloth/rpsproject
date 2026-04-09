@@ -748,7 +748,7 @@ export function SurveyBuilderDemo({
               1. Configurer le sondage, 2. Enregistrer les questions, 3. Activer le sondage, 4. Importer les employés
             </h2>
             <h2 className="mt-2 font-[family-name:var(--font-manrope)] text-2xl font-bold text-slate-900">
-              Fais ces 3 choses dans l&apos;ordre
+              Faites ces 3 choses dans l&apos;ordre
             </h2>
             <p className="hidden mt-2 max-w-3xl text-sm leading-6 text-slate-600">
               Commencez par renseigner l&apos;entreprise et les dates, enregistrez ensuite les
