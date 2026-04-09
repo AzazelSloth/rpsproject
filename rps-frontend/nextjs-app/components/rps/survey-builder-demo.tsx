@@ -9,7 +9,7 @@ import type { SurveyQuestion } from "@/lib/strapi/mappers";
 import { getTrpcClient } from "@/lib/trpc/client";
 
 const defaultCampaignDescription =
-  "Campagne trimestrielle visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.";
+  "Sondage trimestriel visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.";
 
 const defaultChoiceOptions = ["Oui", "Partiellement", "Non"];
 
@@ -99,7 +99,7 @@ export function SurveyBuilderDemo({
         setError(
           caughtError instanceof Error
             ? caughtError.message
-            : "La mise a jour de la campagne a echoue. Verifie le backend.",
+            : "La mise a jour du sondage a echoue. Verifie le backend.",
         );
       }
     });
@@ -144,7 +144,7 @@ export function SurveyBuilderDemo({
 
   function validateCampaignBeforeSave() {
     if (!companyId) {
-      setError("Choisis une entreprise avant d'enregistrer la campagne.");
+      setError("Choisis une entreprise avant d'enregistrer le sondage.");
       return false;
     }
 
@@ -159,7 +159,7 @@ export function SurveyBuilderDemo({
     }
 
     if (mode === "edit" && !campaignId) {
-      setError("Aucune campagne existante a modifier.");
+      setError("Aucun sondage existant a modifier.");
       return false;
     }
 
@@ -173,7 +173,7 @@ export function SurveyBuilderDemo({
 
     const selectedCompanyId = companyId;
     if (selectedCompanyId === null) {
-      setError("Choisis une entreprise avant d'enregistrer la campagne.");
+      setError("Choisis une entreprise avant d'enregistrer le sondage.");
       return;
     }
 
@@ -187,7 +187,7 @@ export function SurveyBuilderDemo({
             startDate,
             endDate,
           }),
-        "Campagne mise a jour.",
+        "Sondage mis a jour.",
       );
       return;
     }
@@ -200,7 +200,7 @@ export function SurveyBuilderDemo({
           startDate,
           endDate,
         }),
-      "Campagne creee.",
+      "Sondage cree.",
       undefined,
       (result) => {
         setCampaignId(result.id);
@@ -209,31 +209,14 @@ export function SurveyBuilderDemo({
     );
   }
 
-  function startNewCampaign() {
-    if (!isCreateMode) {
-      return;
-    }
-
-    setCampaignId(null);
-    setStatus("draft");
-    setTitle("Nouvelle campagne RPS");
-    setDescription(defaultCampaignDescription);
-    setCompanyId(companies[0]?.id ?? null);
-    setStartDate("");
-    setEndDate("");
-    setQuestions([]);
-    setFeedback("Mode nouvelle campagne active.");
-    setError(null);
-  }
-
   function addQuestion(type: "scale" | "choice" | "text") {
     if (!canEditQuestions) {
-      setError("Impossible d'ajouter des questions quand la campagne est active.");
+      setError("Impossible d'ajouter des questions quand le sondage est actif.");
       return;
     }
 
     if (!campaignId) {
-      setError("La campagne doit exister avant d'ajouter des questions.");
+      setError("Le sondage doit exister avant d'ajouter des questions.");
       return;
     }
 
@@ -425,27 +408,27 @@ export function SurveyBuilderDemo({
 
   function changeCampaignStatus(action: "activateCampaign" | "terminateCampaign" | "archiveCampaign") {
     if (!campaignId) {
-      setError("Aucune campagne active n'est disponible.");
+      setError("Aucun sondage actif n'est disponible.");
       return;
     }
 
     if (action === "activateCampaign") {
       if (!canSaveCampaign) {
-        setError("Corrige les informations de campagne avant activation.");
+        setError("Corrige les informations du sondage avant activation.");
         return;
       }
       if (questions.length === 0) {
-        setError("Ajoute au moins une question avant d'activer la campagne.");
+        setError("Ajoute au moins une question avant d'activer le sondage.");
         return;
       }
     }
 
     const successMessage =
       action === "activateCampaign"
-        ? "Campagne activee."
+        ? "Sondage activé."
         : action === "terminateCampaign"
-          ? "Campagne terminee."
-          : "Campagne archivee.";
+          ? "Sondage désactivé."
+          : "Sondage archivé.";
 
     runMutation<{ status?: string }>(
       () => {
@@ -470,127 +453,124 @@ export function SurveyBuilderDemo({
   }
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[1.08fr_0.92fr]">
+    <div className="space-y-6">
       <Card className="p-6">
         <div className="flex flex-wrap items-center gap-3">
           <Pill>{status}</Pill>
-          {campaignId ? <Pill tone="neutral">Campaign #{campaignId}</Pill> : <Pill tone="neutral">Nouvelle campagne</Pill>}
+          {campaignId ? <Pill tone="neutral">Sondage #{campaignId}</Pill> : <Pill tone="neutral">Nouveau sondage</Pill>}
           <Pill tone="neutral">{questions.length} questions</Pill>
         </div>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_0.9fr]">
-          <div className="space-y-4">
-            <div className="relative rounded-[16px] border border-slate-200 bg-slate-50 p-4">
-              <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
-                1
-              </span>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Entreprise</p>
-              <select
-                value={companyId ?? ""}
-                onChange={(event) => setCompanyId(Number(event.target.value))}
-                className="mt-3 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-              >
-                <option value="" disabled>
-                  Choisir une entreprise
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          {/* Bloc 1: Entreprise */}
+          <div className="relative rounded-[16px] border border-slate-200 bg-slate-50 p-5">
+            <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+              1
+            </span>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Entreprise</p>
+            <p className="mt-2 text-sm text-slate-500">nom de l'entreprise</p>
+            <select
+              value={companyId ?? ""}
+              onChange={(event) => setCompanyId(Number(event.target.value))}
+              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+            >
+              <option value="" disabled>
+                Choisir une entreprise
+              </option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
                 </option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
-              {isCreateMode ? (
-                <div className="mt-3 flex gap-3">
-                  <input
-                    value={newCompanyName}
-                    onChange={(event) => setNewCompanyName(event.target.value)}
-                    className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-                    placeholder="Ajouter une nouvelle entreprise"
-                  />
-                  <SecondaryButton
-                    disabled={
-                      isPending ||
-                      newCompanyName.trim().length < 2 ||
-                      newCompanyName.trim().length > 150
-                    }
-                    onClick={createCompany}
-                  >
-                    Creer
-                  </SecondaryButton>
-                </div>
-              ) : (
-                <p className="mt-3 text-xs text-slate-500">
-                  En mode modification, l&apos;ajout d&apos;entreprise est bloque pour eviter les erreurs.
-                </p>
-              )}
-            </div>
-
-            <div className="relative rounded-[16px] border border-slate-200 bg-white p-4">
-              <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
-                3
-              </span>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Sondage</p>
-              <input
-                className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-              />
-              <textarea
-                className="mt-3 min-h-28 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-              />
-            </div>
+              ))}
+            </select>
+            {isCreateMode && (
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={newCompanyName}
+                  onChange={(event) => setNewCompanyName(event.target.value)}
+                  className="flex-1 rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-sm outline-none"
+                  placeholder="Ajouter une nouvelle entreprise"
+                />
+                <SecondaryButton
+                  disabled={
+                    isPending ||
+                    newCompanyName.trim().length < 2 ||
+                    newCompanyName.trim().length > 150
+                  }
+                  onClick={createCompany}
+                  className="px-4 py-2"
+                >
+                  Créer
+                </SecondaryButton>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-4">
-            <div className="relative rounded-[16px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-4">
-              <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
-                2
-              </span>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Calendrier</p>
-              <div className="grid gap-4">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
-                  className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-                />
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(event) => setEndDate(event.target.value)}
-                  className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-                />
-              </div>
-              <p className="text-sm leading-6 text-slate-600">
-                Choisis d&apos;abord l&apos;entreprise, enregistre la campagne, puis ajoute les questions et leurs choix.
-              </p>
-              {isDateRangeInvalid ? (
-                <p className="mt-2 text-sm font-medium text-rose-700">
-                  La date de fin doit etre posterieure ou egale a la date de debut.
-                </p>
-              ) : null}
+          {/* Bloc 2: Calendrier */}
+          <div className="relative rounded-[16px] border border-slate-200 bg-white p-5">
+            <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+              2
+            </span>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Calendrier</p>
+            <div className="mt-3 space-y-3">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(event) => setStartDate(event.target.value)}
+                className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+              />
+              <input
+                type="date"
+                value={endDate}
+                onChange={(event) => setEndDate(event.target.value)}
+                className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+              />
             </div>
+            {isDateRangeInvalid && (
+              <p className="mt-2 text-sm font-medium text-rose-700">
+                La date de fin doit etre posterieure ou egale a la date de debut.
+              </p>
+            )}
+          </div>
 
-            <div className="relative rounded-[16px] border border-slate-200 bg-white p-4">
-              <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
-                4
-              </span>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                Importer la liste des contacts
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Importe un fichier Excel ou CSV pour ajouter les employes lies a cette campagne.
-              </p>
-              <Link
-                href="/employees"
-                className="mt-4 inline-flex items-center justify-center rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-amber-300 hover:text-slate-900"
-              >
-                Importer
-              </Link>
-              <p className="mt-3 text-xs text-slate-500">Amenne a la page gestion des employes.</p>
-            </div>
+          {/* Bloc 3: Sondage */}
+          <div className="relative rounded-[16px] border border-slate-200 bg-white p-5">
+            <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+              3
+            </span>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Sondage</p>
+            <input
+              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Titre du sondage"
+            />
+            <textarea
+              className="mt-3 min-h-24 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Description du sondage"
+            />
+          </div>
+
+          {/* Bloc 4: Import */}
+          <div className="relative rounded-[16px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-5">
+            <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+              4
+            </span>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+              Importer la liste des contacts
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Importe un fichier Excel ou CSV pour ajouter les employes lies a ce sondage.
+            </p>
+            <Link
+              href={campaignId && companyId ? `/employees?campaignId=${campaignId}&companyId=${companyId}` : "/employees"}
+              className="mt-4 inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-6 py-2 text-sm font-semibold text-white transition hover:bg-[#242424]"
+            >
+              Importer
+            </Link>
+            <p className="mt-3 text-xs text-slate-500">amène à la page gestion des employés</p>
           </div>
         </div>
 
@@ -599,22 +579,24 @@ export function SurveyBuilderDemo({
             disabled={isPending || !canSaveCampaign || (mode === "edit" && !campaignId)}
             onClick={saveCampaign}
           >
-            {isPending ? "Enregistrement..." : campaignId ? "Mettre a jour" : "Creer la campagne"}
+            {isPending ? "Enregistrement..." : campaignId ? "Mettre a jour" : "Creer le sondage"}
           </PrimaryButton>
-          {isCreateMode ? (
-            <SecondaryButton disabled={isPending} onClick={startNewCampaign}>
-              Nouvelle campagne
+          {status === "active" ? (
+            <SecondaryButton 
+              disabled={isPending || !campaignId} 
+              onClick={() => changeCampaignStatus("terminateCampaign")}
+              className="bg-red-700 hover:bg-red-800 text-white"
+            >
+              Désactiver
             </SecondaryButton>
-          ) : null}
-          <SecondaryButton
-            disabled={isPending || !campaignId || !canSaveCampaign || questions.length === 0}
-            onClick={() => changeCampaignStatus("activateCampaign")}
-          >
-            Activer
-          </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => changeCampaignStatus("terminateCampaign")}>
-            Terminer
-          </SecondaryButton>
+          ) : (
+            <SecondaryButton
+              disabled={isPending || !campaignId || !canSaveCampaign || questions.length === 0}
+              onClick={() => changeCampaignStatus("activateCampaign")}
+            >
+              Activer
+            </SecondaryButton>
+          )}
           <SecondaryButton disabled={isPending || !campaignId} onClick={() => changeCampaignStatus("archiveCampaign")}>
             Archiver
           </SecondaryButton>
@@ -632,13 +614,13 @@ export function SurveyBuilderDemo({
           </SecondaryButton>
         </div>
 
-        {feedback ? <p className="mt-4 text-sm font-medium text-emerald-700">{feedback}</p> : null}
-        {error ? <p className="mt-4 text-sm font-medium text-rose-700">{error}</p> : null}
-        {!canEditQuestions ? (
+        {feedback && <p className="mt-4 text-sm font-medium text-emerald-700">{feedback}</p>}
+        {error && <p className="mt-4 text-sm font-medium text-rose-700">{error}</p>}
+        {!canEditQuestions && (
           <p className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-            La campagne est active. Les questions ne peuvent plus etre modifiees tant qu&apos;elle reste active.
+            Le sondage est actif. Les questions ne peuvent plus etre modifiees tant qu&apos;il reste actif.
           </p>
-        ) : null}
+        )}
 
         <div className="mt-6 space-y-4">
           {questions.map((question, index) => (
@@ -686,7 +668,7 @@ export function SurveyBuilderDemo({
                 <option value="text">Texte libre</option>
               </select>
 
-              {question.type === "choice" ? (
+              {question.type === "choice" && (
                 <div className="mt-4 rounded-[14px] border border-amber-200 bg-amber-50/50 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
@@ -721,7 +703,7 @@ export function SurveyBuilderDemo({
                     ))}
                   </div>
                 </div>
-              ) : null}
+              )}
 
               <div className="mt-4 flex flex-wrap gap-3">
                 <PrimaryButton disabled={isPending || !canEditQuestions} onClick={() => persistQuestion(question, index)}>
@@ -746,7 +728,7 @@ export function SurveyBuilderDemo({
         <div className="space-y-4 p-6">
           <div className="rounded-[16px] border border-slate-200 bg-slate-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-              Campagne
+              Sondage
             </p>
             <p className="mt-2 text-lg font-semibold">{title}</p>
             <p className="mt-2 text-sm text-slate-500">
@@ -768,7 +750,7 @@ export function SurveyBuilderDemo({
                     ? "Selection d'un choix parmi les options ci-dessous."
                     : "Champ libre pour commentaire qualitatif."}
               </p>
-              {question.type === "choice" ? (
+              {question.type === "choice" && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {sanitizeOptions(question.options).map((option) => (
                     <span
@@ -779,7 +761,7 @@ export function SurveyBuilderDemo({
                     </span>
                   ))}
                 </div>
-              ) : null}
+              )}
             </div>
           ))}
         </div>

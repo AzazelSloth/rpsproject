@@ -198,9 +198,9 @@ export async function getSurveyBuilderData(scenario?: string | null): Promise<Su
         campaignId: null,
         companyId: companyOptions[0]?.id ?? null,
         companies: companyOptions,
-        title: "Nouvelle campagne RPS",
+        title: "Nouveau sondage RPS",
         description:
-          "Campagne trimestrielle visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.",
+          "Sondage trimestriel visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.",
         status: "draft",
         startDate: "",
         endDate: "",
@@ -225,7 +225,7 @@ export async function getSurveyBuilderData(scenario?: string | null): Promise<Su
     title: currentCampaign.title || demoDataset.campaign.title,
     description:
       currentCampaign.description ||
-      "Campagne trimestrielle visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.",
+      "Sondage trimestriel visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.",
     status: currentCampaign.status,
     startDate: currentCampaign.startDate ?? "",
     endDate: currentCampaign.endDate ?? "",
@@ -576,7 +576,7 @@ function mapBackendCampaign(entry: BackendCampaign) {
     documentId: `campaign-${entry.id}`,
     title: entry.name,
     description:
-      "Campagne RPS pilote connectee au backend NestJS pour centraliser les reponses et les indicateurs.",
+      "Sondage RPS pilote connectee au backend NestJS pour centraliser les reponses et les indicateurs.",
     status: mapCampaignStatus(entry.status),
     startDate: entry.start_date ?? "",
     endDate: entry.end_date ?? "",
@@ -764,7 +764,7 @@ function buildReportData(
     title: activeCampaign
       ? `Rapport RPS - ${activeCampaign.name}`
       : reports[0]
-        ? `Rapport RPS - Campagne ${reports[0].campaign.id}`
+        ? `Rapport RPS - Sondage ${reports[0].campaign.id}`
         : reportData.title,
     companyName: activeCampaign?.company?.name ?? reportData.companyName,
     participationRate: dashboardData.metrics.participationRate,
@@ -907,8 +907,8 @@ function buildInsights(
 
   const insights = [
     currentCampaign
-      ? `Campagne active: ${currentCampaign.name}.`
-      : "Aucune campagne active n'est remontee par l'API.",
+      ? `Sondage actif: ${currentCampaign.name}.`
+      : "Aucun sondage actif n'est remontee par l'API.",
     participationRate < 60
       ? "Le taux de participation reste faible et demande une relance ciblee."
       : "Le taux de participation permet une premiere lecture exploitable.",
@@ -951,7 +951,7 @@ function buildRecommendations(riskAreas: string[], participationRate: number) {
   const recommendations = [
     participationRate < 70
       ? "Lancer une relance ciblee des collaborateurs n'ayant pas encore repondu."
-      : "Maintenir une campagne de suivi reguliere pour conserver la dynamique de reponse.",
+      : "Maintenir un sondage de suivi reguliere pour conserver la dynamique de reponse.",
   ];
 
   if (riskAreas.length) {

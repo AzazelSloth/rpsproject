@@ -68,7 +68,7 @@ export function PrimaryButton({
 }) {
   return (
     <button
-      className={`rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:translate-y-0 disabled:opacity-60 ${className}`}
+      className={`rounded-[12px] bg-[#181818] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:translate-y-0 disabled:opacity-60 ${className}`}
       {...props}
     >
       {children}
@@ -86,7 +86,7 @@ export function SecondaryButton({
 }) {
   return (
     <button
-      className={`rounded-[12px] border border-[#d8ccba] bg-[rgba(255,252,246,0.92)] px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-[#faf4eb] disabled:opacity-60 ${className}`}
+      className={`rounded-[12px] bg-[#181818] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#242424] disabled:opacity-60 ${className}`}
       {...props}
     >
       {children}

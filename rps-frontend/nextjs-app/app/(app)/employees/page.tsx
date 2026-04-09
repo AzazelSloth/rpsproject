@@ -1,4 +1,4 @@
-import { EmployeesTableDemo } from "@/components/rps/employees-table-demo";
+﻿import { EmployeesTableDemo } from "@/components/rps/employees-table-demo";
 import { SectionHeader } from "@/components/rps/ui";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
 
@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 export default async function EmployeesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scenario?: string }>;
+  searchParams: Promise<{ scenario?: string; campaignId?: string; companyId?: string }>;
 }) {
-  const { scenario } = await searchParams;
+  const { scenario, campaignId, companyId } = await searchParams;
   const [managementData, surveyBuilderData] = await Promise.all([
     getServerTrpcCaller().data.employeeManagement({
       scenario: scenario ?? null,
@@ -19,18 +19,24 @@ export default async function EmployeesPage({
     }),
   ]);
 
+  // Use URL params if provided, otherwise fallback to managementData
+  const effectiveCampaignId = campaignId ? Number(campaignId) : (surveyBuilderData.campaignId ?? managementData.campaignId);
+  const effectiveCompanyId = companyId ? Number(companyId) : (surveyBuilderData.companyId ?? managementData.companyId);
+
   return (
     <section className="space-y-6">
       <SectionHeader
-        eyebrow="Employees"
-        title="Suivi des collaborateurs invites"
-        description="Vue table simple pour l'import, le statut de reponse et les prochaines actions de relance."
+        eyebrow="Gestion des employés"
+        title="Gestion des employés"
+        description="Import des participants et suivi du sondage en cours."
       />
       <EmployeesTableDemo
         managementData={managementData}
         companies={surveyBuilderData.companies}
-        defaultCompanyId={surveyBuilderData.companyId ?? managementData.companyId}
+        defaultCompanyId={effectiveCompanyId}
         defaultCampaignName={surveyBuilderData.title}
+        campaignId={effectiveCampaignId}
+        companyId={effectiveCompanyId}
       />
     </section>
   );

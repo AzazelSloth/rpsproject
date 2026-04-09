@@ -42,17 +42,17 @@ export default async function SurveysPage({
         <SectionHeader
           eyebrow="Gestion des sondages"
           title="Liste des sondages"
-          description="Consulte les campagnes en cours, leur statut et le niveau de completion avant d'acceder aux resultats."
+          description="Consulte les sondages en cours, leur statut et le niveau de completion avant d'acceder aux resultats."
         />
 
         <Card className="overflow-hidden">
           <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h3 className="font-[family-name:var(--font-manrope)] text-xl font-bold">
-                Campagnes en cours
+                Sondages en cours
               </h3>
               <p className="mt-1 text-sm text-slate-500">
-                Filtre par entreprise ou statut pour retrouver rapidement une campagne.
+                Filtre par entreprise ou statut pour retrouver rapidement un sondage.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -106,7 +106,7 @@ export default async function SurveysPage({
                   <td className="px-6 py-4">
                     <Link
                       href={resultsHref}
-                      className="inline-flex items-center justify-center rounded-[12px] border border-[#d5ba85] bg-[#181818] px-4 py-2 text-xs font-semibold text-[#f7f1e6] shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
+                      className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold text-white no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
                     >
                       Voir les resultats
                     </Link>
@@ -129,7 +129,7 @@ export default async function SurveysPage({
         }
         description={
           activeTab === "edit"
-            ? "Ajuste la campagne existante, mets a jour les questions et valide la nouvelle version. L'ajout d'entreprise est bloque en mode modification."
+            ? "Ajuste le sondage existant, mets a jour les questions et valide la nouvelle version. L'ajout d'entreprise est bloque en mode modification."
             : "Un builder minimal oriente RH, avec structure, typologie de questions et apercu du futur questionnaire salarie."
         }
       />

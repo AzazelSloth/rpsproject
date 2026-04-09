@@ -224,7 +224,7 @@ const campaignParticipantsRouter = t.router({
 			ensureBackendConfigured();
 			return postBackend(`/campaign-participants/campaign/${input.campaignId}/import-employees`, {
 				company_id: input.companyId,
-				csv: input.csv,
+				csv: input.csv?.trim(),
 			});
 		}),
 
