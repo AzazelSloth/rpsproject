@@ -223,13 +223,27 @@ export function EmployeesTableDemo({
       csv,
     })
       .then((result: any) => {
+        const participantsList = result.participants || [];
+        
+        // Mapper les participants de manière sécurisée pour éviter les undefined
+        const mappedParticipants = participantsList.map((p: any) => {
+          // Essayer de trouver le nom sous différentes formes
+          const firstName = p.employee?.first_name || p.first_name || '';
+          const lastName = p.employee?.last_name || p.last_name || '';
+          const fullName = `${firstName} ${lastName}`.trim() || 'Employé';
+          const email = p.employee?.email || p.email || '';
+          const token = p.participation_token || p.token || '';
+          
+          return {
+            name: fullName,
+            email: email,
+            link: `${window.location.origin}/survey-response/${token}`,
+          };
+        });
+
         setImportSuccess({
           count: result.imported_employees || 0,
-          participants: (result.participants || []).map((p: any) => ({
-            name: p.employee?.first_name + ' ' + p.employee?.last_name,
-            email: p.employee?.email,
-            link: `${window.location.origin}/survey-response/${p.participation_token}`,
-          })),
+          participants: mappedParticipants,
         });
         setFeedback(`Import réussi ! ${result.imported_employees || 0} employé(s) ajouté(s).`);
       })
@@ -242,19 +256,88 @@ export function EmployeesTableDemo({
       });
   }
 
+  // Fonction utilitaire pour copier du texte (fonctionne même en HTTP non sécurisé)
+  function copyToClipboard(text: string): Promise<void> {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    } else {
+      // Fallback pour HTTP ou anciens navigateurs
+      return new Promise((resolve) => {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          resolve();
+        } catch (err) {
+          console.error('Fallback copy failed', err);
+          resolve();
+        }
+        document.body.removeChild(textArea);
+      });
+    }
+  }
+
   function copyAllLinks() {
     if (!importSuccess) return;
     const links = importSuccess.participants.map(p => `${p.name}: ${p.link}`).join('\n');
-    navigator.clipboard.writeText(links);
-    setFeedback('Tous les liens ont été copiés dans le presse-papiers !');
+    copyToClipboard(links).then(() => {
+      setFeedback('Tous les liens ont été copiés dans le presse-papiers !');
+    });
   }
 
-  function createNewSurvey() {
-    const params = new URLSearchParams();
-    params.set("tab", "create");
-    params.set("campaignId", String(propCampaignId ?? managementData.campaignId));
-    params.set("companyId", String(propCompanyId ?? managementData.companyId));
+  function downloadExcelList() {
+    if (!importSuccess) return;
+    
+    // Créer le contenu CSV avec en-têtes
+    const headers = ['Nom', 'Prénom', 'Email', 'Fonction', 'Lien Sondage Unique'];
+    const rows = importSuccess.participants.map(p => {
+      const nameParts = p.name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      return [lastName, firstName, p.email, '', p.link];
+    });
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+    
+    // Ajouter les infos du sondage en haut
+    const surveyInfo = [
+      `Titre du sondage: ${defaultCampaignName}`,
+      `Date d'export: ${new Date().toLocaleDateString('fr-FR')}`,
+      `Nombre d'employés: ${importSuccess.count}`,
+      '',
+    ].join('\n');
+    
+    const fullContent = surveyInfo + '\n' + csvContent;
+    const blob = new Blob(['\ufeff' + fullContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Liens_Sondage_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    setFeedback('Fichier Excel/CSV téléchargé avec succès !');
+  }
 
+  function continueSurveyCreation() {
+    // Rediriger vers "Modifier un sondage" pour continuer la création
+    const params = new URLSearchParams();
+    params.set("tab", "edit");
+    
+    const campaignId = propCampaignId ?? managementData.campaignId;
+    if (campaignId) {
+      params.set("campaignId", String(campaignId));
+    }
+    
     const scenario = searchParams.get("scenario");
     if (scenario) {
       params.set("scenario", scenario);
@@ -336,16 +419,16 @@ export function EmployeesTableDemo({
               <div className="mt-4 space-y-3">
                 <div className="flex flex-wrap gap-2 sm:gap-3">
                   <button
-                    onClick={copyAllLinks}
+                    onClick={downloadExcelList}
                     className="rounded-[12px] bg-emerald-700 px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white hover:bg-emerald-800"
                   >
-                    Copier tous les liens
+                    📥 Télécharger la liste (Excel)
                   </button>
                   <button
-                    onClick={createNewSurvey}
+                    onClick={continueSurveyCreation}
                     className="rounded-[12px] bg-slate-900 px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white hover:bg-slate-800"
                   >
-                    Créer un nouveau sondage
+                    ✏️ Continuer la création du sondage
                   </button>
                   <button
                     onClick={() => setImportSuccess(null)}
@@ -372,8 +455,9 @@ export function EmployeesTableDemo({
                           </code>
                           <button
                             onClick={() => {
-                              navigator.clipboard.writeText(participant.link);
-                              setFeedback(`Lien copié pour ${participant.name} !`);
+                              copyToClipboard(participant.link).then(() => {
+                                setFeedback(`Lien copié pour ${participant.name} !`);
+                              });
                             }}
                             className="text-xs text-white bg-emerald-700 px-2 py-1 rounded hover:bg-emerald-800 font-semibold flex-shrink-0"
                           >
