@@ -10,11 +10,14 @@ export default async function EmployeesPage({
   searchParams: Promise<{ scenario?: string; campaignId?: string; companyId?: string }>;
 }) {
   const { scenario, campaignId, companyId } = await searchParams;
-  const [managementData, surveyBuilderData] = await Promise.all([
+  const [managementData, surveyBuilderData, surveysList] = await Promise.all([
     getServerTrpcCaller().data.employeeManagement({
       scenario: scenario ?? null,
     }),
     getServerTrpcCaller().data.surveyBuilder({
+      scenario: scenario ?? null,
+    }),
+    getServerTrpcCaller().data.listSurveys({
       scenario: scenario ?? null,
     }),
   ]);

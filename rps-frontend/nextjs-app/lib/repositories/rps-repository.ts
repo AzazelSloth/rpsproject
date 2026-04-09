@@ -162,6 +162,44 @@ export async function getSurveyQuestions(scenario?: string | null) {
   return currentCampaign.questions;
 }
 
+export type SurveyOption = {
+  id: number;
+  title: string;
+  status: string;
+  companyId: number | null;
+};
+
+export async function getAllSurveys(scenario?: string | null): Promise<SurveyOption[]> {
+  const demoDataset = getDemoDataset(scenario);
+
+  if (!isBackendConfigured()) {
+    // Retourne le sondage demo comme seule option
+    return [{
+      id: demoDataset.campaign.id ?? 1,
+      title: demoDataset.campaign.title,
+      status: demoDataset.campaign.status,
+      companyId: 1,
+    }];
+  }
+
+  try {
+    const campaigns = await getBackendCollection<BackendCampaign>("/campaigns");
+    return campaigns.map(c => ({
+      id: c.id,
+      title: c.name,
+      status: c.status,
+      companyId: c.company?.id ?? null,
+    }));
+  } catch {
+    return [{
+      id: demoDataset.campaign.id ?? 1,
+      title: demoDataset.campaign.title,
+      status: demoDataset.campaign.status,
+      companyId: 1,
+    }];
+  }
+}
+
 export async function getSurveyBuilderData(scenario?: string | null): Promise<SurveyBuilderData> {
   const demoDataset = getDemoDataset(scenario);
 

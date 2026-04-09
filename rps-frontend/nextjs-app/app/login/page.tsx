@@ -54,11 +54,11 @@ export default function LoginPage() {
 
       <div className="relative mx-auto grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[1.15fr_0.85fr]">
         <section className="space-y-7 rounded-[26px] border border-[#dfd1b9] bg-[rgba(255,252,246,0.88)] p-7 shadow-[0_30px_70px_rgba(40,33,24,0.12)] sm:p-10">
-          <div className="space-y-4">
+          <div className="flex flex-col items-start gap-3">
             <BrandLogo />
-            <p className="inline-flex rounded-full border border-[#d6c199] bg-[#fff7ea] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
+            <span className="inline-flex rounded-full border border-[#d6c199] bg-[#fff7ea] px-4 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8a651f]">
               Mesurez, comprenez, agissez
-            </p>
+            </span>
           </div>
 
           <h1 className="max-w-2xl font-[family-name:var(--font-manrope)] text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl">
@@ -84,12 +84,6 @@ export default function LoginPage() {
         <Card className="mx-auto w-full max-w-md rounded-[22px] border border-[#dfd1b9] bg-[rgba(255,252,246,0.95)] p-6 shadow-[0_24px_60px_rgba(40,33,24,0.16)] sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
             Bienvenue
-          </p>
-          <h2 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold tracking-tight text-slate-900">
-            Accès à l&apos;espace Laroche
-          </h2>
-          <p className="mt-2 text-sm text-slate-600">
-            Connectez-vous avec votre adresse Laroche 360.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">

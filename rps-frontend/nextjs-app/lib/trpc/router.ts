@@ -13,6 +13,7 @@ import {
 	getResultsData,
 	getSurveyBuilderData,
 	getSurveyResponseData,
+	getAllSurveys,
 } from "@/lib/repositories/rps-repository";
 
 const t = initTRPC.create();
@@ -311,6 +312,9 @@ const dataRouter = t.router({
 	surveyBuilder: t.procedure
 		.input(z.object({ scenario: scenarioSchema }))
 		.query(({ input }) => getSurveyBuilderData(input.scenario)),
+	listSurveys: t.procedure
+		.input(z.object({ scenario: scenarioSchema }))
+		.query(({ input }) => getAllSurveys(input.scenario)),
 	surveyResponse: t.procedure
 		.input(
 			z.object({
