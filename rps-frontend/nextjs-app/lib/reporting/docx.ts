@@ -7,6 +7,7 @@ import {
   TextRun,
 } from "docx";
 import type { ReportDocumentData } from "@/lib/repositories/rps-repository";
+import { getExecutiveSummaryTitle } from "@/lib/reporting/headings";
 
 export async function buildReportDocx(report: ReportDocumentData) {
   const doc = new Document({
@@ -29,7 +30,7 @@ export async function buildReportDocx(report: ReportDocumentData) {
             ],
           }),
           spacer(),
-          sectionTitle(report.template.executiveSummaryTitle),
+          sectionTitle(getExecutiveSummaryTitle(report.template.executiveSummaryTitle)),
           bodyParagraph(report.template.executiveSummaryBody),
           bulletLine(`Taux de participation: ${report.participationRate}%`),
           bulletLine(`Stress moyen: ${report.averageStress}/5`),
