@@ -168,6 +168,9 @@ apt install -y nginx
 systemctl enable nginx
 systemctl start nginx
 
+# Config 
+nano /etc/
+
 # Vérifier
 systemctl status nginx
 ```

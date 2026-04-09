@@ -298,24 +298,6 @@ jobs:
             sudo env PATH="$PATH" "$(command -v pm2)" startup systemd -u "$USER" --hp "$HOME" >/dev/null 2>&1 || true
             pm2 save
 
-            # Apply Nginx configuration from repository (optional, distro-dependent layout)
-            if [ -f "$APP_DIR/scripts/vps/nginx.rps.conf" ] && command -v nginx >/dev/null 2>&1; then
-              if [ -d /etc/nginx/sites-available ] && [ -d /etc/nginx/sites-enabled ]; then
-                sudo cp "$APP_DIR/scripts/vps/nginx.rps.conf" /etc/nginx/sites-available/rps
-                sudo ln -sf /etc/nginx/sites-available/rps /etc/nginx/sites-enabled/rps
-                sudo nginx -t
-                sudo systemctl reload nginx
-              elif [ -d /etc/nginx/conf.d ]; then
-                sudo cp "$APP_DIR/scripts/vps/nginx.rps.conf" /etc/nginx/conf.d/rps.conf
-                sudo nginx -t
-                sudo systemctl reload nginx
-              else
-                echo "WARN: nginx config directory not found; skipping nginx update."
-              fi
-            else
-              echo "WARN: nginx not installed or nginx.rps.conf missing; skipping nginx update."
-            fi
-
             # Show status
             pm2 status
             pm2 logs --lines 20 --nostream
