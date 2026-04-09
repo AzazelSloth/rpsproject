@@ -8,10 +8,19 @@ import { Card, Pill, PrimaryButton } from "@/components/rps/ui";
 import type { EmployeeManagementData } from "@/lib/repositories/rps-repository";
 import { getTrpcClient } from "@/lib/trpc/client";
 
-function validateCsvFormat(csv: string): { valid: boolean; errors: string[]; lineCount: number } {
+function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; lineCount: number } {
   const errors: string[] = [];
+  
+  // Normaliser les sauts de ligne pour gérer Windows (\r\n), Mac (\r) et Unix (\n)
+  const csv = rawCsv.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  
   const lines = csv.split('\n').filter(line => line.trim());
   
+  if (lines.length === 0) {
+    errors.push("Le fichier est vide. Veuillez ajouter des données.");
+    return { valid: false, errors, lineCount: 0 };
+  }
+
   if (lines.length < 2) {
     errors.push("Le CSV doit contenir au moins un en-tête et une ligne de données.");
     return { valid: false, errors, lineCount: 0 };
