@@ -48,6 +48,7 @@ const adminSurveysRouter = t.router({
 			z.object({
 				companyId: z.number().int().positive(),
 				title: z.string().min(1),
+				description: z.string().max(1000).optional(),
 				startDate: z.string().optional(),
 				endDate: z.string().optional(),
 			}),
@@ -59,12 +60,14 @@ const adminSurveysRouter = t.router({
 				{
 					company_id: number;
 					name: string;
+					description?: string;
 					start_date?: string;
 					end_date?: string;
 				}
 			>("/campaigns", {
 				company_id: input.companyId,
 				name: input.title,
+				description: input.description || undefined,
 				start_date: input.startDate || undefined,
 				end_date: input.endDate || undefined,
 			});
@@ -76,6 +79,7 @@ const adminSurveysRouter = t.router({
 				campaignId: z.number().int().positive(),
 				companyId: z.number().int().positive(),
 				title: z.string().min(1),
+				description: z.string().max(1000).optional(),
 				startDate: z.string().optional(),
 				endDate: z.string().optional(),
 			}),
@@ -87,12 +91,14 @@ const adminSurveysRouter = t.router({
 				{
 					company_id: number;
 					name: string;
+					description?: string;
 					start_date?: string;
 					end_date?: string;
 				}
 			>(`/campaigns/${input.campaignId}`, {
 				company_id: input.companyId,
 				name: input.title,
+				description: input.description || undefined,
 				start_date: input.startDate || undefined,
 				end_date: input.endDate || undefined,
 			});

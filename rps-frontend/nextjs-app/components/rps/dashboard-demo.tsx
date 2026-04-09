@@ -42,10 +42,10 @@ export function DashboardDemo({
     <div className="space-y-6">
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         {[
-          ["Participation Rate", `${metrics.participationRate}%`, "+8% ce mois"],
-          ["Average Stress Score", `${metrics.averageStress} / 5`, "Niveau modere"],
-          ["Employees Responded", `${metrics.responded} / ${metrics.totalEmployees}`, "Suivi en temps reel"],
-          ["Alerts Detected", `${metrics.alertsDetected}`, "2 critiques"],
+          ["Taux de participation", `${metrics.participationRate}%`, "+8% ce mois"],
+          ["Stress moyen", `${metrics.averageStress} / 5`, "Niveau modere"],
+          ["Employes repondants", `${metrics.responded} / ${metrics.totalEmployees}`, "Suivi en temps reel"],
+          ["Alertes detectees", `${metrics.alertsDetected}`, "2 critiques"],
         ].map(([label, value, detail]) => (
           <Card key={label} className="p-5">
             <div className="h-1.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-300" />
@@ -62,7 +62,7 @@ export function DashboardDemo({
         <Card className="p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-slate-500">Stress evolution over time</p>
+              <p className="text-sm text-slate-500">Evolution du stress dans le temps</p>
               <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
                 Evolution du stress
               </h3>
@@ -101,7 +101,7 @@ export function DashboardDemo({
 
         <div className="space-y-5">
           <Card className="p-6">
-            <p className="text-sm text-slate-500">Distribution by department</p>
+            <p className="text-sm text-slate-500">Repartition par departement</p>
             <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
               Repartition par departement
             </h3>
@@ -120,7 +120,7 @@ export function DashboardDemo({
           </Card>
 
           <Card className="p-6">
-            <p className="text-sm text-slate-500">AI Insights</p>
+            <p className="text-sm text-slate-500">Analyse automatique</p>
             <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
               Synthese automatique
             </h3>

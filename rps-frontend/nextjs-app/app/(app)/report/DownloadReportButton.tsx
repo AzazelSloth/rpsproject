@@ -24,7 +24,7 @@ export default function DownloadReportButton({ href }: { href: string }) {
       document.body.removeChild(a);
     } catch (err) {
       console.error("Failed to download report:", err);
-      // Fallback: open in new tab
+      // Ouvre le document dans un nouvel onglet en secours.
       window.open(href, "_blank");
     } finally {
       setLoading(false);
@@ -33,7 +33,7 @@ export default function DownloadReportButton({ href }: { href: string }) {
 
   return (
     <PrimaryButton disabled={loading} onClick={handleDownload}>
-      {loading ? "Generation..." : "Telecharger Word"}
+      {loading ? "Generation..." : "Telecharger le rapport Word"}
     </PrimaryButton>
   );
 }

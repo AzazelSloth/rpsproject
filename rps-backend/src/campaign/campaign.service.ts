@@ -27,6 +27,7 @@ export class CampaignService {
 
     const campaign = this.campaignRepository.create({
       name: createCampaignDto.name,
+      description: createCampaignDto.description ?? null,
       start_date: createCampaignDto.start_date,
       end_date: createCampaignDto.end_date,
       status,
@@ -65,6 +66,10 @@ export class CampaignService {
 
     if (updateCampaignDto.name !== undefined) {
       campaign.name = updateCampaignDto.name;
+    }
+
+    if (updateCampaignDto.description !== undefined) {
+      campaign.description = updateCampaignDto.description;
     }
 
     if (updateCampaignDto.start_date !== undefined) {

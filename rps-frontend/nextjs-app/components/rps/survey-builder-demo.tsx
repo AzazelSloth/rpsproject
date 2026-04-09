@@ -234,6 +234,7 @@ export function SurveyBuilderDemo({
             campaignId,
             companyId: selectedCompanyId,
             title: effectiveCampaignTitle,
+            description: description.trim() || undefined,
             startDate,
             endDate,
           }),
@@ -243,13 +244,14 @@ export function SurveyBuilderDemo({
     }
 
     runMutation<{ id: number; status?: string }>(
-      () =>
-        getTrpcClient().adminSurveys.createCampaign.mutate({
-          companyId: selectedCompanyId,
-          title: effectiveCampaignTitle,
-          startDate,
-          endDate,
-        }),
+        () =>
+          getTrpcClient().adminSurveys.createCampaign.mutate({
+            companyId: selectedCompanyId,
+            title: effectiveCampaignTitle,
+            description: description.trim() || undefined,
+            startDate,
+            endDate,
+          }),
       "Sondage cree.",
       undefined,
       (result) => {
@@ -451,7 +453,7 @@ export function SurveyBuilderDemo({
           count: result.imported_employees || 0,
           participants,
         });
-        setImportFeedback("Import terminé. Les liens personnalisés sont prêts.");
+        setImportFeedback("Import terminé. Vous pouvez maintenant télécharger la liste des employés avec leurs liens respectifs.");
         router.refresh();
       } catch (caughtError) {
         setImportError(
@@ -715,11 +717,11 @@ export function SurveyBuilderDemo({
               Guide utilisateur
             </p>
             <h2 className="mt-2 font-[family-name:var(--font-manrope)] text-2xl font-bold text-slate-900">
-              1. Créer le sondage, 2. Importer les employés, 3. Récupérer les liens
+              1. Créer le sondage, 2. Importer les employés, 3. Télécharger la liste des employés avec leurs liens
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-              L&apos;utilisateur prépare d&apos;abord le sondage, ouvre ensuite le modal d&apos;import
-              sans quitter la page, puis copie ou télécharge les liens personnalisés.
+              L&apos;utilisateur prépare d&apos;abord le questionnaire du sondage, ouvre ensuite le modal d&apos;import
+              sans quitter la page, puis télécharge la liste des employés avec leurs liens respectifs.
             </p>
           </div>
           <Pill tone={importSuccess ? "success" : campaignId ? "warning" : "neutral"}>
@@ -743,8 +745,8 @@ export function SurveyBuilderDemo({
             },
             {
               step: 3,
-              title: "Générer les liens",
-              body: "Une fois l'import terminé, copiez ou téléchargez immédiatement les liens personnalisés.",
+              title: "Télécharger la liste",
+              body: "Une fois l'import terminé, téléchargez la liste des employés avec leurs liens respectifs.",
               done: Boolean(importSuccess?.participants.length),
             },
           ].map((item) => (
@@ -1073,7 +1075,7 @@ export function SurveyBuilderDemo({
 
       <Card className="overflow-hidden">
         <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_100%)] px-6 py-4 text-white">
-          <p className="text-sm text-slate-300">Survey preview</p>
+          <p className="text-sm text-slate-300">Aperçu du sondage</p>
           <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
             Apercu du questionnaire
           </h3>
@@ -1147,8 +1149,8 @@ export function SurveyBuilderDemo({
                   {effectiveCampaignTitle || "Sondage"} - {selectedCompanyName || "Entreprise"}
                 </h3>
                 <p className="mt-2 text-sm text-slate-600">
-                  Étape 2 : importez les employes. Étape 3 : récupérez immédiatement les liens
-                  personnalisés générés pour ce sondage.
+                  Étape 2 : importez les employes. Étape 3 : téléchargez la liste des employés
+                  avec leurs liens respectifs générés pour ce sondage.
                 </p>
               </div>
               <button
@@ -1177,8 +1179,8 @@ export function SurveyBuilderDemo({
                   },
                   {
                     step: 3,
-                    title: "Partager les liens",
-                    body: "Copiez ou téléchargez les liens personnalisés une fois l'import validé.",
+                    title: "Télécharger la liste",
+                    body: "Téléchargez la liste des employés avec leurs liens respectifs une fois l'import validé.",
                     done: Boolean(importSuccess?.participants.length),
                   },
                 ].map((item) => (
@@ -1284,7 +1286,7 @@ export function SurveyBuilderDemo({
                     disabled={isPending || !importCsv.trim() || importValidationErrors.length > 0}
                     onClick={handleImportEmployees}
                   >
-                    {isPending ? "Import en cours..." : "Importer et generer les liens"}
+                    {isPending ? "Import en cours..." : "Importer et preparer la liste avec les liens"}
                   </PrimaryButton>
                   <SecondaryButton onClick={closeImportModal} disabled={isPending}>
                     Fermer le modal
@@ -1295,17 +1297,19 @@ export function SurveyBuilderDemo({
               {importSuccess ? (
                 <Card className="p-5">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                    Liens personnalisés
+                    Liste des employés et liens
                   </p>
                   <h4 className="mt-2 text-lg font-bold text-slate-900">
                     {importSuccess.count} employé(s) importé(s)
                   </h4>
                   <p className="mt-2 text-sm text-slate-600">
-                    Étape 3 : copiez ou téléchargez maintenant les liens à partager avec chaque employé.
+                    Étape 3 : téléchargez maintenant la liste des employés avec leurs liens respectifs.
                   </p>
                   <div className="mt-4 flex flex-wrap gap-3">
-                    <PrimaryButton onClick={copyAllLinks}>Copier tous les liens</PrimaryButton>
-                    <SecondaryButton onClick={downloadLinksList}>Télécharger la liste</SecondaryButton>
+                    <PrimaryButton onClick={downloadLinksList}>
+                      Télécharger la liste des employés avec leurs liens
+                    </PrimaryButton>
+                    <SecondaryButton onClick={copyAllLinks}>Copier tous les liens</SecondaryButton>
                   </div>
                   <div className="mt-5 max-h-72 space-y-3 overflow-y-auto">
                     {importSuccess.participants.map((participant, index) => (

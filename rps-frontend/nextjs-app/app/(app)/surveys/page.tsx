@@ -63,7 +63,7 @@ export default async function SurveysPage({
                 className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
               />
               <select className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none">
-                <option value="active">active</option>
+                <option value="active">actif</option>
                
               </select>
             </div>
@@ -151,13 +151,13 @@ function formatShortDate(value: string | null) {
 
 function formatStatusLabel(value: string) {
   if (value === "active") {
-    return "active";
+    return "actif";
   }
   if (value === "draft") {
     return "brouillon";
   }
   if (value === "archived") {
-    return "archive";
+    return "archivé";
   }
   return value || "inconnu";
 }

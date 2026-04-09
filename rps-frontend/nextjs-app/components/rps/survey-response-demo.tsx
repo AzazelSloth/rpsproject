@@ -83,10 +83,10 @@ export function SurveyResponseDemo({
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
-            Questionnaire RPS
+            Sondage RPS
           </p>
           <h1 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold">
-            {campaignName || "Questionnaire RPS"}
+            {campaignName || "Sondage RPS"}
           </h1>
           {employeeName ? (
             <p className="mt-2 text-sm text-slate-500">Attribue a {employeeName}</p>
@@ -212,7 +212,7 @@ export function SurveyResponseDemo({
           onClick={handleSubmit}
         >
           {completedAt
-            ? "Questionnaire deja complete"
+            ? "Sondage deja complete"
             : isPending
               ? "Envoi en cours..."
               : "Envoyer mes reponses"}

@@ -15,6 +15,7 @@ type CreateCampaignPayload = {
   action: "createCampaign";
   companyId: number;
   title: string;
+  description?: string;
   startDate?: string;
   endDate?: string;
 };
@@ -24,6 +25,7 @@ type UpdateCampaignPayload = {
   campaignId: number;
   companyId: number;
   title: string;
+  description?: string;
   startDate?: string;
   endDate?: string;
 };
@@ -95,6 +97,7 @@ export async function POST(request: Request) {
         const result = await postBackend("/campaigns", {
           company_id: payload.companyId,
           name: payload.title,
+          description: payload.description || undefined,
           start_date: payload.startDate || undefined,
           end_date: payload.endDate || undefined,
         });
@@ -105,6 +108,7 @@ export async function POST(request: Request) {
         const result = await patchBackend(`/campaigns/${payload.campaignId}`, {
           company_id: payload.companyId,
           name: payload.title,
+          description: payload.description || undefined,
           start_date: payload.startDate || undefined,
           end_date: payload.endDate || undefined,
         });
