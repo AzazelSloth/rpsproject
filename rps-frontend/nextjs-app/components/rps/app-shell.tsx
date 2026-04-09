@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { logout, getUser, type User as AuthUser } from "@/lib/backend/auth";
 
@@ -19,7 +19,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const title = pageTitles[pathname] ?? "RPS";
-  const [user] = useState<AuthUser | null>(() => getUser());
+  const user = useSyncExternalStore<AuthUser | null>(
+    () => () => undefined,
+    () => getUser(),
+    () => null,
+  );
   const activeSurveyTab = searchParams.get("tab") ?? "create";
   const isSurveyRoute = pathname === "/surveys";
   const [surveysOpen, setSurveysOpen] = useState(isSurveyRoute);

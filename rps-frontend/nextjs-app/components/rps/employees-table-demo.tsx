@@ -451,8 +451,8 @@ export function EmployeesTableDemo({
     const params = new URLSearchParams();
     params.set("tab", "edit");
     
-    const campaignId = propCampaignId ?? managementData.campaignId;
-    const companyId = propCompanyId ?? managementData.companyId;
+    const campaignId = resolveCampaignId();
+    const companyId = resolveCompanyId();
     if (campaignId) {
       params.set("campaignId", String(campaignId));
     }
