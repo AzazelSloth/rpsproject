@@ -169,7 +169,7 @@ systemctl enable nginx
 systemctl start nginx
 
 # Config 
-nano /etc/
+nano /etc/nginx/conf.d/rps.conf
 
 # Vérifier
 systemctl status nginx
