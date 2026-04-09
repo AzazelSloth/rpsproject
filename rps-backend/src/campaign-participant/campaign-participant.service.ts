@@ -327,15 +327,16 @@ export class CampaignParticipantService {
               phone: row.phone?.trim() || undefined,
               department: row.department?.trim() || undefined,
               survey_token: randomUUID(),
-              company: { id: payload.company_id } as Campaign['company'],
+              company: { id: payload.company_id } as any,
             }),
           );
         } catch (error) {
           // Handle duplicate email error gracefully
-          if (error.code === '23505') { // PostgreSQL unique violation
+          if (error?.code === '23505') { // PostgreSQL unique violation
             console.warn(`Duplicate email skipped: ${email}`);
             continue;
           }
+          console.error(`Failed to create employee with email ${email}:`, error);
           throw error;
         }
       } else if (employee.company.id !== payload.company_id) {
@@ -381,11 +382,15 @@ export class CampaignParticipantService {
       : [];
 
     return {
-      campaign_id: campaignId,
       imported_employees: employees.length,
-      created_participants: participants.length,
-      employees,
-      participants,
+      participants: participants.map((p) => ({
+        participation_token: p.participation_token,
+        employee: {
+          first_name: p.employee?.first_name,
+          last_name: p.employee?.last_name,
+          email: p.employee?.email,
+        },
+      })),
     };
   }
 
