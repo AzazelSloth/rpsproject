@@ -119,7 +119,8 @@ export function DashboardContent({
                   <td className="px-6 py-4">
                     <Link
                       href={resultsHref}
-                      className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold text-white no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
+                      className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
+                      style={{ color: '#ffffff' }}
                     >
                       Voir les resultats
                     </Link>

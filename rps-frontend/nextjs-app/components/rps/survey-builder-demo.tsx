@@ -566,7 +566,8 @@ export function SurveyBuilderDemo({
             </p>
             <Link
               href={campaignId && companyId ? `/employees?campaignId=${campaignId}&companyId=${companyId}` : "/employees"}
-              className="mt-4 inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-6 py-2 text-sm font-semibold text-white transition hover:bg-[#242424]"
+              className="mt-4 inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-6 py-2 text-sm font-semibold transition hover:bg-[#242424]"
+              style={{ color: '#ffffff' }}
             >
               Importer
             </Link>
