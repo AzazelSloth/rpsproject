@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { logout, getUser, type User as AuthUser } from "@/lib/backend/auth";
 
@@ -19,11 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const title = pageTitles[pathname] ?? "RPS";
-  const user = useSyncExternalStore<AuthUser | null>(
-    () => () => undefined,
-    () => getUser(),
-    () => null,
-  );
+  const [user] = useState<AuthUser | null>(() => getUser());
   const activeSurveyTab = searchParams.get("tab") ?? "create";
   const isSurveyRoute = pathname === "/surveys";
   const [surveysOpen, setSurveysOpen] = useState(isSurveyRoute);
@@ -72,6 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
 
             <button
+              
               type="button"
               onClick={() => setSurveysOpen((value) => !value)}
               className={`flex items-center justify-between rounded-[12px] px-4 py-3 text-left text-sm font-semibold transition ${
@@ -79,7 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   ? "bg-slate-900 text-white shadow-lg shadow-slate-300/60 ring-1 ring-slate-800"
                   : "text-slate-600 hover:bg-[#f2e7d4] hover:text-slate-900"
               }`}
-              aria-expanded={showSurveyMenu}
+              aria-expanded={showSurveyMenu ? "true" : "false"}
             >
               <span className={isSurveyRoute ? "text-white" : "text-inherit"}>
                 Gestion des sondages
