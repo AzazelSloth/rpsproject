@@ -151,18 +151,20 @@ export function EmployeesTableDemo({
     participants: Array<{ name: string; email: string; link: string }>;
   } | null>(null);
 
-  const availableSurveys = useMemo(() => {
-    if (!selectedCompanyId) {
-      return surveys;
-    }
-
-    return surveys.filter((survey) => String(survey.companyId ?? "") === selectedCompanyId);
-  }, [selectedCompanyId, surveys]);
+  const availableSurveys = useMemo(() => surveys, [surveys]);
 
   const selectedSurvey =
     surveys.find((survey) => String(survey.id) === selectedCampaignId) ??
     availableSurveys[0] ??
     null;
+  const lockedCompanyId =
+    selectedSurvey?.companyId ? String(selectedSurvey.companyId) : selectedCompanyId;
+  const hasCompanyMismatch =
+    Boolean(
+      selectedSurvey?.companyId &&
+      selectedCompanyId &&
+      String(selectedSurvey.companyId) !== selectedCompanyId,
+    );
   const pendingParticipantsCount = managementData.pendingParticipants + managementData.remindedParticipants;
 
   const filteredParticipants = useMemo(() => {
@@ -171,12 +173,12 @@ export function EmployeesTableDemo({
       const matchesQuery = haystack.includes(query.toLowerCase());
       const matchesFilter = filter === "all" || participant.status === filter;
       const matchesCompany =
-        !selectedCompanyId ||
-        (managementData.companyId !== null && String(managementData.companyId) === selectedCompanyId);
+        !lockedCompanyId ||
+        (managementData.companyId !== null && String(managementData.companyId) === lockedCompanyId);
 
       return matchesQuery && matchesFilter && matchesCompany;
     });
-  }, [filter, managementData.companyId, managementData.participants, query, selectedCompanyId]);
+  }, [filter, lockedCompanyId, managementData.companyId, managementData.participants, query]);
 
   function pushSelection(nextCompanyId: string, nextCampaignId: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -196,29 +198,13 @@ export function EmployeesTableDemo({
     router.push(`${pathname}?${params.toString()}`);
   }
 
-  function handleCompanySelection(nextCompanyId: string) {
-    setSelectedCompanyId(nextCompanyId);
-
-    const nextSurveys = surveys.filter(
-      (survey) => String(survey.companyId ?? "") === nextCompanyId,
-    );
-    const nextCampaignId =
-      nextSurveys.find((survey) => String(survey.id) === selectedCampaignId)?.id ??
-      nextSurveys[0]?.id ??
-      null;
-    const nextCampaignValue = nextCampaignId ? String(nextCampaignId) : "";
-
-    setSelectedCampaignId(nextCampaignValue);
-    pushSelection(nextCompanyId, nextCampaignValue);
-  }
-
   function handleSurveySelection(nextCampaignId: string) {
     setSelectedCampaignId(nextCampaignId);
 
     const nextSurvey = surveys.find((survey) => String(survey.id) === nextCampaignId) ?? null;
-    const nextCompanyId = nextSurvey?.companyId ? String(nextSurvey.companyId) : selectedCompanyId;
+    const nextCompanyId = nextSurvey?.companyId ? String(nextSurvey.companyId) : "";
 
-    if (nextCompanyId !== selectedCompanyId) {
+    if (nextCompanyId && nextCompanyId !== selectedCompanyId) {
       setSelectedCompanyId(nextCompanyId);
     }
 
@@ -238,8 +224,8 @@ export function EmployeesTableDemo({
   }
 
   function resolveCompanyId() {
-    if (selectedCompanyId) {
-      return Number(selectedCompanyId);
+    if (lockedCompanyId) {
+      return Number(lockedCompanyId);
     }
 
     if (selectedSurvey?.companyId) {
@@ -315,6 +301,11 @@ export function EmployeesTableDemo({
 
     if (!campaignId || !companyId) {
       setError("Aucun sondage actif exploitable n'est disponible. Veuillez d'abord créer un sondage.");
+      return;
+    }
+
+    if (selectedSurvey?.companyId && companyId !== selectedSurvey.companyId) {
+      setError("L’entreprise choisie ne correspond pas au sondage sélectionné.");
       return;
     }
 
@@ -483,6 +474,11 @@ export function EmployeesTableDemo({
 
     if (!campaignId || !companyId) {
       setError("Aucun sondage actif exploitable n'est disponible.");
+      return;
+    }
+
+    if (selectedSurvey?.companyId && companyId !== selectedSurvey.companyId) {
+      setError("L’entreprise choisie ne correspond pas au sondage sélectionné.");
       return;
     }
 
@@ -745,8 +741,8 @@ export function EmployeesTableDemo({
             <div>
               <p className="text-sm text-slate-500">Entreprise</p>
               <select
-                value={selectedCompanyId}
-                onChange={(event) => handleCompanySelection(event.target.value)}
+                value={lockedCompanyId}
+                disabled
                 className="mt-2 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
               >
                 {companies.map((company) => (
@@ -755,6 +751,9 @@ export function EmployeesTableDemo({
                   </option>
                 ))}
               </select>
+              <p className="mt-2 text-xs text-slate-500">
+                Verrouillée automatiquement sur l&apos;entreprise du sondage sélectionné.
+              </p>
             </div>
             <div>
               <p className="text-sm text-slate-500">Sondage</p>
@@ -775,6 +774,13 @@ export function EmployeesTableDemo({
                 )}
               </select>
             </div>
+            {hasCompanyMismatch ? (
+              <div className="rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3">
+                <p className="text-sm font-medium text-rose-700">
+                  L’entreprise choisie ne correspond pas au sondage sélectionné.
+                </p>
+              </div>
+            ) : null}
             <div className="rounded-[12px] bg-slate-50 p-4">
               <p className="text-sm text-slate-500">Participants à relancer</p>
               <p className="mt-2 text-2xl font-bold text-slate-900">{pendingParticipantsCount}</p>
@@ -811,8 +817,8 @@ export function EmployeesTableDemo({
               className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none w-full sm:w-auto"
             />
             <select
-              value={selectedCompanyId}
-              onChange={(event) => handleCompanySelection(event.target.value)}
+              value={lockedCompanyId}
+              disabled
               className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
             >
               {companies.map((company) => (

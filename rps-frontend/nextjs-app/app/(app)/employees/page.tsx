@@ -33,8 +33,8 @@ export default async function EmployeesPage({
   const effectiveCampaignId =
     requestedCampaignId ?? selectedSurvey?.id ?? surveyBuilderData.campaignId ?? managementData.campaignId;
   const effectiveCompanyId =
-    (companyId ? Number(companyId) : null) ??
     selectedSurvey?.companyId ??
+    (companyId ? Number(companyId) : null) ??
     surveyBuilderData.companyId ??
     managementData.companyId;
   const effectiveCampaignName =
