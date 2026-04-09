@@ -85,6 +85,9 @@ export default function LoginPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
             Bienvenue
           </p>
+          <h2 className="mt-2 font-[family-name:var(--font-manrope)] text-2xl font-extrabold tracking-tight text-slate-900">
+            Accès à votre espace
+          </h2>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div className="space-y-2">
