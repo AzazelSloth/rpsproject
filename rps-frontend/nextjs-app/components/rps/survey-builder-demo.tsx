@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useTransition, type ChangeEvent } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import * as XLSX from "xlsx";
 import { Card, Pill, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { SurveyBuilderData } from "@/lib/repositories/rps-repository";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
@@ -106,6 +105,7 @@ export function SurveyBuilderDemo({
   const [hasDownloadedLinks, setHasDownloadedLinks] = useState(false);
   const canEditQuestions = status !== "active";
   const isCreateMode = mode === "create";
+  const isEditMode = mode === "edit";
   const selectedCompanyName =
     companies.find((company) => company.id === companyId)?.name?.trim() ?? "";
   const trimmedTitle = title.trim();
@@ -119,22 +119,31 @@ export function SurveyBuilderDemo({
   const isSurveyStepCompleted = Boolean(
     campaignId && companyId && status === "active" && questions.length > 0,
   );
+  const isEditDetailsReady = Boolean(campaignId && companyId && !isDateRangeInvalid);
   const hasImportedEmployees = Boolean(
     importSuccess && (importSuccess.count > 0 || importSuccess.participants.length > 0),
   );
   const statusLabel = formatSurveyStatus(status);
-  const progressTone = hasDownloadedLinks
-    ? "success"
-    : isSurveyStepCompleted
-      ? "warning"
-      : "neutral";
-  const progressLabel = hasDownloadedLinks
-    ? "Parcours complété"
-    : hasImportedEmployees
-      ? "Étape 3 en cours"
-      : isSurveyStepCompleted || isImportModalOpen
-        ? "Étape 2 en cours"
-        : "Étape 1 en cours";
+  const progressTone = isCreateMode
+    ? hasDownloadedLinks
+      ? "success"
+      : isSurveyStepCompleted
+        ? "warning"
+        : "neutral"
+    : status === "active"
+      ? "success"
+      : "warning";
+  const progressLabel = isCreateMode
+    ? hasDownloadedLinks
+      ? "Parcours complété"
+      : hasImportedEmployees
+        ? "Étape 3 en cours"
+        : isSurveyStepCompleted || isImportModalOpen
+          ? "Étape 2 en cours"
+          : "Étape 1 en cours"
+    : status === "active"
+      ? "Sondage actif"
+      : "Modification en cours";
 
   function runMutation<TResponse>(
     mutation: () => Promise<TResponse>,
@@ -261,6 +270,12 @@ export function SurveyBuilderDemo({
             endDate,
           }),
         "Sondage mis a jour.",
+        undefined,
+        (result) => {
+          if (result?.status) {
+            setStatus(result.status);
+          }
+        },
       );
       return;
     }
@@ -314,7 +329,7 @@ export function SurveyBuilderDemo({
     return validation;
   }
 
-  async function handleImportFileChange(event: ChangeEvent<HTMLInputElement>) {
+  async function handleImportFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) {
       return;
@@ -341,6 +356,7 @@ export function SurveyBuilderDemo({
       }
 
       const buffer = await file.arrayBuffer();
+      const XLSX = await import("xlsx");
       const workbook = XLSX.read(buffer, { type: "array" });
       const firstSheetName = workbook.SheetNames[0];
 
@@ -750,7 +766,7 @@ export function SurveyBuilderDemo({
               1. Configurer le sondage, 2. Enregistrer les questions, 3. Activer le sondage, 4. Importer les employés
             </h2>
             <h2 className="mt-2 font-[family-name:var(--font-manrope)] text-2xl font-bold text-slate-900">
-              Parcours de création du sondage
+              {isCreateMode ? "Parcours de création du sondage" : "Parcours de modification du sondage"}
             </h2>
             <p className="hidden mt-2 max-w-3xl text-sm leading-6 text-slate-600">
               Commencez par renseigner l&apos;entreprise et les dates, enregistrez ensuite les
@@ -758,8 +774,9 @@ export function SurveyBuilderDemo({
               liste avec les liens du sondage.
             </p>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-              Suivez ces trois étapes pour publier le sondage, importer les employés, puis
-              télécharger la liste finale avec les liens individuels.
+              {isCreateMode
+                ? "Suivez ces trois étapes pour publier le sondage, importer les employés, puis télécharger la liste finale avec les liens individuels."
+                : "Mettez à jour les informations du sondage, ajustez les questions puis enregistrez vos changements avant de gérer son statut."}
             </p>
           </div>
           <div className="hidden">
@@ -817,26 +834,47 @@ export function SurveyBuilderDemo({
           ))}
         </div>
         <div className="mt-5 grid gap-4 lg:grid-cols-3">
-          {[
-            {
-              step: 1,
-              title: "Créer le sondage",
-              body: "Sélectionnez l'entreprise, renseignez les dates et la description, ajoutez les questions puis activez le sondage.",
-              done: isSurveyStepCompleted,
-            },
-            {
-              step: 2,
-              title: "Importer les employés",
-              body: "Une fois le sondage activé, ouvrez l'import et chargez votre fichier Excel ou CSV.",
-              done: hasImportedEmployees,
-            },
-            {
-              step: 3,
-              title: "Télécharger la liste",
-              body: "Après l'import, téléchargez la liste des employés avec leurs liens individuels.",
-              done: hasDownloadedLinks,
-            },
-          ].map((item) => (
+          {(isCreateMode
+            ? [
+                {
+                  step: 1,
+                  title: "Configurer et créer le sondage",
+                  body: "Sélectionnez l'entreprise, renseignez les dates et la description, puis créez la base du sondage.",
+                  done: Boolean(campaignId),
+                },
+                {
+                  step: 2,
+                  title: "Ajouter les questions et activer",
+                  body: "Ajoutez les questions, enregistrez-les, puis activez le sondage pour le rendre disponible.",
+                  done: isSurveyStepCompleted,
+                },
+                {
+                  step: 3,
+                  title: "Importer et télécharger",
+                  body: "Importez les employés via un fichier Excel ou CSV, puis téléchargez la liste complète avec les liens.",
+                  done: hasDownloadedLinks,
+                },
+              ]
+            : [
+                {
+                  step: 1,
+                  title: "Mettre à jour les informations",
+                  body: "Modifiez l'entreprise, les dates ou la description du sondage existant.",
+                  done: Boolean(campaignId),
+                },
+                {
+                  step: 2,
+                  title: "Ajuster les questions",
+                  body: "Ajoutez, modifiez ou réorganisez les questions (seulement si le sondage n'est pas actif).",
+                  done: questions.length > 0,
+                },
+                {
+                  step: 3,
+                  title: "Gérer le statut",
+                  body: "Activez, désactivez ou archivez le sondage après avoir enregistré vos changements.",
+                  done: status !== "preparation",
+                },
+              ]).map((item) => (
             <div
               key={`user-guide-step-${item.step}`}
               className={`rounded-[16px] border p-5 ${
@@ -998,18 +1036,31 @@ export function SurveyBuilderDemo({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                  Etape 1
+                  {isEditMode ? "Modification" : "Etape 1"}
                 </p>
                 <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold text-slate-900">
-                  Créer le sondage
+                  {isEditMode ? "Modifier le sondage" : "Créer le sondage"}
                 </h3>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                  Renseignez ici les informations du sondage, puis activez-le lorsque la
-                  configuration et les questions sont finalisées.
+                  {isEditMode
+                    ? "Modifiez les informations du sondage, puis enregistrez les changements avant de gérer son statut."
+                    : "Complétez la configuration (entreprise, dates, description), puis créez le sondage pour pouvoir ajouter les questions."}
                 </p>
               </div>
-              <Pill tone={isSurveyStepCompleted ? "success" : "warning"}>
-                {isSurveyStepCompleted ? "Terminé" : "En cours"}
+              <Pill
+                tone={
+                  isCreateMode
+                    ? Boolean(campaignId)
+                      ? "success"
+                      : "warning"
+                    : isEditDetailsReady
+                      ? "success"
+                      : "warning"
+                }
+              >
+                {isCreateMode
+                  ? campaignId ? "Créé" : "À créer"
+                  : isEditDetailsReady ? "Prêt" : "En cours"}
               </Pill>
             </div>
 
@@ -1101,77 +1152,82 @@ export function SurveyBuilderDemo({
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                    Etape 2
-                  </p>
-                <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold text-slate-900">
-                  Importer les employés
-                </h3>
-                </div>
-                <Pill tone={hasImportedEmployees ? "success" : "neutral"}>
-                  {hasImportedEmployees ? "Terminé" : "En attente"}
-                </Pill>
-              </div>
-
-              <button
-                type="button"
-                onClick={openImportModal}
-                disabled={!isSurveyReadyForImport || isPending}
-                className="mt-4 inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-6 py-2 text-sm font-semibold transition hover:bg-[#242424] disabled:opacity-60"
-                style={{ color: "#ffffff" }}
-              >
-                Importer les employes
-              </button>
-              <p className="mt-3 text-xs text-slate-500">
-                {isSurveyReadyForImport
-                  ? "Ouvrez l'import pour charger le fichier des employés."
-                  : "Le sondage doit être activé avant de lancer l'import."}
-              </p>
-            </div>
-
-            <div className="rounded-[18px] border border-slate-200 bg-white p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                    Etape 3
-                  </p>
-                  <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold text-slate-900">
-                    Télécharger la liste des employés avec leurs liens
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Cette étape permet de récupérer la liste finale des liens individuels.
-                  </p>
-                </div>
-                <Pill tone={hasDownloadedLinks ? "success" : "neutral"}>
-                  {hasDownloadedLinks ? "Terminé" : "En attente"}
-                </Pill>
-              </div>
-
-              {hasImportedEmployees ? (
-                <>
-                  <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3">
-                    <p className="text-sm font-semibold text-emerald-800">
-                      {importSuccess?.count ?? 0} employe(s) importe(s), liste prête a télécharger.
+          {isCreateMode ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+                      Etape 2
+                    </p>
+                    <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold text-slate-900">
+                      Importer les employés
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Une fois le sondage créé, compilé et activé, importez vos employés via Excel ou CSV pour générer leurs liens individuels.
                     </p>
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <PrimaryButton onClick={downloadLinksList}>
-                      Télécharger la liste des employés avec leurs liens
-                    </PrimaryButton>
-                    <SecondaryButton onClick={openImportModal}>Voir les liens</SecondaryButton>
-                  </div>
-                </>
-              ) : (
-                <p className="mt-4 text-sm text-slate-500">
-                  Cette étape sera disponible après un import réussi.
+                  <Pill tone={hasImportedEmployees ? "success" : "neutral"}>
+                    {hasImportedEmployees ? "Importé" : "En attente"}
+                  </Pill>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={openImportModal}
+                  disabled={!isSurveyReadyForImport || isPending}
+                  className="mt-4 inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-6 py-2 text-sm font-semibold transition hover:bg-[#242424] disabled:opacity-60"
+                  style={{ color: "#ffffff" }}
+                >
+                  Importer les employes
+                </button>
+                <p className="mt-3 text-xs text-slate-500">
+                  {isSurveyReadyForImport
+                    ? "Ouvrez l'import pour charger le fichier des employés."
+                    : "Le sondage doit être activé avant de lancer l'import."}
                 </p>
-              )}
+              </div>
+
+              <div className="rounded-[18px] border border-slate-200 bg-white p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+                      Etape 3
+                    </p>
+                    <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold text-slate-900">
+                      Télécharger la liste des employés avec leurs liens
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Cette étape permet de récupérer la liste finale des liens individuels.
+                    </p>
+                  </div>
+                  <Pill tone={hasDownloadedLinks ? "success" : "neutral"}>
+                    {hasDownloadedLinks ? "Terminé" : "En attente"}
+                  </Pill>
+                </div>
+
+                {hasImportedEmployees ? (
+                  <>
+                    <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3">
+                      <p className="text-sm font-semibold text-emerald-800">
+                        {importSuccess?.count ?? 0} employe(s) importe(s), liste prête a télécharger.
+                      </p>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <PrimaryButton onClick={downloadLinksList}>
+                        Télécharger la liste des employés avec leurs liens
+                      </PrimaryButton>
+                      <SecondaryButton onClick={openImportModal}>Voir les liens</SecondaryButton>
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-4 text-sm text-slate-500">
+                    Cette étape sera disponible après un import réussi.
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">

@@ -45,7 +45,7 @@ export default async function EmployeesPage({
       <SectionHeader
         eyebrow="Gestion des employés"
         title="Gestion des employés"
-        description="Import des participants et suivi du sondage en cours."
+        description="Suivi des participants, accès aux liens individuels et relances du sondage en cours."
       />
       <EmployeesTableDemo
         managementData={managementData}
