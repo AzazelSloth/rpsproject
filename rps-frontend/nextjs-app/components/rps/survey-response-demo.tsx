@@ -56,7 +56,7 @@ export function SurveyResponseDemo({
         .filter((entry) => entry.answer);
 
       if (payloadAnswers.length !== questions.length) {
-        setSubmitError("Merci de repondre a toutes les questions avant l'envoi.");
+        setSubmitError("Merci de répondre à toutes les questions avant l'envoi.");
         return;
       }
 
@@ -72,7 +72,7 @@ export function SurveyResponseDemo({
         const message =
           error instanceof Error && error.message
             ? error.message
-            : "La soumission a echoue. Verifie la configuration du backend.";
+            : "La soumission a échoué. Vérifie la configuration du backend.";
         setSubmitError(message);
       }
     });
@@ -89,7 +89,7 @@ export function SurveyResponseDemo({
             {campaignName || "Sondage RPS"}
           </h1>
           {employeeName ? (
-            <p className="mt-2 text-sm text-slate-500">Attribue a {employeeName}</p>
+            <p className="mt-2 text-sm text-slate-500">Attribué à {employeeName}</p>
           ) : null}
         </div>
         <div className="rounded-[12px] bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
@@ -164,11 +164,11 @@ export function SurveyResponseDemo({
                 </div>
                 <div className="mt-3 grid gap-2 text-xs text-slate-500 sm:grid-cols-5">
                   {[
-                    "Pas du tout d&apos;accord",
-                    "Plutot pas d&apos;accord",
-                    "Ni d&apos;accord, ni pas d&apos;accord",
-                    "Plutot d&apos;accord",
-                    "Tout a fait d&apos;accord",
+                    "Pas du tout d'accord",
+                    "Plutôt pas d'accord",
+                    "Ni d'accord, ni pas d'accord",
+                    "Plutôt d'accord",
+                    "Tout à fait d'accord",
                   ].map((label) => (
                     <span key={label}>{label}</span>
                   ))}
@@ -212,14 +212,14 @@ export function SurveyResponseDemo({
           onClick={handleSubmit}
         >
           {completedAt
-            ? "Sondage deja complete"
+            ? "Sondage déjà complété"
             : isPending
               ? "Envoi en cours..."
-              : "Envoyer mes reponses"}
+              : "Envoyer mes réponses"}
         </PrimaryButton>
         {submitted ? (
           <span className="text-sm font-medium text-emerald-700">
-            Reponses enregistrees.
+            Réponses enregistrées.
           </span>
         ) : null}
         {submitError ? (

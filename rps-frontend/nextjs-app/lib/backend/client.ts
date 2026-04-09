@@ -51,12 +51,19 @@ async function backendFetch<T>(path: string, init?: RequestInit) {
     );
   }
 
+  const controller = new AbortController();
+  const timeoutMs = path.includes('/import-employees') ? 120000 : 30000; // 2min for import, 30s for others
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
     const response = await fetch(`${backendUrl}${path}`, {
       ...init,
+      signal: controller.signal,
       headers: mergeHeaders(init?.headers),
       cache: "no-store",
     });
+
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
@@ -71,8 +78,22 @@ async function backendFetch<T>(path: string, init?: RequestInit) {
 
     return (await response.json()) as T;
   } catch (error) {
+    clearTimeout(timeout);
+    
     const message =
       error instanceof Error ? error.message : "Unknown backend fetch error";
+    
+    // Check for abort/timeout
+    if (error instanceof Error && error.name === 'AbortError') {
+      const timeoutSec = timeoutMs / 1000;
+      logBackendWarning(
+        `Request timeout after ${timeoutSec}s on ${path}. Check network connectivity.`
+      );
+      throw new Error(
+        `Délai d'attente dépassé après ${timeoutSec}s. Vérifie ta connexion réseau et réessaie.`
+      );
+    }
+
     const isNetworkFailure =
       error instanceof TypeError ||
       /fetch failed|ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|ETIMEDOUT/i.test(

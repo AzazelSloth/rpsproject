@@ -502,11 +502,17 @@ export function SurveyBuilderDemo({
         setImportFeedback("Import terminé. Vous pouvez maintenant télécharger la liste des employés avec leurs liens respectifs.");
         router.refresh();
       } catch (caughtError) {
-        setImportError(
-          caughtError instanceof Error
-            ? caughtError.message
-            : "L'import a échoué. Vérifiez le fichier et réessayez.",
-        );
+        let errorMessage = "L'import a échoué. Vérifiez le fichier et réessayez.";
+        
+        if (caughtError instanceof Error) {
+          if (caughtError.message.includes("Délai d'attente")) {
+            errorMessage = `${caughtError.message} - Essayez avec un fichier plus petit ou une meilleure connexion.`;
+          } else {
+            errorMessage = caughtError.message;
+          }
+        }
+        
+        setImportError(errorMessage);
       }
     });
   }
