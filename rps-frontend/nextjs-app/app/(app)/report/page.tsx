@@ -21,9 +21,7 @@ export default async function ReportPage({
   return (
     <section className="space-y-6">
       <SectionHeader
-        eyebrow="Rapport"
         title="Rapport"
-        description="Synthese et recommandations du sondage selectionne."
         action={
           <div className="flex flex-wrap gap-3">
             {reportData.archivedReportPath ? (
@@ -43,9 +41,8 @@ export default async function ReportPage({
 
       <Card className="overflow-hidden">
         <div className="border-b border-slate-200 bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-6 text-white">
-          <p className="text-sm text-slate-300">Rapport structure</p>
           <h2 className="mt-2 font-[family-name:var(--font-manrope)] text-3xl font-extrabold">
-            {reportData.title}
+            Rapport
           </h2>
         </div>
 

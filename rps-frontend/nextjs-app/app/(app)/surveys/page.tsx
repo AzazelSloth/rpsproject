@@ -123,9 +123,8 @@ export default async function SurveysPage({
   return (
     <section className="space-y-6">
       <SectionHeader
-        eyebrow="Gestion des sondages"
         title={
-          activeTab === "edit" ? "Modifier un sondage" : "Creer un sondage"
+          activeTab === "edit" ? "Modifier un sondage" : "Créer un sondage"
         }
       />
       <SurveyBuilderDemo

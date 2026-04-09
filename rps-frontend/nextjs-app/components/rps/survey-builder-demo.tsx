@@ -468,7 +468,7 @@ export function SurveyBuilderDemo({
               1
             </span>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Entreprise</p>
-            <p className="mt-2 text-sm text-slate-500">nom de l'entreprise</p>
+            <p className="mt-2 text-sm text-slate-500">nom de l&apos;entreprise</p>
             <select
               value={companyId ?? ""}
               onChange={(event) => setCompanyId(Number(event.target.value))}

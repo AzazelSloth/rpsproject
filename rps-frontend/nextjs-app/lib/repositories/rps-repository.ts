@@ -290,6 +290,7 @@ export async function getEmployees(scenario?: string | null) {
 
 export async function getEmployeeManagementData(
   scenario?: string | null,
+  campaignId?: number | null,
 ): Promise<EmployeeManagementData> {
   const demoDataset = getDemoDataset(scenario);
 
@@ -332,7 +333,9 @@ export async function getEmployeeManagementData(
   try {
     const campaigns = await getBackendCollection<BackendCampaign>("/campaigns");
     const activeCampaign =
-      campaigns.find((item) => item.status === "active") ?? campaigns[0];
+      (campaignId ? campaigns.find((item) => item.id === campaignId) : null) ??
+      campaigns.find((item) => item.status === "active") ??
+      campaigns[0];
 
     if (!activeCampaign) {
       throw new Error("no_campaign");

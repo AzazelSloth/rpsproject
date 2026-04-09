@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { logout, getUser, type User as AuthUser } from "@/lib/backend/auth";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Bonjour, Admin",
-  "/surveys": "Gestion des sondages",
+  "/surveys": "",
   "/employees": "Gestion des employés",
   "/results": "Résultats",
   "/report": "Rapport",
@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const title = pageTitles[pathname] ?? "RPS";
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user] = useState<AuthUser | null>(() => getUser());
   const activeSurveyTab = searchParams.get("tab") ?? "create";
   const isSurveyRoute = pathname === "/surveys";
   const [surveysOpen, setSurveysOpen] = useState(isSurveyRoute);
@@ -34,10 +34,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       .join("")
       .toUpperCase()
       .slice(0, 2) || "A";
-
-  useEffect(() => {
-    setUser(getUser());
-  }, []);
 
   function handleLogout() {
     logout();
@@ -153,9 +149,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-[72px] z-20 border-b border-[rgba(64,54,42,0.08)] bg-[rgba(245,240,231,0.82)] backdrop-blur-xl lg:top-0">
           <div className="flex flex-col gap-4 px-5 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-10">
             <div>
-              <h1 className="font-[family-name:var(--font-manrope)] text-2xl font-extrabold tracking-tight">
-                {title}
-              </h1>
+              {title ? (
+                <h1 className="font-[family-name:var(--font-manrope)] text-2xl font-extrabold tracking-tight">
+                  {title}
+                </h1>
+              ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="card-surface flex items-center gap-3 rounded-[12px] px-4 py-2.5">

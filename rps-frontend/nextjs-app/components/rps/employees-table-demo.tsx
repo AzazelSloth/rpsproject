@@ -1,11 +1,14 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type ChangeEvent } from "react";
 import * as XLSX from "xlsx";
 import { Card, Pill, PrimaryButton } from "@/components/rps/ui";
-import type { EmployeeManagementData } from "@/lib/repositories/rps-repository";
+import type {
+  EmployeeManagementData,
+  SurveyOption,
+} from "@/lib/repositories/rps-repository";
 import { getTrpcClient } from "@/lib/trpc/client";
 
 function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; lineCount: number } {
@@ -76,26 +79,63 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
   };
 }
 
+type ImportedParticipantPayload = {
+  employee?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+  };
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  participation_token?: string;
+  token?: string;
+};
+
+type ImportEmployeesResponse = {
+  imported_employees?: number;
+  participants?: ImportedParticipantPayload[];
+};
+
+type RemindResponse =
+  | {
+      reminded?: number;
+      reminded_count?: number;
+      remindedParticipants?: number;
+      count?: number;
+      success?: boolean;
+      message?: string;
+    }
+  | undefined;
+
 export function EmployeesTableDemo({
   managementData,
   companies,
+  surveys,
   defaultCompanyId,
+  defaultCampaignId,
   defaultCampaignName,
   campaignId: propCampaignId,
   companyId: propCompanyId,
 }: {
   managementData: EmployeeManagementData;
   companies: { id: number; name: string }[];
+  surveys: SurveyOption[];
   defaultCompanyId: number | null;
+  defaultCampaignId: number | null;
   defaultCampaignName: string;
   campaignId?: number | null;
   companyId?: number | null;
 }) {
+  const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
-  const [companyFilter, setCompanyFilter] = useState<string>(
-    defaultCompanyId ? String(defaultCompanyId) : "all",
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(
+    defaultCompanyId ? String(defaultCompanyId) : (companies[0] ? String(companies[0].id) : ""),
+  );
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>(
+    defaultCampaignId ? String(defaultCampaignId) : "",
   );
   const [filter, setFilter] = useState<"all" | "completed" | "pending" | "reminded">("all");
   const [csv, setCsv] = useState(
@@ -111,29 +151,102 @@ export function EmployeesTableDemo({
     participants: Array<{ name: string; email: string; link: string }>;
   } | null>(null);
 
+  const availableSurveys = useMemo(() => {
+    if (!selectedCompanyId) {
+      return surveys;
+    }
+
+    return surveys.filter((survey) => String(survey.companyId ?? "") === selectedCompanyId);
+  }, [selectedCompanyId, surveys]);
+
+  const selectedSurvey =
+    surveys.find((survey) => String(survey.id) === selectedCampaignId) ??
+    availableSurveys[0] ??
+    null;
+  const pendingParticipantsCount = managementData.pendingParticipants + managementData.remindedParticipants;
+
   const filteredParticipants = useMemo(() => {
     return managementData.participants.filter((participant) => {
       const haystack = `${participant.name} ${participant.email} ${participant.department}`.toLowerCase();
       const matchesQuery = haystack.includes(query.toLowerCase());
       const matchesFilter = filter === "all" || participant.status === filter;
       const matchesCompany =
-        companyFilter === "all" ||
-        (managementData.companyId !== null && String(managementData.companyId) === companyFilter);
+        !selectedCompanyId ||
+        (managementData.companyId !== null && String(managementData.companyId) === selectedCompanyId);
 
       return matchesQuery && matchesFilter && matchesCompany;
     });
-  }, [companyFilter, filter, managementData.companyId, managementData.participants, query]);
+  }, [filter, managementData.companyId, managementData.participants, query, selectedCompanyId]);
 
-  function buildSurveyCreateHref() {
-    const params = new URLSearchParams();
-    params.set("tab", "create");
+  function pushSelection(nextCompanyId: string, nextCampaignId: string) {
+    const params = new URLSearchParams(searchParams.toString());
 
-    const scenario = searchParams.get("scenario");
-    if (scenario) {
-      params.set("scenario", scenario);
+    if (nextCompanyId) {
+      params.set("companyId", nextCompanyId);
+    } else {
+      params.delete("companyId");
     }
 
-    return `/surveys?${params.toString()}`;
+    if (nextCampaignId) {
+      params.set("campaignId", nextCampaignId);
+    } else {
+      params.delete("campaignId");
+    }
+
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  function handleCompanySelection(nextCompanyId: string) {
+    setSelectedCompanyId(nextCompanyId);
+
+    const nextSurveys = surveys.filter(
+      (survey) => String(survey.companyId ?? "") === nextCompanyId,
+    );
+    const nextCampaignId =
+      nextSurveys.find((survey) => String(survey.id) === selectedCampaignId)?.id ??
+      nextSurveys[0]?.id ??
+      null;
+    const nextCampaignValue = nextCampaignId ? String(nextCampaignId) : "";
+
+    setSelectedCampaignId(nextCampaignValue);
+    pushSelection(nextCompanyId, nextCampaignValue);
+  }
+
+  function handleSurveySelection(nextCampaignId: string) {
+    setSelectedCampaignId(nextCampaignId);
+
+    const nextSurvey = surveys.find((survey) => String(survey.id) === nextCampaignId) ?? null;
+    const nextCompanyId = nextSurvey?.companyId ? String(nextSurvey.companyId) : selectedCompanyId;
+
+    if (nextCompanyId !== selectedCompanyId) {
+      setSelectedCompanyId(nextCompanyId);
+    }
+
+    pushSelection(nextCompanyId, nextCampaignId);
+  }
+
+  function resolveCampaignId() {
+    if (selectedCampaignId) {
+      return Number(selectedCampaignId);
+    }
+
+    if (selectedSurvey?.id) {
+      return selectedSurvey.id;
+    }
+
+    return propCampaignId ?? managementData.campaignId;
+  }
+
+  function resolveCompanyId() {
+    if (selectedCompanyId) {
+      return Number(selectedCompanyId);
+    }
+
+    if (selectedSurvey?.companyId) {
+      return selectedSurvey.companyId;
+    }
+
+    return propCompanyId ?? managementData.companyId;
   }
 
   function validateCsv() {
@@ -187,7 +300,7 @@ export function EmployeesTableDemo({
       
       // Auto-validate after file load
       setTimeout(() => validateCsv(), 100);
-    } catch (err) {
+    } catch {
       setError(
         "Le fichier n'a pas pu être lu. Vérifiez le format et réessayez.",
       );
@@ -197,8 +310,8 @@ export function EmployeesTableDemo({
   }
 
   function handleImport() {
-    const campaignId = propCampaignId ?? managementData.campaignId;
-    const companyId = propCompanyId ?? managementData.companyId;
+    const campaignId = resolveCampaignId();
+    const companyId = resolveCompanyId();
 
     if (!campaignId || !companyId) {
       setError("Aucun sondage actif exploitable n'est disponible. Veuillez d'abord créer un sondage.");
@@ -231,21 +344,22 @@ export function EmployeesTableDemo({
       companyId,
       csv,
     })
-      .then((result: any) => {
+      .then((rawResult) => {
+        const result = rawResult as ImportEmployeesResponse;
         const participantsList = result.participants || [];
         
         // Mapper les participants de manière sécurisée pour éviter les undefined
-        const mappedParticipants = participantsList.map((p: any) => {
+        const mappedParticipants = participantsList.map((participant) => {
           // Essayer de trouver le nom sous différentes formes
-          const firstName = p.employee?.first_name || p.first_name || '';
-          const lastName = p.employee?.last_name || p.last_name || '';
-          const fullName = `${firstName} ${lastName}`.trim() || 'Employé';
-          const email = p.employee?.email || p.email || '';
-          const token = p.participation_token || p.token || '';
+          const firstName = participant.employee?.first_name || participant.first_name || "";
+          const lastName = participant.employee?.last_name || participant.last_name || "";
+          const fullName = `${firstName} ${lastName}`.trim() || "Employé";
+          const email = participant.employee?.email || participant.email || "";
+          const token = participant.participation_token || participant.token || "";
           
           return {
             name: fullName,
-            email: email,
+            email,
             link: `${window.location.origin}/survey-response/${token}`,
           };
         });
@@ -255,9 +369,13 @@ export function EmployeesTableDemo({
           participants: mappedParticipants,
         });
         setFeedback(`Import réussi ! ${result.imported_employees || 0} employé(s) ajouté(s).`);
+        router.refresh();
       })
-      .catch((err) => {
-        const errorMessage = err?.message || "L'import a échoué. Vérifiez le format du CSV et réessayez.";
+      .catch((caughtError: unknown) => {
+        const errorMessage =
+          caughtError instanceof Error
+            ? caughtError.message
+            : "L'import a échoué. Vérifiez le format du CSV et réessayez.";
         setError(errorMessage);
       })
       .finally(() => {
@@ -282,8 +400,8 @@ export function EmployeesTableDemo({
         try {
           document.execCommand('copy');
           resolve();
-        } catch (err) {
-          console.error('Fallback copy failed', err);
+        } catch (copyError) {
+          console.error('Fallback copy failed', copyError);
           resolve();
         }
         document.body.removeChild(textArea);
@@ -317,7 +435,7 @@ export function EmployeesTableDemo({
     
     // Ajouter les infos du sondage en haut
     const surveyInfo = [
-      `Titre du sondage: ${defaultCampaignName}`,
+      `Titre du sondage: ${selectedSurvey?.title ?? defaultCampaignName}`,
       `Date d'export: ${new Date().toLocaleDateString('fr-FR')}`,
       `Nombre d'employés: ${importSuccess.count}`,
       '',
@@ -356,17 +474,16 @@ export function EmployeesTableDemo({
   }
 
   async function handleRemindPending() {
-    const campaignId = propCampaignId ?? managementData.campaignId;
-    const companyId = propCompanyId ?? managementData.companyId;
+    const campaignId = resolveCampaignId();
+    const companyId = resolveCompanyId();
 
     if (!campaignId || !companyId) {
       setError("Aucun sondage actif exploitable n'est disponible.");
       return;
     }
 
-    // Count pending participants
     const pendingCount = managementData.participants.filter(
-      p => p.status === "pending" || p.status !== "completed"
+      (participant) => participant.status !== "completed",
     ).length;
 
     if (pendingCount === 0) {
@@ -383,26 +500,38 @@ export function EmployeesTableDemo({
     setIsPending(true);
 
     try {
-      // Call n8n webhook to send reminders
-      const response = await fetch('/api/webhook/n8n/remind', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          campaignId,
-          companyId,
-          remindPending: true,
-          message: "Rappel : Votre participation au sondage RPS est attendue.",
-        }),
-      });
+      const directResult = (await getTrpcClient().campaignParticipants.remind.mutate({
+        campaignId,
+        force: true,
+      })) as RemindResponse;
+      const remindedCount = extractRemindedCount(directResult) ?? pendingCount;
 
-      if (!response.ok) {
-        throw new Error("Échec de l'appel à n8n");
+      setFeedback(`Relance envoyée à ${remindedCount} employé(s).`);
+      router.refresh();
+    } catch {
+      try {
+        const response = await fetch('/api/webhook/n8n/remind', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            campaignId,
+            companyId,
+            remindPending: true,
+            message: "Rappel : Votre participation au sondage RPS est attendue.",
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Échec de l'appel à n8n");
+        }
+
+        const fallbackResult = (await response.json()) as RemindResponse;
+        const remindedCount = extractRemindedCount(fallbackResult) ?? pendingCount;
+
+        setFeedback(`Relance envoyée à ${remindedCount} employé(s).`);
+      } catch {
+        setError("La relance a échoué. Vérifiez la configuration n8n.");
       }
-
-      const result = await response.json();
-      setFeedback(`Relance envoyée à ${result.reminded || pendingCount} employé(s) !`);
-    } catch (err) {
-      setError("La relance a échoué. Vérifiez la configuration n8n.");
     } finally {
       setIsPending(false);
     }
@@ -428,6 +557,12 @@ export function EmployeesTableDemo({
               <div className="mt-4 space-y-3">
                 <div className="flex flex-wrap gap-2 sm:gap-3">
                   <button
+                    onClick={copyAllLinks}
+                    className="rounded-[12px] border border-emerald-200 bg-white px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
+                  >
+                    Copier tous les liens
+                  </button>
+                  <button
                     onClick={downloadExcelList}
                     className="rounded-[12px] bg-emerald-700 px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white hover:bg-emerald-800"
                   >
@@ -441,7 +576,7 @@ export function EmployeesTableDemo({
                   </button>
                   <button
                     onClick={() => setImportSuccess(null)}
-                    className="rounded-[12px] border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white hover:bg-slate-800"
+                    className="rounded-[12px] border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-100"
                   >
                     Retour à la liste
                   </button>
@@ -593,20 +728,23 @@ export function EmployeesTableDemo({
 
         <Card className="p-4 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-            Sélection
+            Relance manuelle
           </p>
           <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold">
-            Entreprise et sondage
+            Forcer une relance manuelle
           </h3>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Choisissez l&apos;entreprise et le sondage à relancer, puis lancez une relance manuelle
+            des participants qui n&apos;ont pas encore répondu.
+          </p>
           <div className="mt-5 space-y-4">
             <div>
               <p className="text-sm text-slate-500">Entreprise</p>
               <select
-                value={companyFilter}
-                onChange={(event) => setCompanyFilter(event.target.value)}
+                value={selectedCompanyId}
+                onChange={(event) => handleCompanySelection(event.target.value)}
                 className="mt-2 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
               >
-                <option value="all">Toutes les entreprises</option>
                 {companies.map((company) => (
                   <option key={company.id} value={String(company.id)}>
                     {company.name}
@@ -617,17 +755,36 @@ export function EmployeesTableDemo({
             <div>
               <p className="text-sm text-slate-500">Sondage</p>
               <select
-                value={defaultCampaignName}
-                onChange={() => null}
+                value={selectedCampaignId}
+                onChange={(event) => handleSurveySelection(event.target.value)}
+                disabled={availableSurveys.length === 0}
                 className="mt-2 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
               >
-                <option value={defaultCampaignName}>{defaultCampaignName}</option>
+                {availableSurveys.length === 0 ? (
+                  <option value="">Aucun sondage disponible</option>
+                ) : (
+                  availableSurveys.map((survey) => (
+                    <option key={survey.id} value={String(survey.id)}>
+                      {survey.title}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
             <div className="rounded-[12px] bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">Statut</p>
-              <p className="mt-2 text-lg font-bold capitalize">{managementData.campaignStatus}</p>
+              <p className="text-sm text-slate-500">Participants à relancer</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{pendingParticipantsCount}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Sondage sélectionné : {selectedSurvey?.title ?? defaultCampaignName}
+              </p>
             </div>
+            <button
+              onClick={handleRemindPending}
+              disabled={isPending || !selectedCampaignId}
+              className="w-full rounded-[12px] bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60"
+            >
+              {isPending ? "En cours..." : "Forcer une relance manuelle"}
+            </button>
           </div>
         </Card>
       </div>
@@ -650,11 +807,10 @@ export function EmployeesTableDemo({
               className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none w-full sm:w-auto"
             />
             <select
-              value={companyFilter}
-              onChange={(event) => setCompanyFilter(event.target.value)}
+              value={selectedCompanyId}
+              onChange={(event) => handleCompanySelection(event.target.value)}
               className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
             >
-              <option value="all">Toutes les entreprises</option>
               {companies.map((company) => (
                 <option key={company.id} value={String(company.id)}>
                   {company.name}
@@ -762,4 +918,18 @@ function formatShortDate(value: string | null) {
     month: "2-digit",
     year: "numeric",
   });
+}
+
+function extractRemindedCount(result: RemindResponse) {
+  if (!result) {
+    return null;
+  }
+
+  return (
+    result.reminded ??
+    result.reminded_count ??
+    result.remindedParticipants ??
+    result.count ??
+    null
+  );
 }

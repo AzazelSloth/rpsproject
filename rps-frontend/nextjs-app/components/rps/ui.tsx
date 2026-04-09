@@ -16,7 +16,7 @@ export function SectionHeader({
   description,
   action,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description?: string;
   action?: ReactNode;
@@ -24,9 +24,11 @@ export function SectionHeader({
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#9b7223]">
-          {eyebrow}
-        </p>
+        {eyebrow ? (
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#9b7223]">
+            {eyebrow}
+          </p>
+        ) : null}
         <h1 className="font-[family-name:var(--font-manrope)] text-3xl font-extrabold tracking-tight text-slate-900">
           {title}
         </h1>
