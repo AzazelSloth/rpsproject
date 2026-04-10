@@ -75,3 +75,5 @@ async function bootstrap() {
     server.requestTimeout = 120000; // 120s
   });
 }
+
+bootstrap();
