@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, Pill } from "@/components/rps/ui";
 import type {
   EmployeeManagementData,
@@ -54,6 +54,8 @@ export function EmployeesTableDemo({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [surveyDetails, setSurveyDetails] = useState<any>(null);
+  const [loadingSurveyDetails, setLoadingSurveyDetails] = useState(false);
 
   const availableSurveys = useMemo(() => surveys, [surveys]);
 
@@ -70,6 +72,18 @@ export function EmployeesTableDemo({
   );
   const pendingParticipantsCount =
     managementData.pendingParticipants + managementData.remindedParticipants;
+
+  const [remindCompanyId, setRemindCompanyId] = useState<string>(
+    selectedCompanyId || (companies[0] ? String(companies[0].id) : "")
+  );
+  const [remindCampaignId, setRemindCampaignId] = useState<string>(
+    selectedCampaignId || ""
+  );
+
+  const remindAvailableSurveys = useMemo(() => {
+    if (!remindCompanyId) return surveys;
+    return surveys.filter((survey) => String(survey.companyId) === remindCompanyId);
+  }, [remindCompanyId, surveys]);
 
   const filteredParticipants = useMemo(() => {
     return managementData.participants.filter((participant) => {
@@ -140,16 +154,42 @@ export function EmployeesTableDemo({
     return propCompanyId ?? managementData.companyId;
   }
 
-  async function handleRemindPending() {
+  // Fetch survey details when campaign changes
+  useEffect(() => {
     const campaignId = resolveCampaignId();
-    const companyId = resolveCompanyId();
-
-    if (!campaignId || !companyId) {
-      setError("Aucun sondage actif exploitable n'est disponible.");
+    
+    if (!campaignId) {
+      setSurveyDetails(null);
       return;
     }
 
-    if (selectedSurvey?.companyId && companyId !== selectedSurvey.companyId) {
+    const fetchSurveyDetails = async () => {
+      setLoadingSurveyDetails(true);
+      try {
+        const details = await getTrpcClient().campaigns.findOne.query(campaignId);
+        setSurveyDetails(details);
+      } catch (err) {
+        console.error("Failed to fetch survey details:", err);
+        setSurveyDetails(null);
+      } finally {
+        setLoadingSurveyDetails(false);
+      }
+    };
+
+    fetchSurveyDetails();
+  }, [selectedCampaignId, surveys]);
+
+  async function handleRemindPending() {
+    const campaignId = Number(remindCampaignId);
+    const companyId = Number(remindCompanyId);
+
+    if (!campaignId || !companyId) {
+      setError("Sélectionnez une entreprise et un sondage valides pour procéder.");
+      return;
+    }
+
+    const remindSurvey = remindAvailableSurveys.find(s => String(s.id) === remindCampaignId);
+    if (remindSurvey && companyId !== remindSurvey.companyId) {
       setError("L’entreprise choisie ne correspond pas au sondage sélectionné.");
       return;
     }
@@ -227,19 +267,40 @@ export function EmployeesTableDemo({
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             <div>
               <p className="text-sm text-slate-500">Entreprise</p>
-              <select
-                value={lockedCompanyId}
-                disabled
-                className="mt-2 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-              >
-                {companies.map((company) => (
-                  <option key={company.id} value={String(company.id)}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
+              <div className="mt-2 rounded-[12px] border border-slate-200 bg-white overflow-hidden">
+                <div className="max-h-[200px] overflow-y-auto">
+                  {companies.map((company) => {
+                    const companySurveys = surveys.filter(
+                      (survey) => survey.companyId === company.id
+                    );
+                    return (
+                      <button
+                        key={company.id}
+                        onClick={() => {
+                          setSelectedCompanyId(String(company.id));
+                          if (companySurveys.length > 0) {
+                            handleSurveySelection(String(companySurveys[0].id));
+                          }
+                        }}
+                        className={`w-full text-left px-4 py-3 border-b border-slate-100 last:border-b-0 transition ${
+                          String(lockedCompanyId) === String(company.id)
+                            ? "bg-amber-50 font-semibold text-slate-900"
+                            : "hover:bg-slate-50 text-slate-700"
+                        }`}
+                      >
+                        <p className="text-sm font-medium">{company.name}</p>
+                        {companySurveys.length > 0 && (
+                          <p className="mt-1 text-xs text-slate-500">
+                            Sondage: {companySurveys[0].title}
+                          </p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <p className="mt-2 text-xs text-slate-500">
-                Entreprise liée automatiquement au sondage sélectionné.
+                Sélectionnez une entreprise pour voir les sondages associés.
               </p>
             </div>
 
@@ -292,25 +353,152 @@ export function EmployeesTableDemo({
             Relancer les employés en attente
           </h3>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Envoyez une relance aux participants qui n&apos;ont pas encore répondu au sondage.
+            Sélectionnez l'entreprise et le sondage, puis envoyez une relance aux participants qui n'ont pas encore répondu.
           </p>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div>
+              <p className="text-sm text-slate-500">Entreprise</p>
+              <select
+                value={remindCompanyId}
+                onChange={(event) => {
+                  setRemindCompanyId(event.target.value);
+                  const companySurveys = remindAvailableSurveys.filter(
+                    (survey) => String(survey.companyId) === event.target.value
+                  );
+                  if (companySurveys.length > 0) {
+                    setRemindCampaignId(String(companySurveys[0].id));
+                  } else {
+                    setRemindCampaignId("");
+                  }
+                }}
+                className="mt-2 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+              >
+                {companies.map((company) => (
+                  <option key={company.id} value={String(company.id)}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <p className="text-sm text-slate-500">Sondage concerné</p>
+              <select
+                value={remindCampaignId}
+                onChange={(event) => setRemindCampaignId(event.target.value)}
+                disabled={remindAvailableSurveys.length === 0}
+                className="mt-2 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+              >
+                {remindAvailableSurveys.length === 0 ? (
+                  <option value="">Aucun sondage disponible</option>
+                ) : (
+                  remindAvailableSurveys.map((survey) => (
+                    <option key={survey.id} value={String(survey.id)}>
+                      {survey.title}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          </div>
 
           <div className="mt-5 rounded-[12px] bg-slate-50 p-4">
             <p className="text-sm text-slate-500">Participants à relancer</p>
             <p className="mt-2 text-2xl font-bold text-slate-900">{pendingParticipantsCount}</p>
             <p className="mt-1 text-xs text-slate-500">
-              Sondage sélectionné : {selectedSurvey?.title ?? defaultCampaignName}
+              Sondage sélectionné : {remindCampaignId ? remindAvailableSurveys.find(s => String(s.id) === remindCampaignId)?.title : "Aucun sondage"}
             </p>
           </div>
 
           <button
             onClick={handleRemindPending}
-            disabled={isPending || !selectedCampaignId}
+            disabled={isPending || !remindCampaignId}
             className="mt-4 w-full rounded-[12px] bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60"
           >
             {isPending ? "En cours..." : "Forcer une relance manuelle"}
           </button>
         </Card>
+      </div>
+
+      {/* Survey Details Card */}
+      {selectedCampaignId && (
+        <Card className="p-4 sm:p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+            Détails du sondage
+          </p>
+          <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold">
+            {surveyDetails?.title || "Chargement..."}
+          </h3>
+          
+          {loadingSurveyDetails ? (
+            <p className="mt-4 text-sm text-slate-500">Chargement des détails...</p>
+          ) : surveyDetails ? (
+            <div className="mt-4 space-y-4">
+              {/* Dates */}
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500 tracking-[0.05em]">Dates</p>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <div className="rounded-[8px] bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">Début</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {surveyDetails?.start_date
+                        ? new Date(surveyDetails.start_date).toLocaleDateString('fr-FR')
+                        : "Non défini"}
+                    </p>
+                  </div>
+                  <div className="rounded-[8px] bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">Fin</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {surveyDetails?.end_date
+                        ? new Date(surveyDetails.end_date).toLocaleDateString('fr-FR')
+                        : "Non défini"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              {surveyDetails?.description && (
+                <div>
+                  <p className="text-xs font-semibold uppercase text-slate-500 tracking-[0.05em]">Description</p>
+                  <p className="mt-2 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                    {surveyDetails.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Questions Count */}
+              {surveyDetails?.questions && (
+                <div>
+                  <p className="text-xs font-semibold uppercase text-slate-500 tracking-[0.05em]">Questions</p>
+                  <div className="mt-2">
+                    {surveyDetails.questions.length > 0 ? (
+                      <Pill tone="neutral">
+                        {surveyDetails.questions.length} question{surveyDetails.questions.length > 1 ? 's' : ''}
+                      </Pill>
+                    ) : (
+                      <p className="text-sm text-slate-500">Aucune question</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Status */}
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500 tracking-[0.05em]">Statut</p>
+                <div className="mt-2">
+                  <Pill tone={surveyDetails?.status === 'active' ? 'success' : 'neutral'}>
+                    {surveyDetails?.status === 'active' ? 'Actif' : 'Inactif'}
+                  </Pill>
+                </div>
+              </div>
+            </div>
+            ) : (
+              <p className="mt-4 text-sm text-slate-500">Impossible de charger les détails du sondage.</p>
+            )}
+          </Card>
+        )}
       </div>
 
       <Card className="overflow-hidden">

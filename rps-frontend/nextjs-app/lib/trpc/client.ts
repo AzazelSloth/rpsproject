@@ -9,6 +9,14 @@ export function getTrpcClient() {
       links: [
         httpLink({
           url: "/trpc",
+          // Increase timeout for slow connections like Starlink (default is 10s)
+          fetch: (url, options) => {
+            return fetch(url, {
+              ...options,
+              // 2 minutes timeout for large imports
+              signal: AbortSignal.timeout(120000),
+            });
+          },
         }),
       ],
     });

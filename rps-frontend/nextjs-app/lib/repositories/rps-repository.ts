@@ -809,9 +809,9 @@ function buildReportData(
 
   return {
     title: activeCampaign
-      ? `Rapport RPS - ${activeCampaign.name}`
+      ? `${activeCampaign.name}`
       : reports[0]
-        ? `Rapport RPS - Sondage ${reports[0].campaign.id}`
+        ? `${reports[0].campaign.name}`
         : reportData.title,
     companyName: activeCampaign?.company?.name ?? reportData.companyName,
     participationRate: dashboardData.metrics.participationRate,

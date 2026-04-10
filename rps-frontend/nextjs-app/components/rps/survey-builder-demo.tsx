@@ -800,7 +800,47 @@ export function SurveyBuilderDemo({
           </div>
         </div>
 
-        <div className="mt-4 sm:mt-5 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Stepper 5 étapes horizontal - en haut et bien visible */}
+        <div className="mt-6 sm:mt-8 mb-6 sm:mb-8 overflow-x-auto">
+          <div className="flex items-center justify-between min-w-[640px] sm:min-w-max gap-2 md:gap-3 px-2 sm:px-4">
+            {[
+              { step: 1, label: "Entreprise", done: Boolean(companyId) },
+              { step: 2, label: "Dates", done: Boolean(campaignId && startDate && endDate) },
+              { step: 3, label: "Questions", done: questions.length > 0 },
+              { step: 4, label: "Import", done: Boolean(importSuccess?.participants.length) },
+              { step: 5, label: "Envoi", done: hasDownloadedLinks },
+            ].map((item, idx, arr) => (
+              <div key={item.step} className="flex items-center">
+                {/* Cercle étape */}
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border-3 text-base sm:text-lg font-bold transition ${
+                      item.done
+                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        : "border-slate-400 bg-white text-slate-600"
+                    }`}
+                  >
+                    {item.step}
+                  </div>
+                  <p className="mt-2 text-xs sm:text-sm font-semibold text-center whitespace-nowrap text-slate-700">
+                    {item.label}
+                  </p>
+                </div>
+
+                {/* Connecteur vers l'étape suivante */}
+                {idx < arr.length - 1 && (
+                  <div
+                    className={`h-1 w-12 sm:w-16 md:w-24 mx-2 md:mx-4 transition ${
+                      item.done ? "bg-emerald-500" : "bg-slate-300"
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 sm:mt-8 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {[
             {
               step: 1,
@@ -1273,19 +1313,21 @@ export function SurveyBuilderDemo({
           </SecondaryButton>
         </div>
 
-        <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("scale")} className="w-full sm:w-auto">
-            Ajouter echelle 1-5
-          </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("choice")} className="w-full sm:w-auto">
-            Ajouter QCM
-          </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("text")} className="w-full sm:w-auto">
-            Ajouter texte libre
-          </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("section")} className="w-full sm:w-auto">
-            + Ajouter section
-          </SecondaryButton>
+        <div className="mt-3 sm:mt-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700 mb-3">
+            Gestion des questions
+          </p>
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
+            <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("scale")} className="w-full sm:w-auto">
+              Ajouter echelle 1-5
+            </SecondaryButton>
+            <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("choice")} className="w-full sm:w-auto">
+              Ajouter QCM
+            </SecondaryButton>
+            <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("text")} className="w-full sm:w-auto">
+              Ajouter texte libre
+            </SecondaryButton>
+          </div>
         </div>
 
         {feedback && (

@@ -305,82 +305,135 @@ export class CampaignParticipantService {
       : this.parseCsv(payload.csv ?? '');
 
     const normalizedRows = rows.filter((row) => row.email?.trim());
+    const BATCH_SIZE = 50; // Process in batches for stability
+    
+    console.log(`Starting import of ${normalizedRows.length} employees for campaign ${campaignId}`);
+    
     const employees: Employee[] = [];
 
-    for (const row of normalizedRows) {
-      const email = row.email.trim();
+    // Process rows in batches to avoid timeouts
+    for (let i = 0; i < normalizedRows.length; i += BATCH_SIZE) {
+      const batch = normalizedRows.slice(i, i + BATCH_SIZE);
+      console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} rows)`);
+
+      const batchEmails = batch.map(r => r.email.trim());
       
-      // Search globally by email (not scoped to company)
-      let employee = await this.employeeRepository.findOne({
-        where: { email },
-        relations: { company: true },
-      });
-
-      if (!employee) {
-        try {
-          // Create new employee for this company
-          employee = await this.employeeRepository.save(
-            this.employeeRepository.create({
-              first_name: row.first_name?.trim() || 'N/A',
-              last_name: row.last_name?.trim() || 'N/A',
-              email,
-              phone: row.phone?.trim() || undefined,
-              department: row.department?.trim() || undefined,
-              survey_token: randomUUID(),
-              company: { id: payload.company_id } as any,
-            }),
-          );
-        } catch (error) {
-          // Handle duplicate email error gracefully
-          const dbError = error as any;
-          if (dbError?.code === '23505') { // PostgreSQL unique violation
-            console.warn(`Duplicate email skipped: ${email}`);
-            continue;
-          }
-          console.error(`Failed to create employee with email ${email}:`, error);
-          throw error;
-        }
-      } else if (employee.company.id !== payload.company_id) {
-        // Employee exists but belongs to a different company
-        // Skip this employee to avoid conflicts
-        console.warn(
-          `Employee with email ${email} already exists for company ${employee.company.id}. Skipping.`,
-        );
-        continue;
-      }
-
-      employees.push(employee);
-    }
-
-    const participantsToCreate: CampaignParticipant[] = [];
-
-    for (const employee of employees) {
-      const existingParticipant =
-        await this.campaignParticipantRepository.findOne({
-          where: {
-            campaign: { id: campaignId },
-            employee: { id: employee.id },
-          },
+      try {
+        // Fetch existing employees in batch
+        const existingEmployees = await this.employeeRepository.find({
+          where: [{ email: batchEmails }] as any,
+          relations: { company: true },
         });
 
-      if (!existingParticipant) {
-        participantsToCreate.push(
-          this.campaignParticipantRepository.create({
-            campaign: { id: campaignId } as Campaign,
-            employee: { id: employee.id } as Employee,
-            participation_token: randomUUID(),
-            invitation_sent_at: payload.invitation_sent_at ?? new Date(),
-            reminder_sent_at: null,
-            completed_at: null,
-            status: CampaignParticipantStatus.PENDING,
-          }),
+        const existingMap = new Map(existingEmployees.map(e => [e.email, e]));
+        const newEmployeesData: Employee[] = [];
+
+        for (const row of batch) {
+          const email = row.email.trim();
+          let employee = existingMap.get(email);
+
+          if (!employee) {
+            newEmployeesData.push(
+              this.employeeRepository.create({
+                first_name: row.first_name?.trim() || 'N/A',
+                last_name: row.last_name?.trim() || 'N/A',
+                email,
+                phone: row.phone?.trim() || undefined,
+                department: row.department?.trim() || undefined,
+                survey_token: randomUUID(),
+                company: { id: payload.company_id } as any,
+              }),
+            );
+          } else if (employee.company.id === payload.company_id) {
+            employees.push(employee);
+          } else {
+            console.warn(
+              `Employee ${email} already exists for different company. Skipping.`,
+            );
+          }
+        }
+
+        // Bulk insert new employees
+        if (newEmployeesData.length > 0) {
+          try {
+            const created = await this.employeeRepository.save(newEmployeesData);
+            employees.push(...created);
+            console.log(`Created ${created.length} new employees in batch`);
+          } catch (error) {
+            const dbError = error as any;
+            if (dbError?.code === '23505') {
+              console.warn('Some employees have duplicate emails, continuing...');
+              // Try inserting individually with duplicate handling
+              for (const empData of newEmployeesData) {
+                try {
+                  const saved = await this.employeeRepository.save(empData);
+                  employees.push(saved);
+                } catch (e) {
+                  if ((e as any)?.code === '23505') {
+                    console.warn(`Duplicate for ${empData.email}, skipping`);
+                    continue;
+                  }
+                  throw e;
+                }
+              }
+            } else {
+              throw error;
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing batch starting at index ${i}:`, error);
+        throw new Error(
+          `Failed to import employees (batch ${Math.floor(i / BATCH_SIZE) + 1}): ${error instanceof Error ? error.message : 'Unknown error'}`,
         );
       }
     }
 
-    const participants = participantsToCreate.length
-      ? await this.campaignParticipantRepository.save(participantsToCreate)
-      : [];
+    console.log(`Successfully imported ${employees.length} unique employees`);
+
+    // Create participants in batch
+    const participantsToCreate: CampaignParticipant[] = [];
+    const employeeIds = employees.map(e => e.id);
+
+    if (employeeIds.length > 0) {
+      const existingParticipants = await this.campaignParticipantRepository.find({
+        where: {
+          campaign: { id: campaignId },
+          employee: { id: employeeIds } as any,
+        },
+      });
+
+      const existingSet = new Set(existingParticipants.map(p => p.employee.id));
+
+      for (const employee of employees) {
+        if (!existingSet.has(employee.id)) {
+          participantsToCreate.push(
+            this.campaignParticipantRepository.create({
+              campaign: { id: campaignId } as Campaign,
+              employee: { id: employee.id } as Employee,
+              participation_token: randomUUID(),
+              invitation_sent_at: payload.invitation_sent_at ?? new Date(),
+              reminder_sent_at: null,
+              completed_at: null,
+              status: CampaignParticipantStatus.PENDING,
+            }),
+          );
+        }
+      }
+    }
+
+    let participants: CampaignParticipant[] = [];
+    if (participantsToCreate.length > 0) {
+      try {
+        participants = await this.campaignParticipantRepository.save(participantsToCreate);
+        console.log(`Created ${participants.length} new participants`);
+      } catch (error) {
+        console.error('Error saving participants:', error);
+        throw new Error(
+          `Failed to create participants: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      }
+    }
 
     return {
       imported_employees: employees.length,

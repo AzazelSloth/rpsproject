@@ -2,6 +2,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
 	deleteBackend,
+	getBackendItem,
 	isBackendConfigured,
 	patchBackend,
 	postBackend,
@@ -216,6 +217,15 @@ const adminSurveysRouter = t.router({
 				})),
 			);
 		}),
+
+	campaigns: t.router({
+		findOne: t.procedure
+			.input(z.number().int().positive())
+			.query(async (opts) => {
+				ensureBackendConfigured();
+				return getBackendItem(`/campaigns/${opts.input}`);
+			}),
+	}),
 });
 
 const campaignParticipantsRouter = t.router({
