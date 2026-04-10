@@ -266,62 +266,85 @@ export function EmployeesTableDemo({
 
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             <div>
-              <p className="text-sm text-slate-500">Entreprise</p>
-              <div className="mt-2 rounded-[12px] border border-slate-200 bg-white overflow-hidden">
-                <div className="max-h-[200px] overflow-y-auto">
+              <p className="text-sm font-semibold text-slate-700 mb-2">🏢 Entreprise</p>
+              <div className="relative">
+                <select
+                  value={selectedCompanyId}
+                  onChange={(event) => {
+                    setSelectedCompanyId(event.target.value);
+                    const companySurveys = surveys.filter(
+                      (survey) => String(survey.companyId) === event.target.value
+                    );
+                    if (companySurveys.length > 0) {
+                      handleSurveySelection(String(companySurveys[0].id));
+                    }
+                  }}
+                  className="w-full appearance-none rounded-xl border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50 px-4 py-3 pr-10 text-sm font-medium text-slate-900 outline-none transition-all duration-200 hover:border-amber-300 hover:shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                >
+                  <option value="">-- Choisir une entreprise --</option>
                   {companies.map((company) => {
                     const companySurveys = surveys.filter(
                       (survey) => survey.companyId === company.id
                     );
                     return (
-                      <button
-                        key={company.id}
-                        onClick={() => {
-                          setSelectedCompanyId(String(company.id));
-                          if (companySurveys.length > 0) {
-                            handleSurveySelection(String(companySurveys[0].id));
-                          }
-                        }}
-                        className={`w-full text-left px-4 py-3 border-b border-slate-100 last:border-b-0 transition ${
-                          String(lockedCompanyId) === String(company.id)
-                            ? "bg-amber-50 font-semibold text-slate-900"
-                            : "hover:bg-slate-50 text-slate-700"
-                        }`}
-                      >
-                        <p className="text-sm font-medium">{company.name}</p>
-                        {companySurveys.length > 0 && (
-                          <p className="mt-1 text-xs text-slate-500">
-                            Sondage: {companySurveys[0].title}
-                          </p>
-                        )}
-                      </button>
+                      <option key={company.id} value={String(company.id)}>
+                        {company.name} {companySurveys.length > 0 ? `(${companySurveys.length} sondage${companySurveys.length > 1 ? 's' : ''})` : ''}
+                      </option>
                     );
                   })}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                  <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
               </div>
-              <p className="mt-2 text-xs text-slate-500">
-                Sélectionnez une entreprise pour voir les sondages associés.
-              </p>
+              {lockedCompanyId && (
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2">
+                  <span className="text-xs">✓</span>
+                  <p className="text-xs text-amber-800">
+                    Entreprise sélectionnée : <span className="font-semibold">{companies.find(c => String(c.id) === lockedCompanyId)?.name}</span>
+                  </p>
+                </div>
+              )}
             </div>
 
             <div>
-              <p className="text-sm text-slate-500">Sondage</p>
-              <select
-                value={selectedCampaignId}
-                onChange={(event) => handleSurveySelection(event.target.value)}
-                disabled={availableSurveys.length === 0}
-                className="mt-2 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-              >
-                {availableSurveys.length === 0 ? (
-                  <option value="">Aucun sondage disponible</option>
-                ) : (
-                  availableSurveys.map((survey) => (
-                    <option key={survey.id} value={String(survey.id)}>
-                      {survey.title}
-                    </option>
-                  ))
-                )}
-              </select>
+              <p className="text-sm font-semibold text-slate-700 mb-2">📊 Sondage</p>
+              <div className="relative">
+                <select
+                  value={selectedCampaignId}
+                  onChange={(event) => handleSurveySelection(event.target.value)}
+                  disabled={availableSurveys.length === 0}
+                  className="w-full appearance-none rounded-xl border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50 px-4 py-3 pr-10 text-sm font-medium text-slate-900 outline-none transition-all duration-200 hover:border-amber-300 hover:shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {availableSurveys.length === 0 ? (
+                    <option value="">Aucun sondage disponible</option>
+                  ) : (
+                    <>
+                      <option value="">-- Choisir un sondage --</option>
+                      {availableSurveys.map((survey) => (
+                        <option key={survey.id} value={String(survey.id)}>
+                          {survey.title}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                  <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              {selectedCampaignId && selectedSurvey && (
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2">
+                  <span className="text-xs">ℹ️</span>
+                  <p className="text-xs text-blue-800">
+                    {selectedSurvey.title}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -358,48 +381,66 @@ export function EmployeesTableDemo({
 
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             <div>
-              <p className="text-sm text-slate-500">Entreprise</p>
-              <select
-                value={remindCompanyId}
-                onChange={(event) => {
-                  setRemindCompanyId(event.target.value);
-                  const companySurveys = remindAvailableSurveys.filter(
-                    (survey) => String(survey.companyId) === event.target.value
-                  );
-                  if (companySurveys.length > 0) {
-                    setRemindCampaignId(String(companySurveys[0].id));
-                  } else {
-                    setRemindCampaignId("");
-                  }
-                }}
-                className="mt-2 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-              >
-                {companies.map((company) => (
-                  <option key={company.id} value={String(company.id)}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
+              <p className="text-sm font-semibold text-slate-700 mb-2">🏢 Entreprise</p>
+              <div className="relative">
+                <select
+                  value={remindCompanyId}
+                  onChange={(event) => {
+                    setRemindCompanyId(event.target.value);
+                    const companySurveys = remindAvailableSurveys.filter(
+                      (survey) => String(survey.companyId) === event.target.value
+                    );
+                    if (companySurveys.length > 0) {
+                      setRemindCampaignId(String(companySurveys[0].id));
+                    } else {
+                      setRemindCampaignId("");
+                    }
+                  }}
+                  className="w-full appearance-none rounded-xl border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50 px-4 py-3 pr-10 text-sm font-medium text-slate-900 outline-none transition-all duration-200 hover:border-amber-300 hover:shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                >
+                  <option value="">-- Choisir une entreprise --</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={String(company.id)}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                  <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
 
             <div>
-              <p className="text-sm text-slate-500">Sondage concerné</p>
-              <select
-                value={remindCampaignId}
-                onChange={(event) => setRemindCampaignId(event.target.value)}
-                disabled={remindAvailableSurveys.length === 0}
-                className="mt-2 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-              >
-                {remindAvailableSurveys.length === 0 ? (
-                  <option value="">Aucun sondage disponible</option>
-                ) : (
-                  remindAvailableSurveys.map((survey) => (
-                    <option key={survey.id} value={String(survey.id)}>
-                      {survey.title}
-                    </option>
-                  ))
-                )}
-              </select>
+              <p className="text-sm font-semibold text-slate-700 mb-2">📊 Sondage concerné</p>
+              <div className="relative">
+                <select
+                  value={remindCampaignId}
+                  onChange={(event) => setRemindCampaignId(event.target.value)}
+                  disabled={remindAvailableSurveys.length === 0}
+                  className="w-full appearance-none rounded-xl border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50 px-4 py-3 pr-10 text-sm font-medium text-slate-900 outline-none transition-all duration-200 hover:border-amber-300 hover:shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {remindAvailableSurveys.length === 0 ? (
+                    <option value="">Aucun sondage disponible</option>
+                  ) : (
+                    <>
+                      <option value="">-- Choisir un sondage --</option>
+                      {remindAvailableSurveys.map((survey) => (
+                        <option key={survey.id} value={String(survey.id)}>
+                          {survey.title}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                  <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
 

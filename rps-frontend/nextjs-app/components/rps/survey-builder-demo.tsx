@@ -819,39 +819,66 @@ export function SurveyBuilderDemo({
           )}
         </div>
 
-        {/* Bloc 2: Dates */}
+        {/* Bloc 2: Dates de début et fin */}
         <div className="relative rounded-lg border border-slate-200 bg-white p-2 sm:p-3">
           <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
             2
           </span>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Dates</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Dates de début et fin</p>
           <div className="mt-1 space-y-1">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
-              className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[10px] outline-none"
-            />
-            <input
-              type="date"
-              value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
-              className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[10px] outline-none"
-            />
+            {/* Date début */}
+            <div className="relative">
+              <label className="text-[9px] font-semibold text-slate-600 mb-0.5 block">📅 Début</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(event) => setStartDate(event.target.value)}
+                className="w-full rounded border border-slate-200 bg-gradient-to-r from-blue-50 to-white px-2 py-1.5 text-[10px] font-medium text-slate-900 outline-none transition-all hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+              />
+              {startDate && (
+                <p className="text-[9px] text-blue-600 mt-0.5 font-medium">
+                  {new Date(startDate + 'T00:00:00').toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                  })}
+                </p>
+              )}
+            </div>
+            
+            {/* Date fin */}
+            <div className="relative">
+              <label className="text-[9px] font-semibold text-slate-600 mb-0.5 block">🏁 Fin</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(event) => setEndDate(event.target.value)}
+                className="w-full rounded border border-slate-200 bg-gradient-to-r from-emerald-50 to-white px-2 py-1.5 text-[10px] font-medium text-slate-900 outline-none transition-all hover:border-emerald-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200"
+              />
+              {endDate && (
+                <p className="text-[9px] text-emerald-600 mt-0.5 font-medium">
+                  {new Date(endDate + 'T00:00:00').toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                  })}
+                </p>
+              )}
+            </div>
           </div>
           {isDateRangeInvalid && (
             <p className="mt-1 text-[10px] font-medium text-rose-700">
-              Fin ≥ Début
+              ⚠ Fin ≥ Début
             </p>
           )}
         </div>
 
-        {/* Bloc 3: Sondage (Titre + Description) */}
+        {/* Bloc 3: Nom et Description */}
         <div className="relative rounded-lg border border-slate-200 bg-white p-2 sm:p-3">
           <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
             3
           </span>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Sondage</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Nom et Description</p>
           <input
             className="mt-1 w-full rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs outline-none"
             value={effectiveCampaignTitle}
@@ -867,65 +894,87 @@ export function SurveyBuilderDemo({
           />
         </div>
 
-        {/* Bloc 4: Import + Envoi */}
-        <div className="relative rounded-lg border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-2 sm:p-3">
-          <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-            4
-          </span>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Import & Envoi</p>
-          
-          {/* Import */}
-          <button
-            type="button"
-            onClick={openImportModal}
-            disabled={!isSurveyReadyForImport || isPending}
-            className="mt-1 w-full inline-flex items-center justify-center rounded bg-[#181818] px-2 py-1 text-[10px] font-semibold transition hover:bg-[#242424] disabled:opacity-60"
-            style={{ color: "#ffffff" }}
-          >
-            Importer
-          </button>
-          
-          {/* Envoi/Activation */}
-          <div className="mt-2 space-y-1">
-            {status !== "active" ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (questions.length === 0) {
-                    setError("Confirmez d'abord que toutes les questions du sondage sont correctes avant d'activer.");
-                    return;
-                  }
-                  changeCampaignStatus("activateCampaign");
-                }}
-                disabled={!canSaveCampaign || isPending}
-                className="w-full rounded bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
-              >
-                Activer
-              </button>
-            ) : (
-              <>
-                <div className="rounded bg-emerald-50 px-2 py-1 text-center">
-                  <p className="text-[10px] font-semibold text-emerald-700">✓ Actif</p>
-                </div>
+        {/* Bloc 4: Import & Envoi */}
+        <div className="relative rounded-lg border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-3 sm:p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1">
+              <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+                4
+              </span>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Import & Envoi</p>
+              
+              {/* Import section */}
+              <div className="mt-2">
+                <p className="text-[10px] text-slate-600 mb-1">Employés Excel/CSV</p>
                 <button
                   type="button"
-                  onClick={() => changeCampaignStatus("terminateCampaign")}
-                  disabled={isPending}
-                  className="w-full rounded border border-rose-200 bg-white px-2 py-1 text-[10px] font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+                  onClick={openImportModal}
+                  disabled={!isSurveyReadyForImport || isPending}
+                  className="w-full inline-flex items-center justify-center rounded bg-[#181818] px-2 py-1.5 text-[10px] font-semibold transition hover:bg-[#242424] disabled:opacity-60"
+                  style={{ color: "#ffffff" }}
                 >
-                  Désactiver
+                  Importer
                 </button>
-              </>
-            )}
-            {importSuccess && importSuccess.count > 0 && (
-              <button
-                type="button"
-                onClick={downloadLinksList}
-                className="w-full rounded bg-amber-600 px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-amber-700"
-              >
-                {hasDownloadedLinks ? "✓ Liens" : "Télécharger"}
-              </button>
-            )}
+                {importSuccess && (
+                  <div className="mt-1 rounded bg-emerald-100 px-2 py-1 text-center">
+                    <p className="text-[10px] font-semibold text-emerald-700">
+                      ✓ {importSuccess.count} importé(s)
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Step 5 divider */}
+            <div className="flex flex-col items-center border-l-2 border-dashed border-emerald-400 pl-2">
+              <span className="text-[10px] font-bold text-emerald-700 mb-1">5</span>
+              
+              {/* Activation section */}
+              {status !== "active" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (questions.length === 0) {
+                      setError("⚠️ Êtes-vous sûr que le sondage est correct ? Ajoutez d'abord des questions avant d'activer.");
+                      return;
+                    }
+                    if (!confirm("Êtes-vous sûr que toutes les questions du sondage sont correctes avant d'activer ?")) {
+                      return;
+                    }
+                    changeCampaignStatus("activateCampaign");
+                  }}
+                  disabled={!canSaveCampaign || isPending}
+                  className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-[10px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60 shadow-sm"
+                >
+                  Activer
+                </button>
+              ) : (
+                <div className="space-y-1">
+                  <div className="rounded-lg bg-emerald-100 px-2 py-1 text-center">
+                    <p className="text-[10px] font-bold text-emerald-700">✓ Actif</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => changeCampaignStatus("terminateCampaign")}
+                    disabled={isPending}
+                    className="w-full rounded-lg border border-rose-200 bg-white px-2 py-1 text-[9px] font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+                  >
+                    Désactiver
+                  </button>
+                </div>
+              )}
+              
+              {/* Download links button */}
+              {importSuccess && importSuccess.count > 0 && (
+                <button
+                  type="button"
+                  onClick={downloadLinksList}
+                  className="mt-1 w-full rounded-lg bg-amber-600 px-2 py-1 text-[9px] font-semibold text-white transition hover:bg-amber-700"
+                >
+                  {hasDownloadedLinks ? "✓ Liens" : "Télécharger"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -940,28 +989,9 @@ export function SurveyBuilderDemo({
           {isPending ? "Enregistrement..." : campaignId ? "Enregistrer" : "Créer"}
         </PrimaryButton>
         {campaignId && (
-          <>
-            {status === "active" ? (
-              <SecondaryButton
-                disabled={isPending}
-                onClick={() => changeCampaignStatus("terminateCampaign")}
-                className="sm:w-auto bg-slate-200 hover:bg-slate-300 text-[#151515]"
-              >
-                Désactiver
-              </SecondaryButton>
-            ) : (
-              <SecondaryButton
-                disabled={isPending || !canSaveCampaign || questions.length === 0}
-                onClick={() => changeCampaignStatus("activateCampaign")}
-                className="sm:w-auto"
-              >
-                Activer
-              </SecondaryButton>
-            )}
-            <SecondaryButton disabled={isPending} onClick={() => changeCampaignStatus("archiveCampaign")} className="sm:w-auto">
-              Archiver
-            </SecondaryButton>
-          </>
+          <SecondaryButton disabled={isPending} onClick={() => changeCampaignStatus("archiveCampaign")} className="sm:w-auto">
+            Archiver
+          </SecondaryButton>
         )}
       </div>
 
