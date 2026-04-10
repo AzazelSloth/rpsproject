@@ -1,20 +1,32 @@
 function resolveBackendUrl() {
   const isServer = typeof window === "undefined";
-  const candidates = isServer
-    ? [process.env.API_URL, process.env.NEXT_PUBLIC_API_URL]
-    : [process.env.NEXT_PUBLIC_API_URL, process.env.API_URL];
-
-  for (const candidate of candidates) {
-    const normalized = candidate?.trim();
-    if (normalized) {
-      return normalized.replace(/\/$/, "");
+  
+  // Côté serveur (Node.js/SSR) - a besoin d'une URL absolue
+  if (isServer) {
+    // Priorité 1: API_URL (URL absolue pour le serveur)
+    const apiUrl = process.env.API_URL?.trim();
+    if (apiUrl && apiUrl.startsWith('http')) {
+      return apiUrl.replace(/\/$/, "");
     }
+    
+    // Priorité 2: NEXT_PUBLIC_API_URL si c'est une URL absolue
+    const publicUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+    if (publicUrl && publicUrl.startsWith('http')) {
+      return publicUrl.replace(/\/$/, "");
+    }
+    
+    // Fallback: localhost pour la production (backend sur le même serveur)
+    // Cela évite l'erreur "Invalid URL" avec les chemins relatifs
+    return "http://localhost:3000/api";
   }
-
-  // Fallback pour la production
-  // Côté serveur (SSR), utiliser localhost:3000 car le backend tourne sur le même serveur
-  // Côté navigateur, utiliser le chemin relatif /api qui sera proxyé par Nginx
-  return isServer ? "http://localhost:3000/api" : "/api";
+  
+  // Côté navigateur - peut utiliser des chemins relatifs (proxy Nginx)
+  const publicUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (publicUrl) {
+    return publicUrl.replace(/\/$/, "");
+  }
+  
+  return "/api";
 }
 
 const backendUrl = resolveBackendUrl();
