@@ -780,373 +780,218 @@ export function SurveyBuilderDemo({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <Card className="p-4 sm:p-6">
-        {/* Stepper 5 étapes horizontal - en haut et bien visible */}
-        <div className="mt-6 sm:mt-8 mb-6 sm:mb-8 overflow-x-auto">
-          <div className="flex items-center justify-between min-w-[640px] sm:min-w-max gap-2 md:gap-3 px-2 sm:px-4">
-            {[
-              { step: 1, label: "Entreprise", done: Boolean(companyId) },
-              { step: 2, label: "Dates", done: Boolean(campaignId && startDate && endDate) },
-              { step: 3, label: "Questions", done: questions.length > 0 },
-              { step: 4, label: "Import", done: Boolean(importSuccess?.participants.length) },
-              { step: 5, label: "Envoi", done: hasDownloadedLinks },
-            ].map((item, idx, arr) => (
-              <div key={item.step} className="flex items-center">
-                {/* Cercle étape */}
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border-3 text-base sm:text-lg font-bold transition ${
-                      item.done
-                        ? "border-emerald-500 bg-emerald-500 text-white"
-                        : "border-slate-400 bg-white text-slate-600"
-                    }`}
-                  >
-                    {item.step}
-                  </div>
-                  <p className="mt-2 text-xs sm:text-sm font-semibold text-center whitespace-nowrap text-slate-700">
-                    {item.label}
-                  </p>
-                </div>
-
-                {/* Connecteur vers l'étape suivante */}
-                {idx < arr.length - 1 && (
-                  <div
-                    className={`h-1 w-12 sm:w-16 md:w-24 mx-2 md:mx-4 transition ${
-                      item.done ? "bg-emerald-500" : "bg-slate-300"
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-6 sm:mt-8 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            {
-              step: 1,
-              title: "Configurer le sondage",
-              body: "Entrez le nom de l'entreprise, puis choisissez la date de debut et la date de fin.",
-              done: Boolean(campaignId),
-            },
-            {
-              step: 2,
-              title: "Enregistrer les questions",
-              body: "Ajoutez et enregistrez les questions du sondage avant l'activation.",
-              done: questions.length > 0,
-            },
-            {
-              step: 3,
-              title: "Activer le sondage",
-              body: "Activez le sondage quand sa configuration et ses questions sont prêtes.",
-              done: status === "active",
-            },
-            {
-              step: 4,
-              title: "Importer les employés",
-              body: "Importez les employés, puis téléchargez la liste des employés avec leurs liens respectifs.",
-              done: Boolean(importSuccess?.participants.length),
-            },
-          ].map((item) => (
-            <div
-              key={item.step}
-              className={`rounded-[12px] sm:rounded-[16px] border p-4 sm:p-5 ${
-                item.done ? "border-emerald-200 bg-emerald-50/70" : "border-slate-200 bg-white"
-              }`}
-            >
-              <div className="flex items-center gap-2 sm:gap-3">
-                <span className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-bold text-slate-900">
-                  {item.step}
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                  <p className="text-xs text-slate-500">{item.done ? "Terminé" : "En attente"}</p>
-                </div>
-              </div>
-              <p className="mt-2 sm:mt-3 text-sm leading-6 text-slate-600">{item.body}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 sm:mt-5 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {(isCreateMode
-            ? [
-                {
-                  step: 1,
-                  title: "Configurer et créer le sondage",
-                  body: "Sélectionnez l'entreprise, renseignez les dates et la description, puis créez la base du sondage.",
-                  done: Boolean(campaignId),
-                },
-                {
-                  step: 2,
-                  title: "Ajouter les questions et activer",
-                  body: "Ajoutez les questions, enregistrez-les, puis activez le sondage pour le rendre disponible.",
-                  done: isSurveyStepCompleted,
-                },
-                {
-                  step: 3,
-                  title: "Importer et télécharger",
-                  body: "Importez les employés via un fichier Excel ou CSV, puis téléchargez la liste complète avec les liens.",
-                  done: hasDownloadedLinks,
-                },
-              ]
-            : [
-                {
-                  step: 1,
-                  title: "Mettre à jour les informations",
-                  body: "Modifiez l'entreprise, les dates ou la description du sondage existant.",
-                  done: Boolean(campaignId),
-                },
-                {
-                  step: 2,
-                  title: "Ajuster les questions",
-                  body: "Ajoutez, modifiez ou réorganisez les questions (seulement si le sondage n'est pas actif).",
-                  done: questions.length > 0,
-                },
-                {
-                  step: 3,
-                  title: "Gérer le statut",
-                  body: "Activez, désactivez ou archivez le sondage après avoir enregistré vos changements.",
-                  done: status !== "preparation",
-                },
-              ]).map((item) => (
-            <div
-              key={`user-guide-step-${item.step}`}
-              className={`rounded-[12px] sm:rounded-[16px] border p-4 sm:p-5 ${
-                item.done ? "border-emerald-200 bg-emerald-50/70" : "border-slate-200 bg-white"
-              }`}
-            >
-              <div className="flex items-center gap-2 sm:gap-3">
-                <span className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-bold text-slate-900">
-                  {item.step}
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                  <p className="text-xs text-slate-500">{item.done ? "Terminé" : "En attente"}</p>
-                </div>
-              </div>
-              <p className="mt-2 sm:mt-3 text-sm leading-6 text-slate-600">{item.body}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card className="p-4 sm:p-6">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <Pill>{statusLabel}</Pill>
-          {campaignId ? <Pill tone="neutral">Sondage #{campaignId}</Pill> : <Pill tone="neutral">Nouveau sondage</Pill>}
-          <Pill tone="neutral">{questions.length} questions</Pill>
-        </div>
-
-        {/* 5 BLOCS HORIZONTAUX COMPACTS */}
-        <div className="mt-4 sm:mt-6 grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-3 lg:grid-cols-5">
-          {/* Bloc 1: Entreprise */}
-          <div className="relative rounded-lg border border-slate-200 bg-slate-50 p-2 sm:p-3">
-            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-              1
-            </span>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Entreprise</p>
-            <select
-              value={companyId ?? ""}
-              onChange={(event) => handleCompanySelection(Number(event.target.value))}
-              className="mt-1 w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none"
-            >
-              <option value="" disabled>Choisir</option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
-            {isCreateMode && (
-              <div className="mt-2 flex gap-1">
-                <input
-                  value={newCompanyName}
-                  onChange={(event) => setNewCompanyName(event.target.value)}
-                  className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-                  placeholder="Nouvelle..."
-                />
-                <SecondaryButton
-                  disabled={
-                    isPending ||
-                    newCompanyName.trim().length < 2 ||
-                    newCompanyName.trim().length > 150
-                  }
-                  onClick={createCompany}
-                  className="px-2 py-1 text-xs"
-                >
-                  +
-                </SecondaryButton>
-              </div>
-            )}
-          </div>
-
-          {/* Bloc 2: Calendrier */}
-          <div className="relative rounded-lg border border-slate-200 bg-white p-2 sm:p-3">
-            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-              2
-            </span>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Dates</p>
-            <div className="mt-1 space-y-1">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
-                className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[10px] outline-none"
-              />
-              <input
-                type="date"
-                value={endDate}
-                onChange={(event) => setEndDate(event.target.value)}
-                className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[10px] outline-none"
-              />
-            </div>
-            {isDateRangeInvalid && (
-              <p className="mt-1 text-[10px] font-medium text-rose-700">
-                Date fin ≥ date début
-              </p>
-            )}
-          </div>
-
-          {/* Bloc 3: Sondage */}
-          <div className="relative rounded-lg border border-slate-200 bg-white p-2 sm:p-3">
-            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-              3
-            </span>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Sondage</p>
-            <input
-              className="mt-1 w-full rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs outline-none"
-              value={effectiveCampaignTitle}
-              readOnly
-              placeholder="Titre auto"
-            />
-            <textarea
-              className="mt-1 w-full rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs outline-none resize-none"
-              rows={2}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Description..."
-            />
-          </div>
-
-          {/* Bloc 4: Import */}
-          <div className="relative rounded-lg border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-2 sm:p-3">
-            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-              4
-            </span>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Import</p>
-            <p className="mt-1 text-[10px] leading-4 text-slate-600">
-              Importez les employés via Excel/CSV
-            </p>
-            <button
-              type="button"
-              onClick={openImportModal}
-              disabled={!isSurveyReadyForImport || isPending}
-              className="mt-2 w-full inline-flex items-center justify-center rounded bg-[#181818] px-3 py-1.5 text-[10px] font-semibold transition hover:bg-[#242424] disabled:opacity-60"
-              style={{ color: "#ffffff" }}
-            >
-              Importer
-            </button>
-            {importSuccess ? (
-              <div className="mt-2 rounded border border-emerald-200 bg-emerald-50 px-2 py-1">
-                <p className="text-[10px] font-semibold text-emerald-800">
-                  {importSuccess.count} importé(s)
-                </p>
-              </div>
-            ) : null}
-          </div>
-
-          {/* Bloc 5: Confirmation & Envoi */}
-          <div className="relative rounded-lg border border-slate-200 bg-white p-2 sm:p-3">
-            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-              5
-            </span>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Envoi</p>
-            <p className="mt-1 text-[10px] leading-4 text-slate-600">
-              {isCreateMode ? "Activer et envoyer les liens" : "Gérer le statut"}
-            </p>
-            <div className="mt-2 space-y-1">
-              {status !== "active" ? (
-                <button
-                  type="button"
-                  onClick={() => changeCampaignStatus("activateCampaign")}
-                  disabled={!canSaveCampaign || questions.length === 0 || isPending}
-                  className="w-full rounded bg-emerald-600 px-2 py-1.5 text-[10px] font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
-                >
-                  Activer
-                </button>
-              ) : (
-                <>
-                  <div className="rounded bg-emerald-50 px-2 py-1 text-center">
-                    <p className="text-[10px] font-semibold text-emerald-700">✓ Actif</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => changeCampaignStatus("terminateCampaign")}
-                    disabled={isPending}
-                    className="w-full rounded border border-rose-200 bg-white px-2 py-1.5 text-[10px] font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
-                  >
-                    Désactiver
-                  </button>
-                </>
-              )}
-              {importSuccess && importSuccess.count > 0 && (
-                <button
-                  type="button"
-                  onClick={downloadLinksList}
-                  className="w-full rounded bg-amber-600 px-2 py-1.5 text-[10px] font-semibold text-white transition hover:bg-amber-700"
-                >
-                  {hasDownloadedLinks ? "✓ Téléchargé" : "Télécharger liens"}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
-          <PrimaryButton
-            disabled={isPending || !canSaveCampaign || (mode === "edit" && !campaignId)}
-            onClick={saveCampaign}
-            className="w-full sm:w-auto"
+      {/* 4 BLOCS HORIZONTAUX COMPACTS - Basés sur les screenshots client */}
+      <div className="grid gap-2 sm:gap-3 grid-cols-2 lg:grid-cols-4">
+        {/* Bloc 1: Entreprise */}
+        <div className="relative rounded-lg border border-slate-200 bg-slate-50 p-2 sm:p-3">
+          <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+            1
+          </span>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Entreprise</p>
+          <select
+            value={companyId ?? ""}
+            onChange={(event) => handleCompanySelection(Number(event.target.value))}
+            className="mt-1 w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none"
           >
-            {isPending ? "Enregistrement..." : campaignId ? "Enregistrer le sondage" : "Creer le sondage"}
-          </PrimaryButton>
-          {status === "active" ? (
-            <SecondaryButton
-              disabled={isPending || !campaignId}
-              onClick={() => changeCampaignStatus("terminateCampaign")}
-              className="w-full sm:w-auto bg-slate-200 hover:bg-slate-300 text-[#151515]"
-            >
-              Désactiver
-            </SecondaryButton>
-          ) : (
-            <SecondaryButton
-              disabled={isPending || !campaignId || !canSaveCampaign || questions.length === 0}
-              onClick={() => changeCampaignStatus("activateCampaign")}
-              className="w-full sm:w-auto"
-            >
-              Activer
-            </SecondaryButton>
+            <option value="" disabled>Choisir</option>
+            {companies.map((company) => (
+              <option key={company.id} value={company.id}>
+                {company.name}
+              </option>
+            ))}
+          </select>
+          {isCreateMode && (
+            <div className="mt-2 flex gap-1">
+              <input
+                value={newCompanyName}
+                onChange={(event) => setNewCompanyName(event.target.value)}
+                className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+                placeholder="Nouvelle..."
+              />
+              <SecondaryButton
+                disabled={isPending || newCompanyName.trim().length < 2}
+                onClick={createCompany}
+                className="px-2 py-1 text-xs"
+              >
+                +
+              </SecondaryButton>
+            </div>
           )}
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => changeCampaignStatus("archiveCampaign")} className="w-full sm:w-auto">
-            Archiver
-          </SecondaryButton>
         </div>
 
-        <div className="mt-3 sm:mt-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700 mb-3">
-            Gestion des questions
-          </p>
-          <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
-            <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("scale")} className="w-full sm:w-auto">
-              Ajouter echelle 1-5
-            </SecondaryButton>
-            <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("choice")} className="w-full sm:w-auto">
-              Ajouter QCM
-            </SecondaryButton>
-            <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("text")} className="w-full sm:w-auto">
-              Ajouter texte libre
-            </SecondaryButton>
+        {/* Bloc 2: Dates */}
+        <div className="relative rounded-lg border border-slate-200 bg-white p-2 sm:p-3">
+          <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+            2
+          </span>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Dates</p>
+          <div className="mt-1 space-y-1">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[10px] outline-none"
+            />
+            <input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[10px] outline-none"
+            />
           </div>
+          {isDateRangeInvalid && (
+            <p className="mt-1 text-[10px] font-medium text-rose-700">
+              Fin ≥ Début
+            </p>
+          )}
+        </div>
+
+        {/* Bloc 3: Sondage (Titre + Description) */}
+        <div className="relative rounded-lg border border-slate-200 bg-white p-2 sm:p-3">
+          <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+            3
+          </span>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Sondage</p>
+          <input
+            className="mt-1 w-full rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs outline-none"
+            value={effectiveCampaignTitle}
+            readOnly
+            placeholder="Titre auto"
+          />
+          <textarea
+            className="mt-1 w-full rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs outline-none resize-none"
+            rows={2}
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Description..."
+          />
+        </div>
+
+        {/* Bloc 4: Import + Envoi */}
+        <div className="relative rounded-lg border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-2 sm:p-3">
+          <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+            4
+          </span>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Import & Envoi</p>
+          
+          {/* Import */}
+          <button
+            type="button"
+            onClick={openImportModal}
+            disabled={!isSurveyReadyForImport || isPending}
+            className="mt-1 w-full inline-flex items-center justify-center rounded bg-[#181818] px-2 py-1 text-[10px] font-semibold transition hover:bg-[#242424] disabled:opacity-60"
+            style={{ color: "#ffffff" }}
+          >
+            Importer
+          </button>
+          
+          {/* Envoi/Activation */}
+          <div className="mt-2 space-y-1">
+            {status !== "active" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (questions.length === 0) {
+                    setError("Confirmez d'abord que toutes les questions du sondage sont correctes avant d'activer.");
+                    return;
+                  }
+                  changeCampaignStatus("activateCampaign");
+                }}
+                disabled={!canSaveCampaign || isPending}
+                className="w-full rounded bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+              >
+                Activer
+              </button>
+            ) : (
+              <>
+                <div className="rounded bg-emerald-50 px-2 py-1 text-center">
+                  <p className="text-[10px] font-semibold text-emerald-700">✓ Actif</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => changeCampaignStatus("terminateCampaign")}
+                  disabled={isPending}
+                  className="w-full rounded border border-rose-200 bg-white px-2 py-1 text-[10px] font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+                >
+                  Désactiver
+                </button>
+              </>
+            )}
+            {importSuccess && importSuccess.count > 0 && (
+              <button
+                type="button"
+                onClick={downloadLinksList}
+                className="w-full rounded bg-amber-600 px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-amber-700"
+              >
+                {hasDownloadedLinks ? "✓ Liens" : "Télécharger"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Boutons d'action principaux */}
+      <div className="flex flex-wrap gap-2 sm:gap-3">
+        <PrimaryButton
+          disabled={isPending || !canSaveCampaign || (mode === "edit" && !campaignId)}
+          onClick={saveCampaign}
+          className="sm:w-auto"
+        >
+          {isPending ? "Enregistrement..." : campaignId ? "Enregistrer" : "Créer"}
+        </PrimaryButton>
+        {campaignId && (
+          <>
+            {status === "active" ? (
+              <SecondaryButton
+                disabled={isPending}
+                onClick={() => changeCampaignStatus("terminateCampaign")}
+                className="sm:w-auto bg-slate-200 hover:bg-slate-300 text-[#151515]"
+              >
+                Désactiver
+              </SecondaryButton>
+            ) : (
+              <SecondaryButton
+                disabled={isPending || !canSaveCampaign || questions.length === 0}
+                onClick={() => changeCampaignStatus("activateCampaign")}
+                className="sm:w-auto"
+              >
+                Activer
+              </SecondaryButton>
+            )}
+            <SecondaryButton disabled={isPending} onClick={() => changeCampaignStatus("archiveCampaign")} className="sm:w-auto">
+              Archiver
+            </SecondaryButton>
+          </>
+        )}
+      </div>
+
+      {/* Gestion des questions */}
+      <div className="mt-4 sm:mt-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700 mb-3">
+          Gestion des questions
+        </p>
+        <div className="flex flex-wrap gap-2 sm:gap-3 mb-4">
+          <SecondaryButton 
+            disabled={isPending || !campaignId || status === "active"} 
+            onClick={() => addQuestion("scale")} 
+            className="sm:w-auto"
+          >
+            Ajouter échelle 1-5
+          </SecondaryButton>
+          <SecondaryButton 
+            disabled={isPending || !campaignId || status === "active"} 
+            onClick={() => addQuestion("choice")} 
+            className="sm:w-auto"
+          >
+            Ajouter QCM
+          </SecondaryButton>
+          <SecondaryButton 
+            disabled={isPending || !campaignId || status === "active"} 
+            onClick={() => addQuestion("text")} 
+            className="sm:w-auto"
+          >
+            Ajouter texte libre
+          </SecondaryButton>
         </div>
 
         {feedback && (
@@ -1340,7 +1185,7 @@ export function SurveyBuilderDemo({
             );
           })}
         </div>
-      </Card>
+      </div>
 
       <Card className="overflow-hidden">
         <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_100%)] px-4 sm:px-6 py-3 sm:py-4 text-white">
