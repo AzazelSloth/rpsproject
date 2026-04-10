@@ -1,22 +1,18 @@
 function resolveBackendUrl() {
   const isServer = typeof window === "undefined";
   
-  // Côté serveur (Node.js/SSR) - a besoin d'une URL absolue
+  // Côté serveur (Node.js/SSR) - a TOUJOURS besoin d'une URL absolue
   if (isServer) {
-    // Priorité 1: API_URL (URL absolue pour le serveur)
-    const apiUrl = process.env.API_URL?.trim();
-    if (apiUrl && apiUrl.startsWith('http')) {
-      return apiUrl.replace(/\/$/, "");
+    // IMPORTANT: process.env.API_URL est lu au RUNTIME (PM2), pas au build
+    const runtimeApiUrl = process.env.API_URL?.trim();
+    
+    // Si PM2 a défini API_URL avec une URL absolue, on l'utilise
+    if (runtimeApiUrl && runtimeApiUrl.startsWith('http')) {
+      return runtimeApiUrl.replace(/\/$/, "");
     }
     
-    // Priorité 2: NEXT_PUBLIC_API_URL si c'est une URL absolue
-    const publicUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-    if (publicUrl && publicUrl.startsWith('http')) {
-      return publicUrl.replace(/\/$/, "");
-    }
-    
-    // Fallback: localhost pour la production (backend sur le même serveur)
-    // Cela évite l'erreur "Invalid URL" avec les chemins relatifs
+    // Sinon, fallback garanti: localhost (backend sur le même serveur)
+    // On N'utilise JAMAIS "/api" côté serveur car Node.js ne supporte pas les URLs relatives
     return "http://localhost:3000/api";
   }
   
