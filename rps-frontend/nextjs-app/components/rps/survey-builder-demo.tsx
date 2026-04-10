@@ -1255,7 +1255,7 @@ export function SurveyBuilderDemo({
             <SecondaryButton
               disabled={isPending || !campaignId}
               onClick={() => changeCampaignStatus("terminateCampaign")}
-              className="w-full sm:w-auto bg-red-700 hover:bg-red-800 text-white"
+              className="w-full sm:w-auto bg-slate-200 hover:bg-slate-300 text-[#151515]"
             >
               Désactiver
             </SecondaryButton>
@@ -1274,16 +1274,16 @@ export function SurveyBuilderDemo({
         </div>
 
         <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("scale")} className="w-full sm:w-auto bg-purple-600 border border-purple-700 text-white hover:bg-purple-700">
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("scale")} className="w-full sm:w-auto">
             Ajouter echelle 1-5
           </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("choice")} className="w-full sm:w-auto bg-green-600 border border-green-700 text-white hover:bg-green-700">
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("choice")} className="w-full sm:w-auto">
             Ajouter QCM
           </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("text")} className="w-full sm:w-auto bg-blue-600 border border-blue-700 text-white hover:bg-blue-700">
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("text")} className="w-full sm:w-auto">
             Ajouter texte libre
           </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("section")} className="w-full sm:w-auto bg-orange-500 border-2 border-orange-600 text-white hover:bg-orange-600 font-bold text-base shadow-lg hover:shadow-xl">
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("section")} className="w-full sm:w-auto">
             + Ajouter section
           </SecondaryButton>
         </div>
