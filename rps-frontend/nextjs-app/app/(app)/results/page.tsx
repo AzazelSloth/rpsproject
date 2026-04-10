@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, Pill, PrimaryButton, SectionHeader } from "@/components/rps/ui";
+import { Card, Pill, PrimaryButton } from "@/components/rps/ui";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
 
 export const dynamic = "force-dynamic";
@@ -42,12 +42,6 @@ export default async function ResultsPage({
 
   return (
     <section className="space-y-6">
-      <SectionHeader
-        eyebrow="Resultats"
-        title="Resultats par sondage"
-        description="Selectionne un sondage pour consulter les indicateurs et les analyses detaillees."
-      />
-
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>

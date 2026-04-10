@@ -34,7 +34,9 @@ type ImportEmployeesResponse = {
   participants?: ImportedParticipantPayload[];
 };
 
-const templateByType: Record<"scale" | "choice" | "text", SurveyQuestion> = {
+type SurveyQuestionType = "scale" | "choice" | "text" | "section";
+
+const templateByType: Record<SurveyQuestionType, SurveyQuestion> = {
   scale: {
     id: "new-scale",
     documentId: "question-template-scale",
@@ -58,6 +60,14 @@ const templateByType: Record<"scale" | "choice" | "text", SurveyQuestion> = {
     type: "text",
     title: "Quel point devrait etre prioritaire sur le prochain trimestre ?",
     helpText: "Question texte libre",
+    orderIndex: 99,
+  },
+  section: {
+    id: "new-section",
+    documentId: "question-template-section",
+    type: "section",
+    title: "Nouvelle section",
+    helpText: "Titre de section pour regrouper les questions",
     orderIndex: 99,
   },
 };
@@ -525,7 +535,7 @@ export function SurveyBuilderDemo({
     });
   }
 
-  function addQuestion(type: "scale" | "choice" | "text") {
+  function addQuestion(type: SurveyQuestionType) {
     if (!canEditQuestions) {
       setError("Impossible d'ajouter des questions quand le sondage est actif.");
       return;
@@ -544,11 +554,11 @@ export function SurveyBuilderDemo({
         getTrpcClient().adminSurveys.createQuestion.mutate({
           campaignId,
           title: template.title,
-          type,
+          type: type === "section" ? "text" : type,
           options: template.options,
           orderIndex: questions.length,
         }),
-      "Question ajoutee.",
+      type === "section" ? "Section ajoutee." : "Question ajoutee.",
       () =>
         setQuestions((current) => [
           ...current,
@@ -669,11 +679,11 @@ export function SurveyBuilderDemo({
         getTrpcClient().adminSurveys.updateQuestion.mutate({
           questionId: Number(question.id),
           title: trimmedQuestionTitle,
-          type: question.type,
+          type: question.type === "section" ? "text" : question.type,
           options: question.type === "choice" ? sanitizedOptions : undefined,
           orderIndex: index,
         }),
-      "Question mise a jour.",
+      question.type === "section" ? "Section mise a jour." : "Question mise a jour.",
     );
   }
 
@@ -1273,6 +1283,9 @@ export function SurveyBuilderDemo({
           <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("text")} className="w-full sm:w-auto">
             Ajouter texte libre
           </SecondaryButton>
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("section")} className="w-full sm:w-auto bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100">
+            + Ajouter section
+          </SecondaryButton>
         </div>
 
         {feedback && (
@@ -1292,120 +1305,179 @@ export function SurveyBuilderDemo({
         )}
 
         <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
-          {questions.map((question, index) => (
-            <div key={`${question.id}-${index}`} className="rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-white p-3 sm:p-4 shadow-sm">
-              <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-                    Bloc {index + 1}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold">{question.type}</p>
-                </div>
-                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                  <SecondaryButton
-                    className="flex-1 sm:flex-none px-3 py-2"
-                    disabled={index === 0 || !canEditQuestions}
-                    onClick={() => moveQuestion(index, -1)}
-                  >
-                    Monter
-                  </SecondaryButton>
-                  <SecondaryButton
-                    className="flex-1 sm:flex-none px-3 py-2"
-                    disabled={index === questions.length - 1 || !canEditQuestions}
-                    onClick={() => moveQuestion(index, 1)}
-                  >
-                    Descendre
-                  </SecondaryButton>
-                </div>
-              </div>
-              <input
-                value={question.title}
-                onChange={(event) => updateQuestion(index, { title: event.target.value })}
-                disabled={!canEditQuestions}
-                className="mt-3 sm:mt-4 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
-              />
-              <select
-                value={question.type}
-                onChange={(event) =>
-                  updateQuestion(index, { type: event.target.value as SurveyQuestion["type"] })
-                }
-                disabled={!canEditQuestions}
-                className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
+          {questions.map((question, index) => {
+            const isSection = question.type === "section";
+            
+            return (
+              <div
+                key={`${question.id}-${index}`}
+                className={`rounded-[12px] sm:rounded-[16px] border p-3 sm:p-4 shadow-sm ${
+                  isSection
+                    ? "border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50"
+                    : "border-slate-200 bg-white"
+                }`}
               >
-                <option value="scale">Echelle 1 a 5</option>
-                <option value="choice">QCM</option>
-                <option value="text">Texte libre</option>
-              </select>
-
-              {question.type === "scale" && (
-                <div className="mt-3 sm:mt-4 rounded-[12px] sm:rounded-[14px] border border-sky-200 bg-sky-50/70 p-3 sm:p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">
-                    Lecture de l&apos;echelle
-                  </p>
-                  <p className="mt-2 text-sm text-slate-600">
-                    Le repondant choisit une note de 1 a 5 pour indiquer son niveau d&apos;accord.
-                  </p>
-                  <div className="mt-3 grid gap-2 grid-cols-2 sm:grid-cols-5">
-                    {scaleAnswerGuide.map((item) => (
-                      <div
-                        key={`scale-guide-${item.value}`}
-                        className="rounded-[12px] border border-sky-200 bg-white px-3 py-3 text-center"
-                      >
-                        <p className="text-base font-bold text-sky-800">{item.value}</p>
-                        <p className="mt-1 text-xs text-slate-600">{item.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {question.type === "choice" && (
-                <div className="mt-3 sm:mt-4 rounded-[12px] sm:rounded-[14px] border border-amber-200 bg-amber-50/50 p-3 sm:p-4">
+                {isSection ? (
                   <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-                      Choix du QCM
-                    </p>
-                    <SecondaryButton
-                      className="w-full sm:w-auto px-3 py-2"
-                      disabled={(question.options?.length ?? 0) >= 6 || !canEditQuestions}
-                      onClick={() => addChoiceOption(index)}
-                    >
-                      Ajouter un choix
-                    </SecondaryButton>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5 text-amber-700">
+                          <path d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                          Section
+                        </p>
+                      </div>
+                      <input
+                        value={question.title}
+                        onChange={(event) => updateQuestion(index, { title: event.target.value })}
+                        disabled={!canEditQuestions}
+                        className="w-full text-lg font-bold bg-transparent border-b-2 border-amber-300 pb-2 outline-none focus:border-amber-500"
+                        placeholder="Titre de la section"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                      <SecondaryButton
+                        className="flex-1 sm:flex-none px-3 py-2"
+                        disabled={index === 0 || !canEditQuestions}
+                        onClick={() => moveQuestion(index, -1)}
+                      >
+                        Monter
+                      </SecondaryButton>
+                      <SecondaryButton
+                        className="flex-1 sm:flex-none px-3 py-2"
+                        disabled={index === questions.length - 1 || !canEditQuestions}
+                        onClick={() => moveQuestion(index, 1)}
+                      >
+                        Descendre
+                      </SecondaryButton>
+                      <SecondaryButton
+                        className="flex-1 sm:flex-none px-3 py-2 text-red-600 hover:bg-red-50"
+                        disabled={!canEditQuestions}
+                        onClick={() => removeQuestion(question)}
+                      >
+                        Supprimer
+                      </SecondaryButton>
+                    </div>
                   </div>
-                  <div className="mt-3 space-y-3">
-                    {(question.options ?? [...defaultChoiceOptions]).map((option, optionIndex) => (
-                      <div key={`${question.id}-option-${optionIndex}`} className="flex gap-2 sm:gap-3">
-                        <input
-                          value={option}
-                          onChange={(event) => updateChoiceOption(index, optionIndex, event.target.value)}
-                          disabled={!canEditQuestions}
-                          className="w-full rounded-[12px] border border-amber-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
-                          placeholder={`Choix ${optionIndex + 1}`}
-                        />
+                ) : (
+                  <div>
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                          Bloc {index + 1}
+                        </p>
+                        <p className="mt-2 text-sm font-semibold">{question.type}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                         <SecondaryButton
-                          className="px-3 py-2 shrink-0"
-                          disabled={(question.options?.length ?? 0) <= 2 || !canEditQuestions}
-                          onClick={() => removeChoiceOption(index, optionIndex)}
+                          className="flex-1 sm:flex-none px-3 py-2"
+                          disabled={index === 0 || !canEditQuestions}
+                          onClick={() => moveQuestion(index, -1)}
                         >
-                          Retirer
+                          Monter
+                        </SecondaryButton>
+                        <SecondaryButton
+                          className="flex-1 sm:flex-none px-3 py-2"
+                          disabled={index === questions.length - 1 || !canEditQuestions}
+                          onClick={() => moveQuestion(index, 1)}
+                        >
+                          Descendre
                         </SecondaryButton>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    </div>
+                    <input
+                      value={question.title}
+                      onChange={(event) => updateQuestion(index, { title: event.target.value })}
+                      disabled={!canEditQuestions}
+                      className="mt-3 sm:mt-4 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
+                    />
+                    <select
+                      value={question.type}
+                      onChange={(event) =>
+                        updateQuestion(index, { type: event.target.value as SurveyQuestion["type"] })
+                      }
+                      disabled={!canEditQuestions}
+                      className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
+                    >
+                      <option value="scale">Echelle 1 a 5</option>
+                      <option value="choice">QCM</option>
+                      <option value="text">Texte libre</option>
+                      <option value="section">Section</option>
+                    </select>
 
-              <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
-                <PrimaryButton disabled={isPending || !canEditQuestions} onClick={() => persistQuestion(question, index)} className="w-full sm:w-auto">
-                  Enregistrer la question
-                </PrimaryButton>
-                <SecondaryButton disabled={isPending || !canEditQuestions} onClick={() => removeQuestion(question)} className="w-full sm:w-auto">
-                  Supprimer
-                </SecondaryButton>
+                    {question.type === "scale" && (
+                      <div className="mt-3 sm:mt-4 rounded-[12px] sm:rounded-[14px] border border-sky-200 bg-sky-50/70 p-3 sm:p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">
+                          Lecture de l&apos;echelle
+                        </p>
+                        <p className="mt-2 text-sm text-slate-600">
+                          Le repondant choisit une note de 1 a 5 pour indiquer son niveau d&apos;accord.
+                        </p>
+                        <div className="mt-3 grid gap-2 grid-cols-2 sm:grid-cols-5">
+                          {scaleAnswerGuide.map((item) => (
+                            <div
+                              key={`scale-guide-${item.value}`}
+                              className="rounded-[12px] border border-sky-200 bg-white px-3 py-3 text-center"
+                            >
+                              <p className="text-base font-bold text-sky-800">{item.value}</p>
+                              <p className="mt-1 text-xs text-slate-600">{item.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {question.type === "choice" && (
+                      <div className="mt-3 sm:mt-4 rounded-[12px] sm:rounded-[14px] border border-amber-200 bg-amber-50/50 p-3 sm:p-4">
+                        <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                            Choix du QCM
+                          </p>
+                          <SecondaryButton
+                            className="w-full sm:w-auto px-3 py-2"
+                            disabled={(question.options?.length ?? 0) >= 6 || !canEditQuestions}
+                            onClick={() => addChoiceOption(index)}
+                          >
+                            Ajouter un choix
+                          </SecondaryButton>
+                        </div>
+                        <div className="mt-3 space-y-3">
+                          {(question.options ?? [...defaultChoiceOptions]).map((option, optionIndex) => (
+                            <div key={`${question.id}-option-${optionIndex}`} className="flex gap-2 sm:gap-3">
+                              <input
+                                value={option}
+                                onChange={(event) => updateChoiceOption(index, optionIndex, event.target.value)}
+                                disabled={!canEditQuestions}
+                                className="w-full rounded-[12px] border border-amber-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
+                                placeholder={`Choix ${optionIndex + 1}`}
+                              />
+                              <SecondaryButton
+                                className="px-3 py-2 shrink-0"
+                                disabled={(question.options?.length ?? 0) <= 2 || !canEditQuestions}
+                                onClick={() => removeChoiceOption(index, optionIndex)}
+                              >
+                                Retirer
+                              </SecondaryButton>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
+                      <PrimaryButton disabled={isPending || !canEditQuestions} onClick={() => persistQuestion(question, index)} className="w-full sm:w-auto">
+                        Enregistrer la question
+                      </PrimaryButton>
+                      <SecondaryButton disabled={isPending || !canEditQuestions} onClick={() => removeQuestion(question)} className="w-full sm:w-auto">
+                        Supprimer
+                      </SecondaryButton>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
 

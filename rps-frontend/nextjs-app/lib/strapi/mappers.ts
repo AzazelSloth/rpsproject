@@ -23,7 +23,7 @@ export type EmployeeRecord = {
 export type SurveyQuestion = {
   id: string;
   documentId: string;
-  type: "scale" | "choice" | "text";
+  type: "scale" | "choice" | "text" | "section";
   title: string;
   helpText: string;
   options?: string[];
