@@ -191,6 +191,7 @@ DB_PASSWORD=$DB_PASSWORD
 DB_NAME=$DB_NAME
 DB_SYNCHRONIZE=false
 DB_LOGGING=false
+CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001
 ADMIN_BOOTSTRAP_PASSWORD=${ADMIN_BOOTSTRAP_PASSWORD:-password}
 SWAGGER_ENABLED=true
 SWAGGER_PATH=api-docs
@@ -200,7 +201,7 @@ EOF
     # Frontend environment
     cd "$APP_DIR/rps-frontend/nextjs-app"
     cat > .env.local << EOF
-NEXT_PUBLIC_API_URL=/api
+NEXT_PUBLIC_API_URL=http://127.0.0.1:3000/api
 API_URL=http://127.0.0.1:3000/api
 NEXT_PUBLIC_STRAPI_URL=
 STRAPI_API_TOKEN=

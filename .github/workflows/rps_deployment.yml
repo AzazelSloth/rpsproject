@@ -186,6 +186,7 @@ jobs:
             DB_NAME=${{ secrets.DB_NAME }}
             DB_SYNCHRONIZE=false
             DB_LOGGING=false
+            CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001,http://104.254.182.46:8786
             ADMIN_BOOTSTRAP_PASSWORD=${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
             SWAGGER_ENABLED=true
             SWAGGER_PATH=api-docs
@@ -208,7 +209,7 @@ jobs:
 
             # Configure frontend environment BEFORE build so NEXT_PUBLIC_* variables are baked correctly
             cat > .env.local << 'ENVEOF'
-            NEXT_PUBLIC_API_URL=/api
+            NEXT_PUBLIC_API_URL=http://127.0.0.1:3000/api
             API_URL=http://127.0.0.1:3000/api
             NEXT_PUBLIC_STRAPI_URL=
             STRAPI_API_TOKEN=
