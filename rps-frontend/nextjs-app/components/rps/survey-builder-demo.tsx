@@ -1274,16 +1274,16 @@ export function SurveyBuilderDemo({
         </div>
 
         <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("scale")} className="w-full sm:w-auto">
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("scale")} className="w-full sm:w-auto bg-purple-600 border border-purple-700 text-white hover:bg-purple-700">
             Ajouter echelle 1-5
           </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("choice")} className="w-full sm:w-auto">
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("choice")} className="w-full sm:w-auto bg-green-600 border border-green-700 text-white hover:bg-green-700">
             Ajouter QCM
           </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("text")} className="w-full sm:w-auto">
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("text")} className="w-full sm:w-auto bg-blue-600 border border-blue-700 text-white hover:bg-blue-700">
             Ajouter texte libre
           </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("section")} className="w-full sm:w-auto bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100">
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("section")} className="w-full sm:w-auto bg-orange-500 border-2 border-orange-600 text-white hover:bg-orange-600 font-bold text-base shadow-lg hover:shadow-xl">
             + Ajouter section
           </SecondaryButton>
         </div>
