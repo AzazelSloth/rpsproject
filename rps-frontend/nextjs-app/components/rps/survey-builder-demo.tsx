@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AlertTriangle, Check, CheckCircle2, GripHorizontal, TriangleAlert } from "lucide-react";
 import { Card, Pill, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { SurveyBuilderData } from "@/lib/repositories/rps-repository";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
@@ -847,8 +848,9 @@ export function SurveyBuilderDemo({
             </div>
           </div>
           {isDateRangeInvalid && (
-            <p className="mt-0.5 text-[9px] font-medium text-rose-700">
-              ⚠ Fin ≥ Début
+            <p className="mt-0.5 flex items-center gap-1 text-[9px] font-medium text-rose-700">
+              <TriangleAlert className="h-3 w-3" />
+              <span>Fin ≥ Début</span>
             </p>
           )}
         </div>
@@ -897,8 +899,9 @@ export function SurveyBuilderDemo({
                 </button>
                 {importSuccess && (
                   <div className="mt-1 rounded bg-emerald-100 px-2 py-1 text-center">
-                    <p className="text-[10px] font-semibold text-emerald-700">
-                      ✓ {importSuccess.count} importé(s)
+                    <p className="flex items-center justify-center gap-1 text-[10px] font-semibold text-emerald-700">
+                      <Check className="h-3 w-3" />
+                      <span>{importSuccess.count} importé(s)</span>
                     </p>
                   </div>
                 )}
@@ -915,7 +918,7 @@ export function SurveyBuilderDemo({
                   type="button"
                   onClick={() => {
                     if (questions.length === 0) {
-                      setError("⚠️ Êtes-vous sûr que le sondage est correct ? Ajoutez d'abord des questions avant d'activer.");
+                      setError("Êtes-vous sûr que le sondage est correct ? Ajoutez d'abord des questions avant d'activer.");
                       return;
                     }
                     if (!confirm("Êtes-vous sûr que toutes les questions du sondage sont correctes avant d'activer ?")) {
@@ -931,7 +934,10 @@ export function SurveyBuilderDemo({
               ) : (
                 <div className="space-y-1">
                   <div className="rounded-lg bg-emerald-100 px-2 py-1 text-center">
-                    <p className="text-[10px] font-bold text-emerald-700">✓ Actif</p>
+                    <p className="flex items-center justify-center gap-1 text-[10px] font-bold text-emerald-700">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Actif</span>
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -951,7 +957,7 @@ export function SurveyBuilderDemo({
                   onClick={downloadLinksList}
                   className="mt-1 w-full rounded-lg bg-amber-600 px-2 py-1 text-[9px] font-semibold text-white transition hover:bg-amber-700"
                 >
-                  {hasDownloadedLinks ? "✓ Liens" : "Télécharger"}
+                  {hasDownloadedLinks ? "Liens téléchargés" : "Télécharger"}
                 </button>
               )}
             </div>
@@ -1006,12 +1012,18 @@ export function SurveyBuilderDemo({
 
         {feedback && (
           <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3">
-            <p className="text-sm font-medium text-emerald-700">✓ {feedback}</p>
+            <p className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>{feedback}</span>
+            </p>
           </div>
         )}
         {error && (
           <div className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3">
-            <p className="text-sm font-medium text-rose-700">⚠ {error}</p>
+            <p className="flex items-center gap-2 text-sm font-medium text-rose-700">
+              <AlertTriangle className="h-4 w-4" />
+              <span>{error}</span>
+            </p>
           </div>
         )}
         {!canEditQuestions && (
@@ -1037,9 +1049,7 @@ export function SurveyBuilderDemo({
                   <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5 text-amber-700">
-                          <path d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
+                        <GripHorizontal className="h-5 w-5 text-amber-700" />
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
                           Section
                         </p>

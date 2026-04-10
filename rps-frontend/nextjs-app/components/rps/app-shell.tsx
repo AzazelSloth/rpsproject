@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { ChevronDown, ChevronRight, LogOut } from "lucide-react";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { logout, getUser, type User as AuthUser } from "@/lib/backend/auth";
 
@@ -76,12 +77,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   ? "bg-slate-900 text-white shadow-lg shadow-slate-300/60 ring-1 ring-slate-800"
                   : "text-slate-600 hover:bg-[#f2e7d4] hover:text-slate-900"
               }`}
-              aria-expanded={showSurveyMenu ? "true" : "false"}
+              aria-expanded={showSurveyMenu}
             >
               <span className={isSurveyRoute ? "text-white" : "text-inherit"}>
                 Gestion des sondages
               </span>
-              <span className="text-xs">{showSurveyMenu ? "v" : ">"}</span>
+              {showSurveyMenu ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </button>
 
             {showSurveyMenu ? (
@@ -174,20 +175,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   title="Se déconnecter"
                   aria-label="Se déconnecter"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-5 w-5"
-                  >
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                    <polyline points="16 17 21 12 16 7" />
-                    <line x1="21" y1="12" x2="9" y2="12" />
-                  </svg>
+                  <LogOut className="h-5 w-5" />
                 </button>
               </div>
             </div>

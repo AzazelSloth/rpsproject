@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { BarChart3, Building2, CheckCircle2, ChevronDown, CircleAlert, CircleCheck, Info } from "lucide-react";
 import { Card, Pill } from "@/components/rps/ui";
 import type {
   EmployeeManagementData,
@@ -266,7 +267,10 @@ export function EmployeesTableDemo({
 
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             <div>
-              <p className="text-sm font-semibold text-slate-700 mb-2">🏢 Entreprise</p>
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Building2 className="h-4 w-4 text-amber-600" />
+                Entreprise
+              </p>
               <div className="relative">
                 <select
                   value={selectedCompanyId}
@@ -294,14 +298,12 @@ export function EmployeesTableDemo({
                   })}
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                  <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <ChevronDown className="h-5 w-5 text-amber-600" />
                 </div>
               </div>
               {lockedCompanyId && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2">
-                  <span className="text-xs">✓</span>
+                  <CircleCheck className="h-4 w-4 text-amber-700" />
                   <p className="text-xs text-amber-800">
                     Entreprise sélectionnée : <span className="font-semibold">{companies.find(c => String(c.id) === lockedCompanyId)?.name}</span>
                   </p>
@@ -310,7 +312,10 @@ export function EmployeesTableDemo({
             </div>
 
             <div>
-              <p className="text-sm font-semibold text-slate-700 mb-2">📊 Sondage</p>
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <BarChart3 className="h-4 w-4 text-amber-600" />
+                Sondage
+              </p>
               <div className="relative">
                 <select
                   value={selectedCampaignId}
@@ -332,14 +337,12 @@ export function EmployeesTableDemo({
                   )}
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                  <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <ChevronDown className="h-5 w-5 text-amber-600" />
                 </div>
               </div>
               {selectedCampaignId && selectedSurvey && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2">
-                  <span className="text-xs">ℹ️</span>
+                  <Info className="h-4 w-4 text-blue-700" />
                   <p className="text-xs text-blue-800">
                     {selectedSurvey.title}
                   </p>
@@ -358,12 +361,18 @@ export function EmployeesTableDemo({
 
           {feedback ? (
             <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3">
-              <p className="text-sm font-medium text-emerald-700">✓ {feedback}</p>
+              <p className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>{feedback}</span>
+              </p>
             </div>
           ) : null}
           {error ? (
             <div className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3">
-              <p className="text-sm font-medium text-rose-700">✗ {error}</p>
+              <p className="flex items-center gap-2 text-sm font-medium text-rose-700">
+                <CircleAlert className="h-4 w-4" />
+                <span>{error}</span>
+              </p>
             </div>
           ) : null}
         </Card>
@@ -381,7 +390,10 @@ export function EmployeesTableDemo({
 
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             <div>
-              <p className="text-sm font-semibold text-slate-700 mb-2">🏢 Entreprise</p>
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Building2 className="h-4 w-4 text-amber-600" />
+                Entreprise
+              </p>
               <div className="relative">
                 <select
                   value={remindCompanyId}
@@ -406,15 +418,16 @@ export function EmployeesTableDemo({
                   ))}
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                  <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <ChevronDown className="h-5 w-5 text-amber-600" />
                 </div>
               </div>
             </div>
 
             <div>
-              <p className="text-sm font-semibold text-slate-700 mb-2">📊 Sondage concerné</p>
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <BarChart3 className="h-4 w-4 text-amber-600" />
+                Sondage concerné
+              </p>
               <div className="relative">
                 <select
                   value={remindCampaignId}
@@ -436,9 +449,7 @@ export function EmployeesTableDemo({
                   )}
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                  <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <ChevronDown className="h-5 w-5 text-amber-600" />
                 </div>
               </div>
             </div>
