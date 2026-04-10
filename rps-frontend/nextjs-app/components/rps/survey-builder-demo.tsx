@@ -165,11 +165,19 @@ export function SurveyBuilderDemo({
         setFeedback(successMessage);
         router.refresh();
       } catch (caughtError) {
-        setError(
-          caughtError instanceof Error
-            ? caughtError.message
-            : "La mise a jour du sondage a echoue. Verifie le backend.",
-        );
+        let errorMessage = "La mise a jour du sondage a echoue. Verifie le backend.";
+        
+        if (caughtError instanceof Error) {
+          if (caughtError.message.includes("fetch") || caughtError.message.includes("Backend")) {
+            errorMessage = "Impossible de joindre le serveur. Verifiez que le backend est demarre.";
+          } else if (caughtError.message.includes("Délai")) {
+            errorMessage = caughtError.message;
+          } else {
+            errorMessage = caughtError.message;
+          }
+        }
+        
+        setError(errorMessage);
       }
     });
   }
@@ -761,39 +769,28 @@ export function SurveyBuilderDemo({
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
+    <div className="space-y-4 sm:space-y-6">
+      <Card className="p-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:gap-4">
+          <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
               Guide utilisateur
             </p>
-            <h2 className="hidden mt-2 font-[family-name:var(--font-manrope)] text-2xl font-bold text-slate-900">
-              1. Configurer le sondage, 2. Enregistrer les questions, 3. Activer le sondage, 4. Importer les employés
-            </h2>
-            <h2 className="mt-2 font-[family-name:var(--font-manrope)] text-2xl font-bold text-slate-900">
+            <h2 className="font-[family-name:var(--font-manrope)] text-xl sm:text-2xl font-bold text-slate-900">
               {isCreateMode ? "Parcours de création du sondage" : "Parcours de modification du sondage"}
             </h2>
-            <p className="hidden mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-              Commencez par renseigner l&apos;entreprise et les dates, enregistrez ensuite les
-              questions, activez le sondage, puis importez les employés pour télécharger leur
-              liste avec les liens du sondage.
-            </p>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+            <p className="text-sm leading-6 text-slate-600">
               {isCreateMode
                 ? "Suivez ces trois étapes pour publier le sondage, importer les employés, puis télécharger la liste finale avec les liens individuels."
                 : "Mettez à jour les informations du sondage, ajustez les questions puis enregistrez vos changements avant de gérer son statut."}
             </p>
           </div>
-          <div className="hidden">
-            <Pill tone={importSuccess ? "success" : campaignId ? "warning" : "neutral"}>
-            {importSuccess ? "Parcours complété" : status === "active" ? "Étape 4 en cours" : campaignId ? "Étape 2 en cours" : "Étape 1 en cours"}
-            </Pill>
+          <div className="flex flex-wrap items-center gap-2">
+            <Pill tone={progressTone}>{progressLabel}</Pill>
           </div>
-          <Pill tone={progressTone}>{progressLabel}</Pill>
         </div>
 
-        <div className="hidden mt-5 grid gap-4 lg:grid-cols-3">
+        <div className="mt-4 sm:mt-5 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {[
             {
               step: 1,
@@ -822,24 +819,24 @@ export function SurveyBuilderDemo({
           ].map((item) => (
             <div
               key={item.step}
-              className={`rounded-[16px] border p-5 ${
+              className={`rounded-[12px] sm:rounded-[16px] border p-4 sm:p-5 ${
                 item.done ? "border-emerald-200 bg-emerald-50/70" : "border-slate-200 bg-white"
               }`}
             >
-              <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-bold text-slate-900">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <span className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-bold text-slate-900">
                   {item.step}
                 </span>
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-semibold text-slate-900">{item.title}</p>
                   <p className="text-xs text-slate-500">{item.done ? "Terminé" : "En attente"}</p>
                 </div>
               </div>
-              <p className="mt-3 text-sm leading-6 text-slate-600">{item.body}</p>
+              <p className="mt-2 sm:mt-3 text-sm leading-6 text-slate-600">{item.body}</p>
             </div>
           ))}
         </div>
-        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        <div className="mt-4 sm:mt-5 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {(isCreateMode
             ? [
                 {
@@ -883,36 +880,36 @@ export function SurveyBuilderDemo({
               ]).map((item) => (
             <div
               key={`user-guide-step-${item.step}`}
-              className={`rounded-[16px] border p-5 ${
+              className={`rounded-[12px] sm:rounded-[16px] border p-4 sm:p-5 ${
                 item.done ? "border-emerald-200 bg-emerald-50/70" : "border-slate-200 bg-white"
               }`}
             >
-              <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-bold text-slate-900">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <span className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-bold text-slate-900">
                   {item.step}
                 </span>
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-semibold text-slate-900">{item.title}</p>
                   <p className="text-xs text-slate-500">{item.done ? "Terminé" : "En attente"}</p>
                 </div>
               </div>
-              <p className="mt-3 text-sm leading-6 text-slate-600">{item.body}</p>
+              <p className="mt-2 sm:mt-3 text-sm leading-6 text-slate-600">{item.body}</p>
             </div>
           ))}
         </div>
       </Card>
 
-      <Card className="p-6">
-        <div className="flex flex-wrap items-center gap-3">
+      <Card className="p-4 sm:p-6">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Pill>{statusLabel}</Pill>
           {campaignId ? <Pill tone="neutral">Sondage #{campaignId}</Pill> : <Pill tone="neutral">Nouveau sondage</Pill>}
           <Pill tone="neutral">{questions.length} questions</Pill>
         </div>
 
-        <div className="hidden mt-6 grid gap-4 lg:grid-cols-2">
+        <div className="mt-4 sm:mt-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
           {/* Bloc 1: Entreprise */}
-          <div className="relative rounded-[16px] border border-slate-200 bg-slate-50 p-5">
-            <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+          <div className="relative rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <span className="absolute -left-2 -top-2 sm:-left-3 sm:-top-3 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
               1
             </span>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Entreprise</p>
@@ -920,7 +917,7 @@ export function SurveyBuilderDemo({
             <select
               value={companyId ?? ""}
               onChange={(event) => handleCompanySelection(Number(event.target.value))}
-              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
             >
               <option value="" disabled>
                 Choisir une entreprise
@@ -932,11 +929,11 @@ export function SurveyBuilderDemo({
               ))}
             </select>
             {isCreateMode && (
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-col sm:flex-row gap-2">
                 <input
                   value={newCompanyName}
                   onChange={(event) => setNewCompanyName(event.target.value)}
-                  className="flex-1 rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-sm outline-none"
+                  className="flex-1 rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                   placeholder="Ajouter une nouvelle entreprise"
                 />
                 <SecondaryButton
@@ -946,7 +943,7 @@ export function SurveyBuilderDemo({
                     newCompanyName.trim().length > 150
                   }
                   onClick={createCompany}
-                  className="px-4 py-2"
+                  className="px-3 sm:px-4 py-2.5 sm:py-3"
                 >
                   Créer
                 </SecondaryButton>
@@ -955,8 +952,8 @@ export function SurveyBuilderDemo({
           </div>
 
           {/* Bloc 2: Calendrier */}
-          <div className="relative rounded-[16px] border border-slate-200 bg-white p-5">
-            <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+          <div className="relative rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-white p-4 sm:p-5">
+            <span className="absolute -left-2 -top-2 sm:-left-3 sm:-top-3 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
               2
             </span>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Calendrier</p>
@@ -965,36 +962,36 @@ export function SurveyBuilderDemo({
                 type="date"
                 value={startDate}
                 onChange={(event) => setStartDate(event.target.value)}
-                className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+                className="w-full rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
               />
               <input
                 type="date"
                 value={endDate}
                 onChange={(event) => setEndDate(event.target.value)}
-                className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+                className="w-full rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
               />
             </div>
             {isDateRangeInvalid && (
-              <p className="mt-2 text-sm font-medium text-rose-700">
+              <p className="mt-2 text-xs sm:text-sm font-medium text-rose-700">
                 La date de fin doit etre posterieure ou egale a la date de debut.
               </p>
             )}
           </div>
 
           {/* Bloc 3: Sondage */}
-          <div className="relative rounded-[16px] border border-slate-200 bg-white p-5">
-            <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+          <div className="relative rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-white p-4 sm:p-5">
+            <span className="absolute -left-2 -top-2 sm:-left-3 sm:-top-3 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
               3
             </span>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Sondage</p>
             <input
-              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
               value={effectiveCampaignTitle}
               readOnly
               placeholder="Le titre reprend le nom de l'entreprise"
             />
             <textarea
-              className="mt-3 min-h-24 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              className="mt-3 min-h-20 sm:min-h-24 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Description du sondage"
@@ -1002,8 +999,8 @@ export function SurveyBuilderDemo({
           </div>
 
           {/* Bloc 4: Import et liens */}
-          <div className="relative rounded-[16px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-5">
-            <span className="absolute -left-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+          <div className="relative rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-4 sm:p-5">
+            <span className="absolute -left-2 -top-2 sm:-left-3 sm:-top-3 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
               4
             </span>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
@@ -1017,7 +1014,7 @@ export function SurveyBuilderDemo({
               type="button"
               onClick={openImportModal}
               disabled={!isSurveyReadyForImport || isPending}
-              className="mt-4 inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-6 py-2 text-sm font-semibold transition hover:bg-[#242424] disabled:opacity-60"
+              className="mt-4 w-full sm:w-auto inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-semibold transition hover:bg-[#242424] disabled:opacity-60"
               style={{ color: "#ffffff" }}
             >
               Importer les employes
@@ -1028,7 +1025,7 @@ export function SurveyBuilderDemo({
                 : "Activez d'abord le sondage pour ouvrir l'import des employés."}
             </p>
             {importSuccess ? (
-              <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-3 sm:px-4 py-3">
                 <p className="text-sm font-semibold text-emerald-800">
                   {importSuccess.count} employe(s) importe(s), liste des liens prête à télécharger.
                 </p>
@@ -1037,17 +1034,17 @@ export function SurveyBuilderDemo({
           </div>
         </div>
 
-        <div className="mt-6 space-y-4">
-          <div className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#ffffff_100%)] p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="mt-4 sm:mt-6 space-y-4">
+          <div className="rounded-[12px] sm:rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#ffffff_100%)] p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
                   {isEditMode ? "Modification" : "Etape 1"}
                 </p>
-                <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold text-slate-900">
+                <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold text-slate-900">
                   {isEditMode ? "Modifier le sondage" : "Créer le sondage"}
                 </h3>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                <p className="mt-2 text-sm leading-6 text-slate-600">
                   {isEditMode
                     ? "Modifiez les informations du sondage, puis enregistrez les changements avant de gérer son statut."
                     : "Complétez la configuration (entreprise, dates, description), puis créez le sondage pour pouvoir ajouter les questions."}
@@ -1070,8 +1067,8 @@ export function SurveyBuilderDemo({
               </Pill>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-3">
-              <div className="rounded-[16px] border border-slate-200 bg-slate-50 p-5">
+            <div className="mt-4 sm:mt-5 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
                   Entreprise
                 </p>
@@ -1079,7 +1076,7 @@ export function SurveyBuilderDemo({
                 <select
                   value={companyId ?? ""}
                   onChange={(event) => handleCompanySelection(Number(event.target.value))}
-                  className="mt-3 w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+                  className="mt-3 w-full rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                 >
                   <option value="" disabled>
                     Choisir une entreprise
@@ -1091,11 +1088,11 @@ export function SurveyBuilderDemo({
                   ))}
                 </select>
                 {isCreateMode ? (
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex flex-col sm:flex-row gap-2">
                     <input
                       value={newCompanyName}
                       onChange={(event) => setNewCompanyName(event.target.value)}
-                      className="flex-1 rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-sm outline-none"
+                      className="flex-1 rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                       placeholder="Ajouter une nouvelle entreprise"
                     />
                     <SecondaryButton
@@ -1105,7 +1102,7 @@ export function SurveyBuilderDemo({
                         newCompanyName.trim().length > 150
                       }
                       onClick={createCompany}
-                      className="px-4 py-2"
+                      className="px-3 sm:px-4 py-2.5 sm:py-3"
                     >
                       Créer
                     </SecondaryButton>
@@ -1113,7 +1110,7 @@ export function SurveyBuilderDemo({
                 ) : null}
               </div>
 
-              <div className="rounded-[16px] border border-slate-200 bg-white p-5">
+              <div className="rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-white p-4 sm:p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
                   Calendrier
                 </p>
@@ -1122,34 +1119,34 @@ export function SurveyBuilderDemo({
                     type="date"
                     value={startDate}
                     onChange={(event) => setStartDate(event.target.value)}
-                    className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+                    className="w-full rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                   />
                   <input
                     type="date"
                     value={endDate}
                     onChange={(event) => setEndDate(event.target.value)}
-                    className="w-full rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+                    className="w-full rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                   />
                 </div>
                 {isDateRangeInvalid ? (
-                  <p className="mt-2 text-sm font-medium text-rose-700">
+                  <p className="mt-2 text-xs sm:text-sm font-medium text-rose-700">
                     La date de fin doit etre postérieure ou egale a la date de debut.
                   </p>
                 ) : null}
               </div>
 
-              <div className="rounded-[16px] border border-slate-200 bg-white p-5">
+              <div className="rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-white p-4 sm:p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
                   Sondage
                 </p>
                 <input
-                  className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                  className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                   value={effectiveCampaignTitle}
                   readOnly
                   placeholder="Le titre reprend le nom de l'entreprise"
                 />
                 <textarea
-                  className="mt-3 min-h-24 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                  className="mt-3 min-h-20 sm:min-h-24 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                   placeholder="Description du sondage"
@@ -1159,14 +1156,14 @@ export function SurveyBuilderDemo({
           </div>
 
           {isCreateMode ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-2">
+              <div className="rounded-[12px] sm:rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
                       Etape 2
                     </p>
-                    <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold text-slate-900">
+                    <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold text-slate-900">
                       Importer les employés
                     </h3>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -1182,7 +1179,7 @@ export function SurveyBuilderDemo({
                   type="button"
                   onClick={openImportModal}
                   disabled={!isSurveyReadyForImport || isPending}
-                  className="mt-4 inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-6 py-2 text-sm font-semibold transition hover:bg-[#242424] disabled:opacity-60"
+                  className="mt-4 w-full sm:w-auto inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-semibold transition hover:bg-[#242424] disabled:opacity-60"
                   style={{ color: "#ffffff" }}
                 >
                   Importer les employes
@@ -1194,13 +1191,13 @@ export function SurveyBuilderDemo({
                 </p>
               </div>
 
-              <div className="rounded-[18px] border border-slate-200 bg-white p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="rounded-[12px] sm:rounded-[18px] border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
                       Etape 3
                     </p>
-                    <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold text-slate-900">
+                    <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold text-slate-900">
                       Télécharger la liste des employés avec leurs liens
                     </h3>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -1214,14 +1211,14 @@ export function SurveyBuilderDemo({
 
                 {hasImportedEmployees ? (
                   <>
-                    <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3">
+                    <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-3 sm:px-4 py-3">
                       <p className="text-sm font-semibold text-emerald-800">
                         {importSuccess?.count ?? 0} employe(s) importe(s), liste prête a télécharger.
                       </p>
                     </div>
-                    <div className="mt-4 flex flex-wrap gap-3">
+                    <div className="mt-4 flex flex-wrap gap-2 sm:gap-3">
                       <PrimaryButton onClick={downloadLinksList}>
-                        Télécharger la liste des employés avec leurs liens
+                        Télécharger la liste
                       </PrimaryButton>
                       <SecondaryButton onClick={openImportModal}>Voir les liens</SecondaryButton>
                     </div>
@@ -1236,18 +1233,19 @@ export function SurveyBuilderDemo({
           ) : null}
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
           <PrimaryButton
             disabled={isPending || !canSaveCampaign || (mode === "edit" && !campaignId)}
             onClick={saveCampaign}
+            className="w-full sm:w-auto"
           >
             {isPending ? "Enregistrement..." : campaignId ? "Enregistrer le sondage" : "Creer le sondage"}
           </PrimaryButton>
           {status === "active" ? (
-            <SecondaryButton 
-              disabled={isPending || !campaignId} 
+            <SecondaryButton
+              disabled={isPending || !campaignId}
               onClick={() => changeCampaignStatus("terminateCampaign")}
-              className="bg-red-700 hover:bg-red-800 text-white"
+              className="w-full sm:w-auto bg-red-700 hover:bg-red-800 text-white"
             >
               Désactiver
             </SecondaryButton>
@@ -1255,55 +1253,64 @@ export function SurveyBuilderDemo({
             <SecondaryButton
               disabled={isPending || !campaignId || !canSaveCampaign || questions.length === 0}
               onClick={() => changeCampaignStatus("activateCampaign")}
+              className="w-full sm:w-auto"
             >
               Activer
             </SecondaryButton>
           )}
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => changeCampaignStatus("archiveCampaign")}>
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => changeCampaignStatus("archiveCampaign")} className="w-full sm:w-auto">
             Archiver
           </SecondaryButton>
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("scale")}>
+        <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("scale")} className="w-full sm:w-auto">
             Ajouter echelle 1-5
           </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("choice")}>
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("choice")} className="w-full sm:w-auto">
             Ajouter QCM
           </SecondaryButton>
-          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("text")}>
+          <SecondaryButton disabled={isPending || !campaignId} onClick={() => addQuestion("text")} className="w-full sm:w-auto">
             Ajouter texte libre
           </SecondaryButton>
         </div>
 
-        {feedback && <p className="mt-4 text-sm font-medium text-emerald-700">{feedback}</p>}
-        {error && <p className="mt-4 text-sm font-medium text-rose-700">{error}</p>}
+        {feedback && (
+          <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <p className="text-sm font-medium text-emerald-700">✓ {feedback}</p>
+          </div>
+        )}
+        {error && (
+          <div className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3">
+            <p className="text-sm font-medium text-rose-700">⚠ {error}</p>
+          </div>
+        )}
         {!canEditQuestions && (
           <p className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
             Le sondage est actif. Les questions ne peuvent plus etre modifiees tant qu&apos;il reste actif.
           </p>
         )}
 
-        <div className="mt-6 space-y-4">
+        <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
           {questions.map((question, index) => (
-            <div key={`${question.id}-${index}`} className="rounded-[16px] border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
+            <div key={`${question.id}-${index}`} className="rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-white p-3 sm:p-4 shadow-sm">
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
                     Bloc {index + 1}
                   </p>
                   <p className="mt-2 text-sm font-semibold">{question.type}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                   <SecondaryButton
-                    className="px-3 py-2"
+                    className="flex-1 sm:flex-none px-3 py-2"
                     disabled={index === 0 || !canEditQuestions}
                     onClick={() => moveQuestion(index, -1)}
                   >
                     Monter
                   </SecondaryButton>
                   <SecondaryButton
-                    className="px-3 py-2"
+                    className="flex-1 sm:flex-none px-3 py-2"
                     disabled={index === questions.length - 1 || !canEditQuestions}
                     onClick={() => moveQuestion(index, 1)}
                   >
@@ -1315,7 +1322,7 @@ export function SurveyBuilderDemo({
                 value={question.title}
                 onChange={(event) => updateQuestion(index, { title: event.target.value })}
                 disabled={!canEditQuestions}
-                className="mt-4 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                className="mt-3 sm:mt-4 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
               />
               <select
                 value={question.type}
@@ -1323,7 +1330,7 @@ export function SurveyBuilderDemo({
                   updateQuestion(index, { type: event.target.value as SurveyQuestion["type"] })
                 }
                 disabled={!canEditQuestions}
-                className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
               >
                 <option value="scale">Echelle 1 a 5</option>
                 <option value="choice">QCM</option>
@@ -1331,14 +1338,14 @@ export function SurveyBuilderDemo({
               </select>
 
               {question.type === "scale" && (
-                <div className="mt-4 rounded-[14px] border border-sky-200 bg-sky-50/70 p-4">
+                <div className="mt-3 sm:mt-4 rounded-[12px] sm:rounded-[14px] border border-sky-200 bg-sky-50/70 p-3 sm:p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">
                     Lecture de l&apos;echelle
                   </p>
                   <p className="mt-2 text-sm text-slate-600">
                     Le repondant choisit une note de 1 a 5 pour indiquer son niveau d&apos;accord.
                   </p>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-5">
+                  <div className="mt-3 grid gap-2 grid-cols-2 sm:grid-cols-5">
                     {scaleAnswerGuide.map((item) => (
                       <div
                         key={`scale-guide-${item.value}`}
@@ -1353,13 +1360,13 @@ export function SurveyBuilderDemo({
               )}
 
               {question.type === "choice" && (
-                <div className="mt-4 rounded-[14px] border border-amber-200 bg-amber-50/50 p-4">
-                  <div className="flex items-center justify-between gap-3">
+                <div className="mt-3 sm:mt-4 rounded-[12px] sm:rounded-[14px] border border-amber-200 bg-amber-50/50 p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
                       Choix du QCM
                     </p>
                     <SecondaryButton
-                      className="px-3 py-2"
+                      className="w-full sm:w-auto px-3 py-2"
                       disabled={(question.options?.length ?? 0) >= 6 || !canEditQuestions}
                       onClick={() => addChoiceOption(index)}
                     >
@@ -1368,16 +1375,16 @@ export function SurveyBuilderDemo({
                   </div>
                   <div className="mt-3 space-y-3">
                     {(question.options ?? [...defaultChoiceOptions]).map((option, optionIndex) => (
-                      <div key={`${question.id}-option-${optionIndex}`} className="flex gap-3">
+                      <div key={`${question.id}-option-${optionIndex}`} className="flex gap-2 sm:gap-3">
                         <input
                           value={option}
                           onChange={(event) => updateChoiceOption(index, optionIndex, event.target.value)}
                           disabled={!canEditQuestions}
-                          className="w-full rounded-[12px] border border-amber-200 bg-white px-4 py-3 text-sm outline-none"
+                          className="w-full rounded-[12px] border border-amber-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                           placeholder={`Choix ${optionIndex + 1}`}
                         />
                         <SecondaryButton
-                          className="px-3 py-2"
+                          className="px-3 py-2 shrink-0"
                           disabled={(question.options?.length ?? 0) <= 2 || !canEditQuestions}
                           onClick={() => removeChoiceOption(index, optionIndex)}
                         >
@@ -1389,11 +1396,11 @@ export function SurveyBuilderDemo({
                 </div>
               )}
 
-              <div className="mt-4 flex flex-wrap gap-3">
-                <PrimaryButton disabled={isPending || !canEditQuestions} onClick={() => persistQuestion(question, index)}>
+              <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
+                <PrimaryButton disabled={isPending || !canEditQuestions} onClick={() => persistQuestion(question, index)} className="w-full sm:w-auto">
                   Enregistrer la question
                 </PrimaryButton>
-                <SecondaryButton disabled={isPending || !canEditQuestions} onClick={() => removeQuestion(question)}>
+                <SecondaryButton disabled={isPending || !canEditQuestions} onClick={() => removeQuestion(question)} className="w-full sm:w-auto">
                   Supprimer
                 </SecondaryButton>
               </div>
@@ -1403,18 +1410,18 @@ export function SurveyBuilderDemo({
       </Card>
 
       <Card className="overflow-hidden">
-        <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_100%)] px-6 py-4 text-white">
-          <p className="text-sm text-slate-300">Aperçu du sondage</p>
-          <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
+        <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_100%)] px-4 sm:px-6 py-3 sm:py-4 text-white">
+          <p className="text-xs sm:text-sm text-slate-300">Aperçu du sondage</p>
+          <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold">
             Apercu du questionnaire
           </h3>
         </div>
-        <div className="space-y-4 p-6">
-          <div className="rounded-[16px] border border-slate-200 bg-slate-50 p-4">
+        <div className="space-y-3 sm:space-y-4 p-3 sm:p-6">
+          <div className="rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-slate-50 p-3 sm:p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
               Sondage
             </p>
-            <p className="mt-2 text-lg font-semibold">
+            <p className="mt-2 text-base sm:text-lg font-semibold">
               {effectiveCampaignTitle || "Entreprise a definir"}
             </p>
             <p className="mt-2 text-sm text-slate-500">
@@ -1424,7 +1431,7 @@ export function SurveyBuilderDemo({
           </div>
 
           {questions.map((question, index) => (
-            <div key={`${question.id}-preview-${index}`} className="rounded-[16px] border border-slate-200 p-4">
+            <div key={`${question.id}-preview-${index}`} className="rounded-[12px] sm:rounded-[16px] border border-slate-200 p-3 sm:p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
                 Question {index + 1}
               </p>
@@ -1437,7 +1444,7 @@ export function SurveyBuilderDemo({
                     : "Champ libre pour commentaire qualitatif."}
               </p>
               {question.type === "scale" && (
-                <div className="mt-3 grid gap-2 sm:grid-cols-5">
+                <div className="mt-3 grid gap-2 grid-cols-2 sm:grid-cols-5">
                   {scaleAnswerGuide.map((item) => (
                     <div
                       key={`${question.id}-scale-preview-${item.value}`}
@@ -1467,14 +1474,14 @@ export function SurveyBuilderDemo({
       </Card>
 
       {isImportModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6">
-          <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[24px] bg-white shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-6 py-5">
-              <div>
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-950/55 px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto">
+          <div className="relative w-full max-w-5xl my-4 sm:my-0 rounded-[16px] sm:rounded-[24px] bg-white shadow-2xl overflow-y-auto max-h-[95vh] sm:max-h-[92vh]">
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-3 sm:gap-4 border-b border-slate-200 bg-white px-4 sm:px-6 py-4 sm:py-5">
+              <div className="flex-1 pr-8 sm:pr-12">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
                   Import des employes
                 </p>
-                <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-2xl font-bold text-slate-900">
+                <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl sm:text-2xl font-bold text-slate-900">
                   {effectiveCampaignTitle || "Sondage"} - {selectedCompanyName || "Entreprise"}
                 </h3>
                 <p className="mt-2 text-sm text-slate-600">
@@ -1485,14 +1492,14 @@ export function SurveyBuilderDemo({
               <button
                 type="button"
                 onClick={closeImportModal}
-                className="rounded-[12px] border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                className="shrink-0 rounded-[12px] border border-slate-200 px-3 sm:px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
               >
                 Fermer
               </button>
             </div>
 
-            <div className="space-y-6 px-6 py-6">
-              <div className="grid gap-4 lg:grid-cols-3">
+            <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 py-4 sm:py-6">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
                 {[
                   {
                     step: 1,
@@ -1515,29 +1522,29 @@ export function SurveyBuilderDemo({
                 ].map((item) => (
                   <div
                     key={`modal-step-${item.step}`}
-                    className={`rounded-[16px] border p-4 ${
+                    className={`rounded-[12px] sm:rounded-[16px] border p-3 sm:p-4 ${
                       item.done ? "border-emerald-200 bg-emerald-50/70" : "border-slate-200 bg-slate-50/70"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-bold text-slate-900">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-bold text-slate-900">
                         {item.step}
                       </span>
-                      <div>
+                      <div className="flex-1">
                         <p className="text-sm font-semibold text-slate-900">{item.title}</p>
                         <p className="text-xs text-slate-500">{item.done ? "Terminé" : "En cours"}</p>
                       </div>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-slate-600">{item.body}</p>
+                    <p className="mt-2 sm:mt-3 text-sm leading-6 text-slate-600">{item.body}</p>
                   </div>
                 ))}
               </div>
 
-              <Card className="p-5">
+              <Card className="p-4 sm:p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
                   Etape 2
                 </p>
-                <div className="mt-4 rounded-[12px] border border-dashed border-slate-300 bg-slate-50/80 p-4">
+                <div className="mt-4 rounded-[12px] border border-dashed border-slate-300 bg-slate-50/80 p-3 sm:p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-semibold text-slate-800">Ajouter un fichier</p>
@@ -1545,7 +1552,7 @@ export function SurveyBuilderDemo({
                         Formats acceptés : .xlsx, .xls, .csv
                       </p>
                     </div>
-                    <label className="inline-flex cursor-pointer items-center justify-center rounded-[12px] border border-slate-200 bg-[#181818] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#242424]">
+                    <label className="inline-flex cursor-pointer items-center justify-center rounded-[12px] border border-slate-200 bg-[#181818] px-4 py-2.5 sm:py-3 text-sm font-semibold text-white transition hover:bg-[#242424]">
                       Choisir un fichier
                       <input
                         type="file"
@@ -1560,7 +1567,7 @@ export function SurveyBuilderDemo({
                   ) : null}
                 </div>
 
-                <div className="mt-5">
+                <div className="mt-4 sm:mt-5">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-semibold text-slate-700">
                       Données CSV
@@ -1581,13 +1588,13 @@ export function SurveyBuilderDemo({
                       setImportCsv(event.target.value);
                       setImportValidationErrors([]);
                     }}
-                    className="mt-2 min-h-40 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none font-mono"
+                    className="mt-2 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none font-mono min-h-32 sm:min-h-40"
                     placeholder="Nom,Prenom,Adresse courriel,Fonction"
                   />
                 </div>
 
                 {importValidationErrors.length > 0 ? (
-                  <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3">
+                  <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-3 sm:px-4 py-3">
                     <p className="text-sm font-semibold text-amber-800">
                       {importValidationErrors.length} erreur(s) détectée(s)
                     </p>
@@ -1602,51 +1609,52 @@ export function SurveyBuilderDemo({
                 ) : null}
 
                 {importFeedback ? (
-                  <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3">
+                  <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-3 sm:px-4 py-3">
                     <p className="text-sm font-medium text-emerald-700">{importFeedback}</p>
                   </div>
                 ) : null}
                 {importError ? (
-                  <div className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3">
+                  <div className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-3 sm:px-4 py-3">
                     <p className="text-sm font-medium text-rose-700">{importError}</p>
                   </div>
                 ) : null}
 
-                <div className="mt-5 flex flex-wrap gap-3">
+                <div className="mt-4 sm:mt-5 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
                   <PrimaryButton
                     disabled={isPending || !importCsv.trim() || importValidationErrors.length > 0}
                     onClick={handleImportEmployees}
+                    className="w-full sm:w-auto"
                   >
                     {isPending ? "Import en cours..." : "Importer les employés"}
                   </PrimaryButton>
-                  <SecondaryButton onClick={closeImportModal} disabled={isPending}>
+                  <SecondaryButton onClick={closeImportModal} disabled={isPending} className="w-full sm:w-auto">
                     Fermer
                   </SecondaryButton>
                 </div>
               </Card>
 
               {importSuccess ? (
-                <Card className="p-5">
+                <Card className="p-4 sm:p-5">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
                     Liste des employés et liens
                   </p>
-                  <h4 className="mt-2 text-lg font-bold text-slate-900">
+                  <h4 className="mt-2 text-base sm:text-lg font-bold text-slate-900">
                     {importSuccess.count} employé(s) importé(s)
                   </h4>
                   <p className="mt-2 text-sm text-slate-600">
                     L&apos;import est terminé. Vous pouvez maintenant télécharger la liste des liens.
                   </p>
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <PrimaryButton onClick={downloadLinksList}>
-                      Télécharger la liste des employés avec leurs liens
+                  <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
+                    <PrimaryButton onClick={downloadLinksList} className="w-full sm:w-auto">
+                      Télécharger la liste
                     </PrimaryButton>
-                    <SecondaryButton onClick={copyAllLinks}>Copier tous les liens</SecondaryButton>
+                    <SecondaryButton onClick={copyAllLinks} className="w-full sm:w-auto">Copier tous les liens</SecondaryButton>
                   </div>
-                  <div className="mt-5 max-h-72 space-y-3 overflow-y-auto">
+                  <div className="mt-4 sm:mt-5 max-h-60 sm:max-h-72 space-y-2 sm:space-y-3 overflow-y-auto">
                     {importSuccess.participants.map((participant, index) => (
                       <div
                         key={`participant-link-${index}`}
-                        className="flex flex-col gap-3 rounded-[12px] border border-slate-200 bg-slate-50 p-4 lg:flex-row lg:items-center"
+                        className="flex flex-col gap-2 sm:gap-3 rounded-[12px] border border-slate-200 bg-slate-50 p-3 sm:p-4"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-slate-900">{participant.name}</p>
@@ -1656,7 +1664,7 @@ export function SurveyBuilderDemo({
                           {participant.link}
                         </code>
                         <SecondaryButton
-                          className="px-4 py-2"
+                          className="w-full sm:w-auto px-3 sm:px-4 py-2"
                           onClick={() =>
                             copyToClipboard(participant.link).then(() => {
                               setImportFeedback(`Lien copié pour ${participant.name}.`);

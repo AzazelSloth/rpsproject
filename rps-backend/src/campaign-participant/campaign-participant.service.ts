@@ -332,7 +332,8 @@ export class CampaignParticipantService {
           );
         } catch (error) {
           // Handle duplicate email error gracefully
-          if (error?.code === '23505') { // PostgreSQL unique violation
+          const dbError = error as any;
+          if (dbError?.code === '23505') { // PostgreSQL unique violation
             console.warn(`Duplicate email skipped: ${email}`);
             continue;
           }
