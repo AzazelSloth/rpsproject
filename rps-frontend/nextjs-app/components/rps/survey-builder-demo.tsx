@@ -819,55 +819,35 @@ export function SurveyBuilderDemo({
           )}
         </div>
 
-        {/* Bloc 2: Dates de début et fin */}
-        <div className="relative rounded-lg border border-slate-200 bg-white p-2 sm:p-3">
+        {/* Bloc 2: Date */}
+        <div className="relative rounded-lg border border-slate-200 bg-white p-2">
           <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
             2
           </span>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Dates de début et fin</p>
-          <div className="mt-1 space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Date</p>
+          <div className="mt-1 space-y-0.5">
             {/* Date début */}
-            <div className="relative">
-              <label className="text-[9px] font-semibold text-slate-600 mb-0.5 block">📅 Début</label>
+            <div>
               <input
                 type="date"
                 value={startDate}
                 onChange={(event) => setStartDate(event.target.value)}
-                className="w-full rounded border border-slate-200 bg-gradient-to-r from-blue-50 to-white px-2 py-1.5 text-[10px] font-medium text-slate-900 outline-none transition-all hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                className="w-full rounded border border-slate-200 bg-blue-50/50 px-1.5 py-1 text-[9px] font-medium text-slate-900 outline-none"
               />
-              {startDate && (
-                <p className="text-[9px] text-blue-600 mt-0.5 font-medium">
-                  {new Date(startDate + 'T00:00:00').toLocaleDateString('fr-FR', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                  })}
-                </p>
-              )}
             </div>
             
             {/* Date fin */}
-            <div className="relative">
-              <label className="text-[9px] font-semibold text-slate-600 mb-0.5 block">🏁 Fin</label>
+            <div>
               <input
                 type="date"
                 value={endDate}
                 onChange={(event) => setEndDate(event.target.value)}
-                className="w-full rounded border border-slate-200 bg-gradient-to-r from-emerald-50 to-white px-2 py-1.5 text-[10px] font-medium text-slate-900 outline-none transition-all hover:border-emerald-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200"
+                className="w-full rounded border border-slate-200 bg-emerald-50/50 px-1.5 py-1 text-[9px] font-medium text-slate-900 outline-none"
               />
-              {endDate && (
-                <p className="text-[9px] text-emerald-600 mt-0.5 font-medium">
-                  {new Date(endDate + 'T00:00:00').toLocaleDateString('fr-FR', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                  })}
-                </p>
-              )}
             </div>
           </div>
           {isDateRangeInvalid && (
-            <p className="mt-1 text-[10px] font-medium text-rose-700">
+            <p className="mt-0.5 text-[9px] font-medium text-rose-700">
               ⚠ Fin ≥ Début
             </p>
           )}
