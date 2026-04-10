@@ -294,21 +294,35 @@ export class CampaignParticipantService {
       throw new NotFoundException(`Campaign ${campaignId} not found`);
     }
 
+    // Fix: Ensure company is loaded
+    if (!campaign.company) {
+      throw new BadRequestException('Campaign does not have an associated company');
+    }
+
     if (campaign.company.id !== payload.company_id) {
       throw new BadRequestException(
-        'The provided company does not match the campaign company',
+        `Company mismatch: campaign has company ${campaign.company.id}, but payload has ${payload.company_id}`,
       );
     }
+
+    console.log(`[Import] Starting import for campaign ${campaignId}, company ${payload.company_id}`);
+    console.log(`[Import] CSV length: ${payload.csv?.length || 0}, Rows provided: ${payload.rows?.length || 0}`);
 
     const rows = payload.rows?.length
       ? payload.rows
       : this.parseCsv(payload.csv ?? '');
 
+    console.log(`[Import] Parsed ${rows.length} rows from CSV`);
+
     const normalizedRows = rows.filter((row) => row.email?.trim());
     const BATCH_SIZE = 50; // Process in batches for stability
-    
-    console.log(`Starting import of ${normalizedRows.length} employees for campaign ${campaignId}`);
-    
+
+    console.log(`[Import] Starting import of ${normalizedRows.length} employees for campaign ${campaignId}`);
+
+    if (normalizedRows.length === 0) {
+      throw new BadRequestException('No valid employee rows found in CSV. Ensure you have email addresses.');
+    }
+
     const employees: Employee[] = [];
 
     // Process rows in batches to avoid timeouts
