@@ -30,6 +30,11 @@ export class CreateCampaignDto {
   name: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  description?: string;
+
+  @IsOptional()
   @Type(() => Date)
   @IsDate()
   start_date?: Date;
@@ -55,6 +60,11 @@ export class UpdateCampaignDto {
   @MinLength(2)
   @MaxLength(150)
   name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  description?: string;
 
   @IsOptional()
   @Type(() => Date)

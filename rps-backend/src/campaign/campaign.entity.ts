@@ -27,6 +27,9 @@ export class Campaign {
   @Column({ type: 'varchar', nullable: true })
   name: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
+
   @Column({ type: 'date', nullable: true })
   start_date: Date;
 

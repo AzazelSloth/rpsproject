@@ -42,10 +42,10 @@ export function DashboardContent({
       <SectionHeader
         eyebrow="Tableau de bord"
         title="Liste des entreprises"
-        description="Accede aux sondages par entreprise, avec statut, taux de completion et acces direct aux resultats."
+        description="Accéder aux sondages par entreprise, avec statut, taux de completion et acces direct aux resultats."
         action={
           <Link href="/surveys?tab=create" className="inline-flex">
-            <PrimaryButton>Creer un sondage</PrimaryButton>
+            <PrimaryButton>Créer un sondage</PrimaryButton>
           </Link>
         }
       />
@@ -73,9 +73,9 @@ export function DashboardContent({
               className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
             >
               <option value="all">Tous les statuts</option>
-              <option value="active">active</option>
+              <option value="active">actif</option>
               <option value="draft">brouillon</option>
-              <option value="archived">archive</option>
+              <option value="archived">archivé</option>
             </select>
           </div>
         </div>
@@ -155,13 +155,13 @@ function formatShortDate(value: string | null) {
 
 function formatStatusLabel(value: string) {
   if (value === "active") {
-    return "active";
+    return "actif";
   }
   if (value === "draft") {
     return "brouillon";
   }
   if (value === "archived") {
-    return "archive";
+    return "archivé";
   }
   return value || "inconnu";
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, Pill, PrimaryButton, SectionHeader } from "@/components/rps/ui";
+import { Card, Pill, PrimaryButton } from "@/components/rps/ui";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
 
 export const dynamic = "force-dynamic";
@@ -42,12 +42,6 @@ export default async function ResultsPage({
 
   return (
     <section className="space-y-6">
-      <SectionHeader
-        eyebrow="Resultats"
-        title="Resultats par sondage"
-        description="Selectionne un sondage pour consulter les indicateurs et les analyses detaillees."
-      />
-
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -64,9 +58,9 @@ export default async function ResultsPage({
               className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
             />
             <select className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none">
-              <option value="active">active</option>
+              <option value="active">actif</option>
               <option value="draft">brouillon</option>
-              <option value="archived">archive</option>
+              <option value="archived">archivé</option>
             </select>
           </div>
         </div>
@@ -276,13 +270,13 @@ function formatShortDate(value: string | null) {
 
 function formatStatusLabel(value: string) {
   if (value === "active") {
-    return "active";
+    return "actif";
   }
   if (value === "draft") {
     return "brouillon";
   }
   if (value === "archived") {
-    return "archive";
+    return "archivé";
   }
   return value || "inconnu";
 }

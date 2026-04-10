@@ -1,5 +1,4 @@
 ﻿import { EmployeesTableDemo } from "@/components/rps/employees-table-demo";
-import { SectionHeader } from "@/components/rps/ui";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
 
 export const dynamic = "force-dynamic";
@@ -42,11 +41,6 @@ export default async function EmployeesPage({
 
   return (
     <section className="space-y-6">
-      <SectionHeader
-        eyebrow="Gestion des employés"
-        title="Gestion des employés"
-        description="Import des participants et suivi du sondage en cours."
-      />
       <EmployeesTableDemo
         managementData={managementData}
         companies={surveyBuilderData.companies}

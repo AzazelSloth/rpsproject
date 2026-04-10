@@ -622,7 +622,8 @@ function mapBackendCampaign(entry: BackendCampaign) {
     documentId: `campaign-${entry.id}`,
     title: entry.name,
     description:
-      "Sondage RPS pilote connectee au backend NestJS pour centraliser les reponses et les indicateurs.",
+      entry.description ??
+      "Description du sondage ici. Ce champ peut etre utilise pour fournir des instructions ou des informations supplementaires aux participants.",
     status: mapCampaignStatus(entry.status),
     startDate: entry.start_date ?? "",
     endDate: entry.end_date ?? "",

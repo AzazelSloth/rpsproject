@@ -1,13 +1,21 @@
 import 'dotenv/config';
+import express from 'express';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: true,
+  });
   const apiPrefix = 'api';
   const swaggerPath = process.env.SWAGGER_PATH ?? 'api-docs';
+
+  // Augmente les limites de taille pour les uploads CSV volumineux
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.text({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   app.setGlobalPrefix(apiPrefix);
 
@@ -59,7 +67,11 @@ async function bootstrap() {
     });
   }
 
-  const port = Number(process.env.PORT ?? 3000);
-  await app.listen(port, '0.0.0.0');
+  await app.listen(process.env.PORT ?? 3000, () => {
+    const server = app.getHttpServer();
+    // Augmente les timeouts pour les connexions lentes (Starlink, etc.)
+    server.keepAliveTimeout = 90000; // 90s
+    server.headersTimeout = 100000; // 100s
+    server.requestTimeout = 120000; // 120s
+  });
 }
-void bootstrap();
