@@ -285,181 +285,197 @@ export class CampaignParticipantService {
     campaignId: number,
     payload: ImportCampaignEmployeesDto,
   ) {
-    const campaign = await this.campaignRepository.findOne({
-      where: { id: campaignId },
-      relations: { company: true },
-    });
+    try {
+      console.log(`[Import] Starting import for campaign ${campaignId}, company ${payload.company_id}`);
+      console.log(`[Import] CSV length: ${payload.csv?.length || 0}, Rows provided: ${payload.rows?.length || 0}`);
 
-    if (!campaign) {
-      throw new NotFoundException(`Campaign ${campaignId} not found`);
-    }
-
-    // Fix: Ensure company is loaded
-    if (!campaign.company) {
-      throw new BadRequestException('Campaign does not have an associated company');
-    }
-
-    if (campaign.company.id !== payload.company_id) {
-      throw new BadRequestException(
-        `Company mismatch: campaign has company ${campaign.company.id}, but payload has ${payload.company_id}`,
-      );
-    }
-
-    console.log(`[Import] Starting import for campaign ${campaignId}, company ${payload.company_id}`);
-    console.log(`[Import] CSV length: ${payload.csv?.length || 0}, Rows provided: ${payload.rows?.length || 0}`);
-
-    const rows = payload.rows?.length
-      ? payload.rows
-      : this.parseCsv(payload.csv ?? '');
-
-    console.log(`[Import] Parsed ${rows.length} rows from CSV`);
-
-    const normalizedRows = rows.filter((row) => row.email?.trim());
-    const BATCH_SIZE = 50; // Process in batches for stability
-
-    console.log(`[Import] Starting import of ${normalizedRows.length} employees for campaign ${campaignId}`);
-
-    if (normalizedRows.length === 0) {
-      throw new BadRequestException('No valid employee rows found in CSV. Ensure you have email addresses.');
-    }
-
-    const employees: Employee[] = [];
-
-    // Process rows in batches to avoid timeouts
-    for (let i = 0; i < normalizedRows.length; i += BATCH_SIZE) {
-      const batch = normalizedRows.slice(i, i + BATCH_SIZE);
-      console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} rows)`);
-
-      const batchEmails = batch.map(r => r.email.trim());
-      
-      try {
-        // Fetch existing employees in batch
-        const existingEmployees = await this.employeeRepository.find({
-          where: [{ email: batchEmails }] as any,
-          relations: { company: true },
-        });
-
-        const existingMap = new Map(existingEmployees.map(e => [e.email, e]));
-        const newEmployeesData: Employee[] = [];
-
-        for (const row of batch) {
-          const email = row.email.trim();
-          let employee = existingMap.get(email);
-
-          if (!employee) {
-            newEmployeesData.push(
-              this.employeeRepository.create({
-                first_name: row.first_name?.trim() || 'N/A',
-                last_name: row.last_name?.trim() || 'N/A',
-                email,
-                phone: row.phone?.trim() || undefined,
-                department: row.department?.trim() || undefined,
-                survey_token: randomUUID(),
-                company: { id: payload.company_id } as any,
-              }),
-            );
-          } else if (employee.company.id === payload.company_id) {
-            employees.push(employee);
-          } else {
-            console.warn(
-              `Employee ${email} already exists for different company. Skipping.`,
-            );
-          }
-        }
-
-        // Bulk insert new employees
-        if (newEmployeesData.length > 0) {
-          try {
-            const created = await this.employeeRepository.save(newEmployeesData);
-            employees.push(...created);
-            console.log(`Created ${created.length} new employees in batch`);
-          } catch (error) {
-            const dbError = error as any;
-            if (dbError?.code === '23505') {
-              console.warn('Some employees have duplicate emails, continuing...');
-              // Try inserting individually with duplicate handling
-              for (const empData of newEmployeesData) {
-                try {
-                  const saved = await this.employeeRepository.save(empData);
-                  employees.push(saved);
-                } catch (e) {
-                  if ((e as any)?.code === '23505') {
-                    console.warn(`Duplicate for ${empData.email}, skipping`);
-                    continue;
-                  }
-                  throw e;
-                }
-              }
-            } else {
-              throw error;
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`Error processing batch starting at index ${i}:`, error);
-        throw new Error(
-          `Failed to import employees (batch ${Math.floor(i / BATCH_SIZE) + 1}): ${error instanceof Error ? error.message : 'Unknown error'}`,
-        );
-      }
-    }
-
-    console.log(`Successfully imported ${employees.length} unique employees`);
-
-    // Create participants in batch
-    const participantsToCreate: CampaignParticipant[] = [];
-    const employeeIds = employees.map(e => e.id);
-
-    if (employeeIds.length > 0) {
-      const existingParticipants = await this.campaignParticipantRepository.find({
-        where: {
-          campaign: { id: campaignId },
-          employee: { id: employeeIds } as any,
-        },
+      const campaign = await this.campaignRepository.findOne({
+        where: { id: campaignId },
+        relations: { company: true },
       });
 
-      const existingSet = new Set(existingParticipants.map(p => p.employee.id));
+      if (!campaign) {
+        throw new NotFoundException(`Campaign ${campaignId} not found`);
+      }
 
-      for (const employee of employees) {
-        if (!existingSet.has(employee.id)) {
-          participantsToCreate.push(
-            this.campaignParticipantRepository.create({
-              campaign: { id: campaignId } as Campaign,
-              employee: { id: employee.id } as Employee,
-              participation_token: randomUUID(),
-              invitation_sent_at: payload.invitation_sent_at ?? new Date(),
-              reminder_sent_at: null,
-              completed_at: null,
-              status: CampaignParticipantStatus.PENDING,
-            }),
+      // Fix: Ensure company is loaded
+      if (!campaign.company) {
+        throw new BadRequestException('Campaign does not have an associated company');
+      }
+
+      if (campaign.company.id !== payload.company_id) {
+        throw new BadRequestException(
+          `Company mismatch: campaign has company ${campaign.company.id}, but payload has ${payload.company_id}`,
+        );
+      }
+
+      const rows = payload.rows?.length
+        ? payload.rows
+        : this.parseCsv(payload.csv ?? '');
+
+      console.log(`[Import] Parsed ${rows.length} rows from CSV`);
+
+      const normalizedRows = rows.filter((row) => row.email?.trim());
+
+      console.log(`[Import] Starting import of ${normalizedRows.length} employees for campaign ${campaignId}`);
+
+      if (normalizedRows.length === 0) {
+        throw new BadRequestException('No valid employee rows found in CSV. Ensure you have email addresses.');
+      }
+
+      const employees: Employee[] = [];
+      const BATCH_SIZE = 50; // Process in batches for stability
+
+      // Process rows in batches to avoid timeouts
+      for (let i = 0; i < normalizedRows.length; i += BATCH_SIZE) {
+        const batch = normalizedRows.slice(i, i + BATCH_SIZE);
+        console.log(`[Import] Processing batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} rows)`);
+
+        const batchEmails = batch.map(r => r.email.trim());
+
+        try {
+          // Fetch existing employees in batch
+          const existingEmployees = await this.employeeRepository.find({
+            where: [{ email: batchEmails }] as any,
+            relations: { company: true },
+          });
+
+          const existingMap = new Map(existingEmployees.map(e => [e.email, e]));
+          const newEmployeesData: Employee[] = [];
+
+          for (const row of batch) {
+            const email = row.email.trim();
+            let employee = existingMap.get(email);
+
+            if (!employee) {
+              newEmployeesData.push(
+                this.employeeRepository.create({
+                  first_name: row.first_name?.trim() || 'N/A',
+                  last_name: row.last_name?.trim() || 'N/A',
+                  email,
+                  phone: row.phone?.trim() || undefined,
+                  department: row.department?.trim() || undefined,
+                  survey_token: randomUUID(),
+                  company: { id: payload.company_id } as any,
+                }),
+              );
+            } else if (employee.company.id === payload.company_id) {
+              employees.push(employee);
+            } else {
+              console.warn(
+                `[Import] Employee ${email} already exists for different company. Skipping.`,
+              );
+            }
+          }
+
+          // Bulk insert new employees
+          if (newEmployeesData.length > 0) {
+            try {
+              const created = await this.employeeRepository.save(newEmployeesData);
+              employees.push(...created);
+              console.log(`[Import] Created ${created.length} new employees in batch`);
+            } catch (error) {
+              const dbError = error as any;
+              if (dbError?.code === '23505') {
+                console.warn('[Import] Some employees have duplicate emails, continuing...');
+                // Try inserting individually with duplicate handling
+                for (const empData of newEmployeesData) {
+                  try {
+                    const saved = await this.employeeRepository.save(empData);
+                    employees.push(saved);
+                  } catch (e) {
+                    if ((e as any)?.code === '23505') {
+                      console.warn(`[Import] Duplicate for ${empData.email}, skipping`);
+                      continue;
+                    }
+                    throw e;
+                  }
+                }
+              } else {
+                throw error;
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`[Import] Error processing batch starting at index ${i}:`, error);
+          throw new Error(
+            `Failed to import employees (batch ${Math.floor(i / BATCH_SIZE) + 1}): ${error instanceof Error ? error.message : 'Unknown error'}`,
           );
         }
       }
-    }
 
-    let participants: CampaignParticipant[] = [];
-    if (participantsToCreate.length > 0) {
-      try {
-        participants = await this.campaignParticipantRepository.save(participantsToCreate);
-        console.log(`Created ${participants.length} new participants`);
-      } catch (error) {
-        console.error('Error saving participants:', error);
-        throw new Error(
-          `Failed to create participants: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        );
+      console.log(`[Import] Successfully imported ${employees.length} unique employees`);
+
+      // Create participants in batch
+      const participantsToCreate: CampaignParticipant[] = [];
+      const employeeIds = employees.map(e => e.id);
+
+      if (employeeIds.length > 0) {
+        const existingParticipants = await this.campaignParticipantRepository.find({
+          where: {
+            campaign: { id: campaignId },
+            employee: { id: employeeIds } as any,
+          },
+        });
+
+        const existingSet = new Set(existingParticipants.map(p => p.employee.id));
+
+        for (const employee of employees) {
+          if (!existingSet.has(employee.id)) {
+            participantsToCreate.push(
+              this.campaignParticipantRepository.create({
+                campaign: { id: campaignId } as Campaign,
+                employee: { id: employee.id } as Employee,
+                participation_token: randomUUID(),
+                invitation_sent_at: payload.invitation_sent_at ?? new Date(),
+                reminder_sent_at: null,
+                completed_at: null,
+                status: CampaignParticipantStatus.PENDING,
+              }),
+            );
+          }
+        }
       }
-    }
 
-    return {
-      imported_employees: employees.length,
-      participants: participants.map((p) => ({
-        participation_token: p.participation_token,
-        employee: {
-          first_name: p.employee?.first_name,
-          last_name: p.employee?.last_name,
-          email: p.employee?.email,
-        },
-      })),
-    };
+      let participants: CampaignParticipant[] = [];
+      if (participantsToCreate.length > 0) {
+        try {
+          participants = await this.campaignParticipantRepository.save(participantsToCreate);
+          console.log(`[Import] Created ${participants.length} new participants`);
+        } catch (error) {
+          console.error('[Import] Error saving participants:', error);
+          throw new Error(
+            `Failed to create participants: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+        }
+      }
+
+      // Build employee map for return data
+      const employeeMap = new Map(employees.map(e => [e.id, e]));
+
+      return {
+        imported_employees: employees.length,
+        participants: participants.map((p) => {
+          const emp = employeeMap.get(p.employee?.id);
+          return {
+            participation_token: p.participation_token,
+            employee: {
+              first_name: emp?.first_name || 'N/A',
+              last_name: emp?.last_name || 'N/A',
+              email: emp?.email || '',
+            },
+          };
+        }),
+      };
+    } catch (error) {
+      console.error('[Import] Fatal error during import:', error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new Error(
+        `Employee import failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   }
 
   async sendReminders(
@@ -523,14 +539,16 @@ export class CampaignParticipantService {
       .split(',')
       .map((header) => this.normalizeCsvHeader(header));
 
-    console.log('CSV Headers detected:', headers);
+    console.log('[CSV] Headers detected:', headers);
 
     const rows: ImportCampaignEmployeeRowDto[] = [];
 
     for (let i = 0; i < dataLines.length; i++) {
       try {
         const line = dataLines[i];
-        const values = line.split(',').map((value) => value.trim());
+        
+        // Handle quoted fields properly
+        const values = this.parseCsvLine(line);
         const row: Record<string, string> = {};
 
         headers.forEach((header, idx) => {
@@ -538,10 +556,10 @@ export class CampaignParticipantService {
         });
 
         const email = (row.email ?? row.adresse_courriel ?? row.courriel ?? '').trim();
-        
+
         // Skip rows without valid email
         if (!email || !email.includes('@')) {
-          console.warn(`Row ${i + 2}: Missing or invalid email '${email}', skipping`);
+          console.warn(`[CSV] Row ${i + 2}: Missing or invalid email '${email}', skipping`);
           continue;
         }
 
@@ -553,11 +571,40 @@ export class CampaignParticipantService {
           department: (row.department ?? row.fonction ?? row.titre_professionnel ?? '').trim() || undefined,
         });
       } catch (error) {
-        console.error(`Error parsing CSV row ${i + 2}:`, error);
+        console.error(`[CSV] Error parsing row ${i + 2}:`, error);
       }
     }
 
+    console.log(`[CSV] Successfully parsed ${rows.length} valid rows from ${dataLines.length} total rows`);
     return rows;
+  }
+
+  private parseCsvLine(line: string): string[] {
+    const values: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          // Escaped quote
+          current += '"';
+          i++; // Skip next quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        values.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    values.push(current.trim());
+    return values;
   }
 
   private normalizeCsvHeader(header: string) {
