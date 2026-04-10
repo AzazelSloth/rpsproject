@@ -781,25 +781,6 @@ export function SurveyBuilderDemo({
   return (
     <div className="space-y-4 sm:space-y-6">
       <Card className="p-4 sm:p-6">
-        <div className="flex flex-col gap-3 sm:gap-4">
-          <div className="flex flex-col gap-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-              Guide utilisateur
-            </p>
-            <h2 className="font-[family-name:var(--font-manrope)] text-xl sm:text-2xl font-bold text-slate-900">
-              {isCreateMode ? "Parcours de création du sondage" : "Parcours de modification du sondage"}
-            </h2>
-            <p className="text-sm leading-6 text-slate-600">
-              {isCreateMode
-                ? "Suivez ces trois étapes pour publier le sondage, importer les employés, puis télécharger la liste finale avec les liens individuels."
-                : "Mettez à jour les informations du sondage, ajustez les questions puis enregistrez vos changements avant de gérer son statut."}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Pill tone={progressTone}>{progressLabel}</Pill>
-          </div>
-        </div>
-
         {/* Stepper 5 étapes horizontal - en haut et bien visible */}
         <div className="mt-6 sm:mt-8 mb-6 sm:mb-8 overflow-x-auto">
           <div className="flex items-center justify-between min-w-[640px] sm:min-w-max gap-2 md:gap-3 px-2 sm:px-4">
@@ -956,22 +937,20 @@ export function SurveyBuilderDemo({
           <Pill tone="neutral">{questions.length} questions</Pill>
         </div>
 
-        <div className="mt-4 sm:mt-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+        {/* 5 BLOCS HORIZONTAUX COMPACTS */}
+        <div className="mt-4 sm:mt-6 grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-3 lg:grid-cols-5">
           {/* Bloc 1: Entreprise */}
-          <div className="relative rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
-            <span className="absolute -left-2 -top-2 sm:-left-3 sm:-top-3 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+          <div className="relative rounded-lg border border-slate-200 bg-slate-50 p-2 sm:p-3">
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               1
             </span>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Entreprise</p>
-            <p className="mt-2 text-sm text-slate-500">nom de l&apos;entreprise</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Entreprise</p>
             <select
               value={companyId ?? ""}
               onChange={(event) => handleCompanySelection(Number(event.target.value))}
-              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
+              className="mt-1 w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none"
             >
-              <option value="" disabled>
-                Choisir une entreprise
-              </option>
+              <option value="" disabled>Choisir</option>
               {companies.map((company) => (
                 <option key={company.id} value={company.id}>
                   {company.name}
@@ -979,12 +958,12 @@ export function SurveyBuilderDemo({
               ))}
             </select>
             {isCreateMode && (
-              <div className="mt-3 flex flex-col sm:flex-row gap-2">
+              <div className="mt-2 flex gap-1">
                 <input
                   value={newCompanyName}
                   onChange={(event) => setNewCompanyName(event.target.value)}
-                  className="flex-1 rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
-                  placeholder="Ajouter une nouvelle entreprise"
+                  className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+                  placeholder="Nouvelle..."
                 />
                 <SecondaryButton
                   disabled={
@@ -993,294 +972,134 @@ export function SurveyBuilderDemo({
                     newCompanyName.trim().length > 150
                   }
                   onClick={createCompany}
-                  className="px-3 sm:px-4 py-2.5 sm:py-3"
+                  className="px-2 py-1 text-xs"
                 >
-                  Créer
+                  +
                 </SecondaryButton>
               </div>
             )}
           </div>
 
           {/* Bloc 2: Calendrier */}
-          <div className="relative rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-white p-4 sm:p-5">
-            <span className="absolute -left-2 -top-2 sm:-left-3 sm:-top-3 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+          <div className="relative rounded-lg border border-slate-200 bg-white p-2 sm:p-3">
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               2
             </span>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Calendrier</p>
-            <div className="mt-3 space-y-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Dates</p>
+            <div className="mt-1 space-y-1">
               <input
                 type="date"
                 value={startDate}
                 onChange={(event) => setStartDate(event.target.value)}
-                className="w-full rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
+                className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[10px] outline-none"
               />
               <input
                 type="date"
                 value={endDate}
                 onChange={(event) => setEndDate(event.target.value)}
-                className="w-full rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
+                className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[10px] outline-none"
               />
             </div>
             {isDateRangeInvalid && (
-              <p className="mt-2 text-xs sm:text-sm font-medium text-rose-700">
-                La date de fin doit etre posterieure ou egale a la date de debut.
+              <p className="mt-1 text-[10px] font-medium text-rose-700">
+                Date fin ≥ date début
               </p>
             )}
           </div>
 
           {/* Bloc 3: Sondage */}
-          <div className="relative rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-white p-4 sm:p-5">
-            <span className="absolute -left-2 -top-2 sm:-left-3 sm:-top-3 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+          <div className="relative rounded-lg border border-slate-200 bg-white p-2 sm:p-3">
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               3
             </span>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Sondage</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Sondage</p>
             <input
-              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
+              className="mt-1 w-full rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs outline-none"
               value={effectiveCampaignTitle}
               readOnly
-              placeholder="Le titre reprend le nom de l'entreprise"
+              placeholder="Titre auto"
             />
             <textarea
-              className="mt-3 min-h-20 sm:min-h-24 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
+              className="mt-1 w-full rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs outline-none resize-none"
+              rows={2}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Description du sondage"
+              placeholder="Description..."
             />
           </div>
 
-          {/* Bloc 4: Import et liens */}
-          <div className="relative rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-4 sm:p-5">
-            <span className="absolute -left-2 -top-2 sm:-left-3 sm:-top-3 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700">
+          {/* Bloc 4: Import */}
+          <div className="relative rounded-lg border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-2 sm:p-3">
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               4
             </span>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-              Import et liens
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Étape finale : une fois le sondage activé, importez les employés dans le modal, puis
-              téléchargez la liste des employés avec leurs liens du sondage.
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Import</p>
+            <p className="mt-1 text-[10px] leading-4 text-slate-600">
+              Importez les employés via Excel/CSV
             </p>
             <button
               type="button"
               onClick={openImportModal}
               disabled={!isSurveyReadyForImport || isPending}
-              className="mt-4 w-full sm:w-auto inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-semibold transition hover:bg-[#242424] disabled:opacity-60"
+              className="mt-2 w-full inline-flex items-center justify-center rounded bg-[#181818] px-3 py-1.5 text-[10px] font-semibold transition hover:bg-[#242424] disabled:opacity-60"
               style={{ color: "#ffffff" }}
             >
-              Importer les employes
+              Importer
             </button>
-            <p className="mt-3 text-xs text-slate-500">
-              {isSurveyReadyForImport
-                ? "Le modal prépare la liste des employés avec leurs liens dès la fin de l'import."
-                : "Activez d'abord le sondage pour ouvrir l'import des employés."}
-            </p>
             {importSuccess ? (
-              <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-3 sm:px-4 py-3">
-                <p className="text-sm font-semibold text-emerald-800">
-                  {importSuccess.count} employe(s) importe(s), liste des liens prête à télécharger.
+              <div className="mt-2 rounded border border-emerald-200 bg-emerald-50 px-2 py-1">
+                <p className="text-[10px] font-semibold text-emerald-800">
+                  {importSuccess.count} importé(s)
                 </p>
               </div>
             ) : null}
           </div>
-        </div>
 
-        <div className="mt-4 sm:mt-6 space-y-4">
-          <div className="rounded-[12px] sm:rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#ffffff_100%)] p-4 sm:p-5">
-            <div className="flex flex-col sm:flex-row flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                  {isEditMode ? "Modification" : "Etape 1"}
-                </p>
-                <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold text-slate-900">
-                  {isEditMode ? "Modifier le sondage" : "Créer le sondage"}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {isEditMode
-                    ? "Modifiez les informations du sondage, puis enregistrez les changements avant de gérer son statut."
-                    : "Complétez la configuration (entreprise, dates, description), puis créez le sondage pour pouvoir ajouter les questions."}
-                </p>
-              </div>
-              <Pill
-                tone={
-                  isCreateMode
-                    ? Boolean(campaignId)
-                      ? "success"
-                      : "warning"
-                    : isEditDetailsReady
-                      ? "success"
-                      : "warning"
-                }
-              >
-                {isCreateMode
-                  ? campaignId ? "Créé" : "À créer"
-                  : isEditDetailsReady ? "Prêt" : "En cours"}
-              </Pill>
-            </div>
-
-            <div className="mt-4 sm:mt-5 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                  Entreprise
-                </p>
-                <p className="mt-2 text-sm text-slate-500">Nom de l&apos;entreprise</p>
-                <select
-                  value={companyId ?? ""}
-                  onChange={(event) => handleCompanySelection(Number(event.target.value))}
-                  className="mt-3 w-full rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
-                >
-                  <option value="" disabled>
-                    Choisir une entreprise
-                  </option>
-                  {companies.map((company) => (
-                    <option key={company.id} value={company.id}>
-                      {company.name}
-                    </option>
-                  ))}
-                </select>
-                {isCreateMode ? (
-                  <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                    <input
-                      value={newCompanyName}
-                      onChange={(event) => setNewCompanyName(event.target.value)}
-                      className="flex-1 rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
-                      placeholder="Ajouter une nouvelle entreprise"
-                    />
-                    <SecondaryButton
-                      disabled={
-                        isPending ||
-                        newCompanyName.trim().length < 2 ||
-                        newCompanyName.trim().length > 150
-                      }
-                      onClick={createCompany}
-                      className="px-3 sm:px-4 py-2.5 sm:py-3"
-                    >
-                      Créer
-                    </SecondaryButton>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-white p-4 sm:p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                  Calendrier
-                </p>
-                <div className="mt-3 space-y-3">
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(event) => setStartDate(event.target.value)}
-                    className="w-full rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
-                  />
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(event) => setEndDate(event.target.value)}
-                    className="w-full rounded-[12px] border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
-                  />
-                </div>
-                {isDateRangeInvalid ? (
-                  <p className="mt-2 text-xs sm:text-sm font-medium text-rose-700">
-                    La date de fin doit etre postérieure ou egale a la date de debut.
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-white p-4 sm:p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                  Sondage
-                </p>
-                <input
-                  className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
-                  value={effectiveCampaignTitle}
-                  readOnly
-                  placeholder="Le titre reprend le nom de l'entreprise"
-                />
-                <textarea
-                  className="mt-3 min-h-20 sm:min-h-24 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Description du sondage"
-                />
-              </div>
-            </div>
-          </div>
-
-          {isCreateMode ? (
-            <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-2">
-              <div className="rounded-[12px] sm:rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#f7f3eb_100%)] p-4 sm:p-5">
-                <div className="flex flex-col sm:flex-row flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                      Etape 2
-                    </p>
-                    <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold text-slate-900">
-                      Importer les employés
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Une fois le sondage créé, compilé et activé, importez vos employés via Excel ou CSV pour générer leurs liens individuels.
-                    </p>
-                  </div>
-                  <Pill tone={hasImportedEmployees ? "success" : "neutral"}>
-                    {hasImportedEmployees ? "Importé" : "En attente"}
-                  </Pill>
-                </div>
-
+          {/* Bloc 5: Confirmation & Envoi */}
+          <div className="relative rounded-lg border border-slate-200 bg-white p-2 sm:p-3">
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+              5
+            </span>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Envoi</p>
+            <p className="mt-1 text-[10px] leading-4 text-slate-600">
+              {isCreateMode ? "Activer et envoyer les liens" : "Gérer le statut"}
+            </p>
+            <div className="mt-2 space-y-1">
+              {status !== "active" ? (
                 <button
                   type="button"
-                  onClick={openImportModal}
-                  disabled={!isSurveyReadyForImport || isPending}
-                  className="mt-4 w-full sm:w-auto inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-semibold transition hover:bg-[#242424] disabled:opacity-60"
-                  style={{ color: "#ffffff" }}
+                  onClick={() => changeCampaignStatus("activateCampaign")}
+                  disabled={!canSaveCampaign || questions.length === 0 || isPending}
+                  className="w-full rounded bg-emerald-600 px-2 py-1.5 text-[10px] font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
                 >
-                  Importer les employes
+                  Activer
                 </button>
-                <p className="mt-3 text-xs text-slate-500">
-                  {isSurveyReadyForImport
-                    ? "Ouvrez l'import pour charger le fichier des employés."
-                    : "Le sondage doit être activé avant de lancer l'import."}
-                </p>
-              </div>
-
-              <div className="rounded-[12px] sm:rounded-[18px] border border-slate-200 bg-white p-4 sm:p-5">
-                <div className="flex flex-col sm:flex-row flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                      Etape 3
-                    </p>
-                    <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold text-slate-900">
-                      Télécharger la liste des employés avec leurs liens
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Cette étape permet de récupérer la liste finale des liens individuels.
-                    </p>
+              ) : (
+                <>
+                  <div className="rounded bg-emerald-50 px-2 py-1 text-center">
+                    <p className="text-[10px] font-semibold text-emerald-700">✓ Actif</p>
                   </div>
-                  <Pill tone={hasDownloadedLinks ? "success" : "neutral"}>
-                    {hasDownloadedLinks ? "Terminé" : "En attente"}
-                  </Pill>
-                </div>
-
-                {hasImportedEmployees ? (
-                  <>
-                    <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-3 sm:px-4 py-3">
-                      <p className="text-sm font-semibold text-emerald-800">
-                        {importSuccess?.count ?? 0} employe(s) importe(s), liste prête a télécharger.
-                      </p>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2 sm:gap-3">
-                      <PrimaryButton onClick={downloadLinksList}>
-                        Télécharger la liste
-                      </PrimaryButton>
-                      <SecondaryButton onClick={openImportModal}>Voir les liens</SecondaryButton>
-                    </div>
-                  </>
-                ) : (
-                  <p className="mt-4 text-sm text-slate-500">
-                    Cette étape sera disponible après un import réussi.
-                  </p>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => changeCampaignStatus("terminateCampaign")}
+                    disabled={isPending}
+                    className="w-full rounded border border-rose-200 bg-white px-2 py-1.5 text-[10px] font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+                  >
+                    Désactiver
+                  </button>
+                </>
+              )}
+              {importSuccess && importSuccess.count > 0 && (
+                <button
+                  type="button"
+                  onClick={downloadLinksList}
+                  className="w-full rounded bg-amber-600 px-2 py-1.5 text-[10px] font-semibold text-white transition hover:bg-amber-700"
+                >
+                  {hasDownloadedLinks ? "✓ Téléchargé" : "Télécharger liens"}
+                </button>
+              )}
             </div>
-          ) : null}
+          </div>
         </div>
 
         <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
