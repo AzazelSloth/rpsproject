@@ -11,7 +11,10 @@ function resolveBackendUrl() {
     }
   }
 
-  return isServer ? "http://127.0.0.1:3000/api" : "/api";
+  // Fallback pour la production
+  // Côté serveur (SSR), utiliser localhost:3000 car le backend tourne sur le même serveur
+  // Côté navigateur, utiliser le chemin relatif /api qui sera proxyé par Nginx
+  return isServer ? "http://localhost:3000/api" : "/api";
 }
 
 const backendUrl = resolveBackendUrl();
