@@ -157,7 +157,7 @@ export function EmployeesTableDemo({
   // Fetch survey details when campaign changes
   useEffect(() => {
     const campaignId = resolveCampaignId();
-    
+
     if (!campaignId) {
       setSurveyDetails(null);
       return;
@@ -166,7 +166,7 @@ export function EmployeesTableDemo({
     const fetchSurveyDetails = async () => {
       setLoadingSurveyDetails(true);
       try {
-        const details = await getTrpcClient().campaigns.findOne.query(campaignId);
+        const details = await getTrpcClient().adminSurveys.campaigns.findOne.query(campaignId);
         setSurveyDetails(details);
       } catch (err) {
         console.error("Failed to fetch survey details:", err);
@@ -494,12 +494,11 @@ export function EmployeesTableDemo({
                 </div>
               </div>
             </div>
-            ) : (
-              <p className="mt-4 text-sm text-slate-500">Impossible de charger les détails du sondage.</p>
-            )}
-          </Card>
-        )}
-      </div>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">Impossible de charger les détails du sondage.</p>
+          )}
+        </Card>
+      )}
 
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
