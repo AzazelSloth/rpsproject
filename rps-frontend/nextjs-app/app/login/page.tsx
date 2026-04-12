@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
 import { createDemoAuthResponse, saveAuth } from "@/lib/backend/auth";
@@ -45,11 +45,11 @@ export default function LoginPage() {
 
       <div className="relative mx-auto grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[1.15fr_0.85fr]">
         <section className="space-y-7 rounded-[26px] border border-[#dfd1b9] bg-[rgba(255,252,246,0.88)] p-7 shadow-[0_30px_70px_rgba(40,33,24,0.12)] sm:p-10">
-          <div className="flex flex-col items-start gap-3">
+          <div className="flex flex-col items-start gap-2">
             <BrandLogo />
-            <span className="inline-flex rounded-full border border-[#d6c199] bg-[#fff7ea] px-4 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#8a651f]">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
               Mesurez, comprenez, agissez
-            </span>
+            </p>
           </div>
 
           <h1 className="max-w-2xl font-[family-name:var(--font-manrope)] text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl">
@@ -77,7 +77,7 @@ export default function LoginPage() {
             Bienvenue
           </p>
           <h2 className="mt-2 font-[family-name:var(--font-manrope)] text-2xl font-extrabold tracking-tight text-slate-900">
-            Acces libre a votre espace
+            Acces a votre espace
           </h2>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -111,21 +111,6 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <Link
-                href="/signup"
-                className="font-medium text-[#8a651f] underline-offset-4 transition hover:underline"
-              >
-                Personnaliser la session
-              </Link>
-              <Link
-                href="/forgot-password"
-                className="font-medium text-slate-600 underline-offset-4 transition hover:text-slate-900 hover:underline"
-              >
-                Infos de connexion
-              </Link>
-            </div>
-
             {error ? (
               <p className="rounded-[10px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {error}
@@ -137,7 +122,7 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.14)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLoading ? "Connexion..." : "Entrer dans l'application"}
+              {isLoading ? "Connexion..." : "Se connecter"}
             </button>
           </form>
         </Card>

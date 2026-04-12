@@ -31,7 +31,7 @@ export function createDemoAuthResponse(name?: string, email?: string): AuthRespo
   return {
     user: {
       id: 0,
-      email: normalizeEmail(email || "demo@laroche360.ca"),
+      email: normalizeEmail(email || "roxanne@laroche360.ca"),
       name: name?.trim() || "Admin demo",
     },
     token: "auth-disabled",
