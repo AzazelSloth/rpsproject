@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 import { CampaignController } from './campaign.controller';
 import { CampaignService } from './campaign.service';
 import { CreateCampaignDto, UpdateCampaignDto } from './dto/campaign.dto';
@@ -20,6 +21,11 @@ describe('CampaignController', () => {
     remove: jest.Mock;
   };
 
+  const mockJwtService = {
+    sign: jest.fn().mockReturnValue('fake-jwt-token'),
+    verifyAsync: jest.fn().mockResolvedValue({ sub: 1, email: 'test@test.com' }),
+  };
+
   beforeEach(async () => {
     service = {
       create: jest.fn(),
@@ -38,6 +44,10 @@ describe('CampaignController', () => {
         {
           provide: CampaignService,
           useValue: service,
+        },
+        {
+          provide: JwtService,
+          useValue: mockJwtService,
         },
       ],
     }).compile();

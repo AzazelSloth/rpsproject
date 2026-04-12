@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 import { ResponseController } from './response.controller';
 import { ResponseService } from './response.service';
 
@@ -17,6 +18,13 @@ describe('ResponseController', () => {
             findOne: jest.fn(),
             update: jest.fn(),
             remove: jest.fn(),
+          },
+        },
+        {
+          provide: JwtService,
+          useValue: {
+            sign: jest.fn().mockReturnValue('fake-jwt-token'),
+            verifyAsync: jest.fn().mockResolvedValue({ sub: 1, email: 'test@test.com' }),
           },
         },
       ],
