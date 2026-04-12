@@ -64,7 +64,6 @@ export default async function SurveysPage({
               />
               <select className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none">
                 <option value="active">actif</option>
-               
               </select>
             </div>
           </div>
@@ -108,7 +107,7 @@ export default async function SurveysPage({
                     <Link
                       href={resultsHref}
                       className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
-                      style={{ color: '#ffffff' }}
+                      style={{ color: "#ffffff" }}
                     >
                       Voir les resultats
                     </Link>
@@ -124,11 +123,6 @@ export default async function SurveysPage({
 
   return (
     <section className="space-y-6">
-      <SectionHeader
-        title={
-          activeTab === "edit" ? "Modifier un sondage" : "Créer un sondage"
-        }
-      />
       <SurveyBuilderDemo
         initialData={surveyBuilderData}
         mode={activeTab === "edit" ? "edit" : "create"}
@@ -157,7 +151,7 @@ function formatStatusLabel(value: string) {
     return "brouillon";
   }
   if (value === "archived") {
-    return "archivé";
+    return "archive";
   }
   return value || "inconnu";
 }
