@@ -46,12 +46,22 @@ export async function logout() {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("auth_user");
   }
+  // Supprimer les cookies côté client via API call
+  if (typeof window !== "undefined") {
+    document.cookie = 'auth_token=; path=/; max-age=0';
+    document.cookie = 'auth_user=; path=/; max-age=0';
+  }
 }
 
 export function saveAuth(response: AuthResponse) {
   if (typeof window !== "undefined") {
+    // localStorage (pour le client-side JS)
     localStorage.setItem("auth_token", response.token);
     localStorage.setItem("auth_user", JSON.stringify(response.user));
+    
+    // Cookies (pour le middleware SSR)
+    document.cookie = `auth_token=${response.token}; path=/; max-age=604800; samesite=lax`; // 7 jours
+    document.cookie = `auth_user=${encodeURIComponent(JSON.stringify(response.user))}; path=/; max-age=604800; samesite=lax`;
   }
 }
 

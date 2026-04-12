@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
   CreateQuestionDto,
@@ -14,7 +15,9 @@ import {
   UpdateQuestionDto,
 } from './dto/question.dto';
 import { QuestionService } from './question.service';
+import { AuthGuard } from '../auth/auth.guard';
 
+@UseGuards(AuthGuard)
 @Controller('questions')
 export class QuestionController {
   constructor(private readonly questionService: QuestionService) {}

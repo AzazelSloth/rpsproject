@@ -18,6 +18,7 @@ export class ReportController {
   constructor(private readonly reportService: ReportService) {}
 
   @Post()
+  @UseGuards(AuthGuard)
   create(@Body() createReportDto: CreateReportDto) {
     return this.reportService.create(createReportDto);
   }

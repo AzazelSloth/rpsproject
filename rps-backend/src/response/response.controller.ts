@@ -7,10 +7,13 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateResponseDto, UpdateResponseDto } from './dto/response.dto';
 import { ResponseService } from './response.service';
+import { AuthGuard } from '../auth/auth.guard';
 
+@UseGuards(AuthGuard)
 @Controller('responses')
 export class ResponseController {
   constructor(private readonly responseService: ResponseService) {}

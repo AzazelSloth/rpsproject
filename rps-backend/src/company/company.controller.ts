@@ -7,10 +7,13 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateCompanyDto, UpdateCompanyDto } from './dto/company.dto';
 import { CompanyService } from './company.service';
+import { AuthGuard } from '../auth/auth.guard';
 
+@UseGuards(AuthGuard)
 @Controller('companies')
 export class CompanyController {
   constructor(private readonly companyService: CompanyService) {}

@@ -36,17 +36,22 @@ export function isBackendConfigured() {
   return Boolean(url);
 }
 
-function getAuthHeaders() {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+function getAuthHeaders(customToken?: string): Record<string, string> {
+  let token: string | null = customToken || null;
+
+  if (!token && typeof window !== "undefined") {
+    // Client-side: localStorage
+    token = localStorage.getItem("auth_token");
+  }
+
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function mergeHeaders(initHeaders?: HeadersInit) {
+function mergeHeaders(initHeaders?: HeadersInit, customToken?: string) {
   const headers = new Headers(initHeaders);
   headers.set("Content-Type", "application/json");
 
-  for (const [key, value] of Object.entries(getAuthHeaders())) {
+  for (const [key, value] of Object.entries(getAuthHeaders(customToken))) {
     headers.set(key, value);
   }
 
@@ -134,31 +139,34 @@ async function backendFetch<T>(path: string, init?: RequestInit) {
   }
 }
 
-export async function getBackendCollection<T>(path: string) {
-  return backendFetch<T[]>(path);
+export async function getBackendCollection<T>(path: string, token?: string) {
+  return backendFetch<T[]>(path, token ? { headers: mergeHeaders(undefined, token) } : undefined);
 }
 
-export async function getBackendItem<T>(path: string) {
-  return backendFetch<T>(path);
+export async function getBackendItem<T>(path: string, token?: string) {
+  return backendFetch<T>(path, token ? { headers: mergeHeaders(undefined, token) } : undefined);
 }
 
-export async function postBackend<TResponse, TBody>(path: string, body: TBody) {
+export async function postBackend<TResponse, TBody>(path: string, body: TBody, token?: string) {
   return backendFetch<TResponse>(path, {
     method: "POST",
     body: JSON.stringify(body),
+    headers: mergeHeaders(undefined, token),
   });
 }
 
-export async function patchBackend<TResponse, TBody>(path: string, body: TBody) {
+export async function patchBackend<TResponse, TBody>(path: string, body: TBody, token?: string) {
   return backendFetch<TResponse>(path, {
     method: "PATCH",
     body: JSON.stringify(body),
+    headers: mergeHeaders(undefined, token),
   });
 }
 
-export async function deleteBackend<TResponse>(path: string) {
+export async function deleteBackend<TResponse>(path: string, token?: string) {
   return backendFetch<TResponse>(path, {
     method: "DELETE",
+    headers: mergeHeaders(undefined, token),
   });
 }
 

@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
   CreateEmployeeDto,
@@ -14,7 +15,9 @@ import {
   UpdateEmployeeDto,
 } from './dto/employee.dto';
 import { EmployeeService } from './employee.service';
+import { AuthGuard } from '../auth/auth.guard';
 
+@UseGuards(AuthGuard)
 @Controller('employees')
 export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService) {}
