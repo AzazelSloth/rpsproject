@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Card, Pill } from "@/components/rps/ui";
+import { appFetch } from "@/lib/api";
 import type {
   EmployeeManagementData,
   SurveyOption,
@@ -294,10 +295,7 @@ export function EmployeesTableDemo({
       router.refresh();
     } catch {
       try {
-        const apiUrl = typeof window !== 'undefined'
-          ? `${window.location.origin}/api/webhook/n8n/remind`
-          : '/api/webhook/n8n/remind';
-        const response = await fetch(apiUrl, {
+        const response = await appFetch("/api/webhook/n8n/remind", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
