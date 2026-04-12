@@ -3,9 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ResponseController } from './response.controller';
 import { SurveyResponse } from './response.entity';
 import { ResponseService } from './response.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SurveyResponse])],
+  imports: [TypeOrmModule.forFeature([SurveyResponse]), AuthModule],
   controllers: [ResponseController],
   providers: [ResponseService],
   exports: [TypeOrmModule, ResponseService],

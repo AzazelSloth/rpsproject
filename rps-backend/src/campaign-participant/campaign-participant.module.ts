@@ -7,6 +7,7 @@ import { SurveyResponse } from '../response/response.entity';
 import { CampaignParticipantController } from './campaign-participant.controller';
 import { CampaignParticipant } from './campaign-participant.entity';
 import { CampaignParticipantService } from './campaign-participant.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { CampaignParticipantService } from './campaign-participant.service';
       Employee,
       Campaign,
     ]),
+    AuthModule,
   ],
   controllers: [CampaignParticipantController],
   providers: [CampaignParticipantService],

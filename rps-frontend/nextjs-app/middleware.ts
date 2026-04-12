@@ -6,8 +6,11 @@ import { NextRequest, NextResponse } from 'next/server';
 const publicRoutes = ['/login', '/signup', '/forgot-password', '/survey-response'];
 
 /**
- * Middleware de protection des routes
- * Redirige vers /login si l'utilisateur n'est pas authentifié
+ * Middleware de protection des routes - MODE SOUPLE
+ * 
+ * Permet l'accès à toutes les routes (mode demo)
+ * La protection côté backend se fait via AuthGuard
+ * Le frontendfallback sur les données de démo si pas de backend
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -35,17 +38,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Vérifier l'authentification via les cookies (pas localStorage côté serveur)
+  // MODE DEMO : On laisse passer toutes les requêtes
+  // Les pages gèrent elles-mêmes le fallback vers les données de démo
+  // Si le backend retourne 401, le frontend catch et utilise les données de démo
+  
+  // Si l'utilisateur a un token, on le laisse passer
   const authToken = request.cookies.get('auth_token')?.value;
-
-  if (!authToken) {
-    // Rediriger vers login avec l'URL de retour
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
+  if (authToken) {
+    return NextResponse.next();
   }
 
-  // Utilisateur authentifié, continuer
+  // PAS de redirection vers /login - on permet l'accès en mode demo
+  // Le login page a un bouton "Accéder à la demo admin" qui bypass l'auth
   return NextResponse.next();
 }
 

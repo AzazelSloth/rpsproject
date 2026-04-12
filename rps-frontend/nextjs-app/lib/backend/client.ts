@@ -22,13 +22,32 @@ function resolveBackendUrl() {
     return "http://127.0.0.1:3000/api";
   }
 
-  // Côté navigateur - peut utiliser des chemins relatifs (proxy Nginx)
+  // Côté navigateur (client-side)
+  // NEXT_PUBLIC_API_URL est bakeé au BUILD time, donc s'il pointe vers 127.0.0.1,
+  // il sera incorrect quand l'utilisateur accède au site depuis l'extérieur.
+  // Solution: détecter l'origine de la page dynamiquement.
   const publicUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (publicUrl) {
-    return publicUrl.replace(/\/$/, "");
+  
+  // Si NEXT_PUBLIC_API_URL est vide ou relatif, utiliser "/api" (proxy Nginx)
+  if (!publicUrl || !publicUrl.startsWith('http')) {
+    return publicUrl || "/api";
   }
 
-  return "/api";
+  // Si NEXT_PUBLIC_API_URL contient 127.0.0.1 ou localhost, on remplace l'hôte par l'origine actuelle
+  // Le backend est sur le MÊME serveur que le frontend, donc on garde le même port (3000)
+  if (publicUrl.includes('127.0.0.1') || publicUrl.includes('localhost')) {
+    // Détecter l'origine de la page (ex: http://104.254.182.46:8786)
+    if (typeof window !== 'undefined' && window.location) {
+      const { protocol, hostname } = window.location;
+      // Extraire le port du backend depuis l'URL configurée (ex: http://127.0.0.1:3000/api -> 3000)
+      const backendPortMatch = publicUrl.match(/:(\d+)/);
+      const backendPort = backendPortMatch ? backendPortMatch[1] : '3000';
+      return `${protocol}//${hostname}:${backendPort}/api`;
+    }
+  }
+
+  // Sinon, utiliser la valeur configurée (cas où NEXT_PUBLIC_API_URL pointe vers le bon serveur)
+  return publicUrl.replace(/\/$/, "");
 }
 
 export function isBackendConfigured() {
