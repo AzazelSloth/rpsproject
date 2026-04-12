@@ -187,7 +187,6 @@ jobs:
             DB_SYNCHRONIZE=false
             DB_LOGGING=false
             CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001,http://104.254.182.46:8786
-            ADMIN_BOOTSTRAP_PASSWORD=${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
             SWAGGER_ENABLED=true
             SWAGGER_PATH=api-docs
             ENVEOF
