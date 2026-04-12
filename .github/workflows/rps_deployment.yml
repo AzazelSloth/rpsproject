@@ -186,6 +186,7 @@ jobs:
             DB_NAME=${{ secrets.DB_NAME }}
             DB_SYNCHRONIZE=false
             DB_LOGGING=false
+            AUTH_DISABLED=true
             CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001,http://${{ secrets.VPS_HOST }}:8786
             SWAGGER_ENABLED=true
             SWAGGER_PATH=api-docs
@@ -295,10 +296,23 @@ jobs:
 
             # Stop existing processes
             pm2 delete all 2>/dev/null || true
+            pm2 flush >/dev/null 2>&1 || true
 
             # Start with new code
             pm2 start ecosystem.config.cjs
             pm2 save
+
+            echo "Waiting for services to initialize..."
+            sleep 8
+
+            echo "Smoke testing backend..."
+            curl --fail --silent --show-error http://127.0.0.1:3000/api/health >/dev/null
+
+            echo "Smoke testing frontend login page..."
+            curl --fail --silent --show-error http://127.0.0.1:3001/login >/dev/null
+
+            echo "Smoke testing frontend results page..."
+            curl --fail --silent --show-error http://127.0.0.1:3001/results >/dev/null
 
             # Enable PM2 startup on reboot
             sudo env PATH="$PATH" "$(command -v pm2)" startup systemd -u "$USER" --hp "$HOME" >/dev/null 2>&1 || true

@@ -1,16 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
-import { register, saveAuth } from "@/lib/backend/auth";
-import {
-  allowedAdminEmails,
-  isAllowedAdminEmail,
-  normalizeAdminEmail,
-} from "@/lib/backend/auth-config";
+import { createDemoAuthResponse, saveAuth } from "@/lib/backend/auth";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -26,20 +21,10 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const normalizedEmail = normalizeAdminEmail(email);
-      if (!isAllowedAdminEmail(normalizedEmail)) {
-        setError(`Utilisez un e-mail autorisé : ${allowedAdminEmails.join(" ou ")}`);
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await register({ name: name.trim(), email: normalizedEmail, password });
-      saveAuth(response);
+      saveAuth(createDemoAuthResponse(name, email));
       router.push("/dashboard");
     } catch (err) {
-      setError(
-        "Inscription impossible. Utilisez un email autorise ou verifiez les informations."
-      );
+      setError("Ouverture de session impossible en mode demo.");
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -57,25 +42,22 @@ export default function SignupPage() {
             <BrandLogo />
           </div>
           <h1 className="font-[family-name:var(--font-manrope)] text-4xl font-extrabold tracking-tight text-slate-900">
-            Creer un compte admin
+            Acceder sans authentification
           </h1>
           <p className="max-w-2xl text-base leading-7 text-slate-600">
-            Inscription reservee aux administrateurs internes Laroche 360.
+            Renseignez un nom et un email si vous souhaitez personnaliser la session demo.
           </p>
-          <div className="rounded-[12px] border border-[#e6cf9f] bg-[rgba(255,252,246,0.92)] px-4 py-3 text-sm text-slate-600">
-            Emails autorises: {allowedAdminEmails.join(", ")}
-          </div>
         </div>
 
         <Card className="mx-auto w-full max-w-md p-6 sm:p-8">
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
-            Inscription
+            Session demo
           </p>
           <h2 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold tracking-tight">
-            Nouvel acces admin
+            Ouvrir l'application
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Renseignez le nom, l&apos;email autorise et un mot de passe.
+            Le mot de passe n'est plus requis, mais le formulaire reste disponible pour nommer la session.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -90,7 +72,7 @@ export default function SignupPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f7f2ea] px-4 py-3 text-sm outline-none focus:border-[#c9a86c] focus:ring-1 focus:ring-[#c9a86c]"
-                placeholder="Isabelle Tremblay"
+                placeholder="Admin demo"
               />
             </div>
             <div>
@@ -104,7 +86,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f7f2ea] px-4 py-3 text-sm outline-none focus:border-[#c9a86c] focus:ring-1 focus:ring-[#c9a86c]"
-                placeholder="isabelle@laroche360.ca"
+                placeholder="demo@laroche360.ca"
               />
             </div>
             <div>
@@ -115,11 +97,11 @@ export default function SignupPage() {
                 id="password"
                 type="password"
                 required
-                minLength={6}
+                minLength={1}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f7f2ea] px-4 py-3 text-sm outline-none focus:border-[#c9a86c] focus:ring-1 focus:ring-[#c9a86c]"
-                placeholder="Minimum 6 caracteres"
+                placeholder="Non utilise en mode demo"
               />
             </div>
 
@@ -130,14 +112,14 @@ export default function SignupPage() {
               disabled={isLoading}
               className="w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? "Creation..." : "Creer le compte"}
+              {isLoading ? "Ouverture..." : "Continuer sans authentification"}
             </button>
           </form>
 
           <div className="mt-4 text-center text-xs text-slate-500">
-            Deja un compte ?{" "}
+            Retour a{" "}
             <Link href="/login" className="text-[#8a651f] underline-offset-4 hover:underline">
-              Se connecter
+              la connexion
             </Link>
           </div>
         </Card>
