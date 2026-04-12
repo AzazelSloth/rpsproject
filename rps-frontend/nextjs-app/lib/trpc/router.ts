@@ -226,6 +226,16 @@ const adminSurveysRouter = t.router({
 				return getBackendItem(`/campaigns/${opts.input}`);
 			}),
 	}),
+
+	analyzeCampaign: t.procedure
+		.input(z.object({ campaignId: z.number().int().positive() }))
+		.mutation(async ({ input }) => {
+			ensureBackendConfigured();
+			return postBackend<
+				{ success: boolean; message: string },
+				Record<string, never>
+			>(`/campaigns/${input.campaignId}/analyze`, {});
+		}),
 });
 
 const campaignParticipantsRouter = t.router({

@@ -1,34 +1,39 @@
 function resolveBackendUrl() {
   const isServer = typeof window === "undefined";
-  
+
   // Côté serveur (Node.js/SSR) - a TOUJOURS besoin d'une URL absolue
   if (isServer) {
     // IMPORTANT: process.env.API_URL est lu au RUNTIME (PM2), pas au build
     const runtimeApiUrl = process.env.API_URL?.trim();
-    
+
     // Si PM2 a défini API_URL avec une URL absolue, on l'utilise
     if (runtimeApiUrl && runtimeApiUrl.startsWith('http')) {
       return runtimeApiUrl.replace(/\/$/, "");
     }
-    
+
+    // Fallback: try NEXT_PUBLIC_API_URL if it's an absolute URL
+    const publicUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+    if (publicUrl && publicUrl.startsWith('http')) {
+      return publicUrl.replace(/\/$/, "");
+    }
+
     // Sinon, fallback garanti: localhost (backend sur le même serveur)
     // On N'utilise JAMAIS "/api" côté serveur car Node.js ne supporte pas les URLs relatives
-    return "http://localhost:3000/api";
+    return "http://127.0.0.1:3000/api";
   }
-  
+
   // Côté navigateur - peut utiliser des chemins relatifs (proxy Nginx)
   const publicUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (publicUrl) {
     return publicUrl.replace(/\/$/, "");
   }
-  
+
   return "/api";
 }
 
-const backendUrl = resolveBackendUrl();
-
 export function isBackendConfigured() {
-  return Boolean(backendUrl);
+  const url = resolveBackendUrl();
+  return Boolean(url);
 }
 
 function getAuthHeaders() {
@@ -55,6 +60,9 @@ function logBackendWarning(message: string) {
 }
 
 async function backendFetch<T>(path: string, init?: RequestInit) {
+  // Résolution dynamique à CHAQUE appel pour éviter les problèmes de cache module
+  const backendUrl = resolveBackendUrl();
+
   if (!backendUrl) {
     logBackendWarning("API URL is not configured.");
     throw new Error(
@@ -90,10 +98,10 @@ async function backendFetch<T>(path: string, init?: RequestInit) {
     return (await response.json()) as T;
   } catch (error) {
     clearTimeout(timeout);
-    
+
     const message =
       error instanceof Error ? error.message : "Unknown backend fetch error";
-    
+
     // Check for abort/timeout
     if (error instanceof Error && error.name === 'AbortError') {
       const timeoutSec = timeoutMs / 1000;
@@ -155,5 +163,5 @@ export async function deleteBackend<TResponse>(path: string) {
 }
 
 export function getBackendUrl() {
-  return backendUrl;
+  return resolveBackendUrl();
 }

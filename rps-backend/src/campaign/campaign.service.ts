@@ -2,6 +2,8 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -16,10 +18,17 @@ import { Campaign } from './campaign.entity';
 
 @Injectable()
 export class CampaignService {
+  private readonly logger = new Logger(CampaignService.name);
+  private readonly n8nWebhookUrl: string;
+
   constructor(
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
-  ) {}
+  ) {
+    this.n8nWebhookUrl =
+      process.env.N8N_WEBHOOK_URL ||
+      'http://localhost:5678/webhook/sondage-rps-solutions-tech';
+  }
 
   create(createCampaignDto: CreateCampaignDto) {
     const status = createCampaignDto.status ?? 'preparation';
@@ -117,6 +126,47 @@ export class CampaignService {
     const campaign = await this.findOne(id);
     campaign.status = 'archived';
     return this.campaignRepository.save(campaign);
+  }
+
+  async analyze(campaignId: number, userEmail: string) {
+    const campaign = await this.findOne(campaignId);
+
+    const payload = {
+      campaign_id: campaignId,
+      campaign_name: campaign.name,
+      user_email: userEmail,
+    };
+
+    try {
+      const response = await fetch(this.n8nWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        this.logger.error(
+          `n8n webhook failed: ${response.status} ${response.statusText}`,
+        );
+        throw new InternalServerErrorException(
+          "Erreur lors de l'envoi de l'analyse à n8n",
+        );
+      }
+
+      this.logger.log(
+        `Analysis triggered for campaign ${campaignId} by ${userEmail}`,
+      );
+      return {
+        success: true,
+        message:
+          'Analyse lancée. Vous recevrez le rapport par email dans 1 à 2 minutes.',
+      };
+    } catch (error) {
+      this.logger.error('Failed to call n8n webhook', error);
+      throw new InternalServerErrorException(
+        "Erreur lors du lancement de l'analyse. Vérifiez que n8n est démarré.",
+      );
+    }
   }
 
   private ensureValidStatus(status: CampaignStatus) {

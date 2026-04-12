@@ -1,12 +1,12 @@
 {
-  "name": "ANALYSE RPS",
+  "name": "ANALYSE RPS - Production",
   "nodes": [
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Analyse les résultats RPS  ",
+        "text": "=Analyse les résultats RPS pour la campagne {{ $node[\"Webhook\"].json.body.campaign_name }}",
         "options": {
-          "systemMessage": "=Tu es un Expert Senior en Psychologie du Travail. Tu analyses les résultats du sondage RPS de \n\nMéthodologie d'analyse :\nLes employés ont répondu avec l'échelle suivante. Tu dois les interpréter ainsi :\n\n    \"Tout à fait d'accord\" ou \"Plutôt d'accord\" : Score 4-5 (Facteur de protection / Satisfaction).\n\n    \"Ni d'accord, ni pas d'accord\" : Score 3 (Zone neutre).\n\n    \"Plutôt pas d'accord\" ou \"Pas du tout d'accord\" : Score 1-2 (Alerte / Risque psychosocial).\n\nNote : Analyse l'ensemble des réponses pour dégager des moyennes et des tendances de groupe, peu importe le nombre de répondants.\n\nConsignes de formatage :\n\n    AUCUN formatage Markdown (pas de #, pas de *, pas de **).\n\n    Utilise uniquement les titres de sections ci-dessous.\n\n\nStructure du Rapport :\n\nCharge de travail\n(Analyse la quantité, le rythme et la complexité perçue).\n\nOrganisation & Étique\n(Analyse la clarté des rôles et le respect des valeurs).\n\nAutonomie et Développement\n(Analyse la liberté de décision et l'utilisation des compétences).\n\nReconnaissance & condition\n(Analyse le sentiment de justice et la valorisation du travail).\n\nRelation et Soutien\n(Analyse l'ambiance d'équipe et le soutien managérial).\n\nDemandes Émotionnelles & Valeurs\n(Analyse la charge mentale liée au public et les conflits d'éthique).\n\nConséquence sur la santé et Équilibre\n(Analyse l'impact sur le bien-être et la vie personnelle).\n\nAvis pour améliorer le bien être au travail\n(Propose 3 actions concrètes et adaptées à Solutions Tech Québec)."
+          "systemMessage": "=Tu es un Expert Senior en Psychologie du Travail pour LaRoche Consulting. Tu analyses les résultats du sondage RPS.\n\nMéthodologie :\n- \"Tout à fait d'accord\" / \"Plutôt d'accord\" (4-5) : Facteur de protection.\n- \"Ni d'accord, ni pas d'accord\" (3) : Neutre.\n- \"Plutôt pas d'accord\" / \"Pas du tout d'accord\" (1-2) : Alerte / Risque.\n\nConsignes :\n- AUCUN Markdown (#, *, **).\n- Ton professionnel et bienveillant.\n- Structure stricte ci-dessous.\n\nStructure :\n1. Charge de travail\n2. Organisation & Éthique\n3. Autonomie et Développement\n4. Reconnaissance & condition\n5. Relation et Soutien\n6. Demandes Émotionnelles & Valeurs\n7. Conséquence sur la santé et Équilibre\n8. Avis pour améliorer le bien être au travail (3 actions concrètes)"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -40,30 +40,28 @@
     },
     {
       "parameters": {
-        "fromEmail": "cathynomeniavo@gmail.com",
-        "toEmail": "cathynomeniavo@gmail.com",
-        "subject": "=Rapport d'analyse RPS - {{ $now.format('yyyy-MM-dd') }}",
-        "emailFormat": "text",
-        "text": "=Bonjour, vous trouverez ci-joint l'analyse des risques psychosociaux pour votre entreprise  . Le rapport complet a également été déposé sur le Drive\n ",
+        "fromEmail": "rapport@laroche360.ca",
+        "toEmail": "={{ $node[\"Webhook\"].json.body.user_email || 'admin@laroche.ca' }}",
+        "subject": "=Rapport RPS : {{ $node[\"Webhook\"].json.body.campaign_name }}",
+        "emailType": "text",
+        "text": "=Bonjour,\n\nVeuillez trouver ci-joint le rapport d'analyse des risques psychosociaux pour la campagne : {{ $node[\"Webhook\"].json.body.campaign_name }}.\n\nCe document a été généré automatiquement et est confidentiel.\n\nCordialement,\nL'équipe LaRoche Consulting",
         "options": {
           "attachments": "=data"
         }
       },
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
       "position": [
         704,
         -224
       ],
       "id": "f7289293-58c3-4f0e-82b2-ea203c12a8cb",
-      "name": "Send email",
+      "name": "Send email (SendGrid)",
       "webhookId": "4b20b4ae-3672-4aab-b5f8-9012bede3e07",
-      "alwaysOutputData": false,
-      "executeOnce": false,
       "credentials": {
-        "smtp": {
-          "id": "cXE7lBmRMBj2OJwl",
-          "name": "SMTP account"
+        "sendGridApi": {
+          "id": "SENDGRID_CREDENTIAL_ID",
+          "name": "SendGrid account"
         }
       }
     },
@@ -90,16 +88,12 @@
         "documentId": {
           "__rl": true,
           "value": "1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig",
-          "mode": "list",
-          "cachedResultName": "Suivi Campagne RPS.",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig/edit?usp=drivesdk"
+          "mode": "list"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
-          "mode": "list",
-          "cachedResultName": "Feuille 1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig/edit#gid=0"
+          "mode": "list"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -115,69 +109,12 @@
             "Email"
           ],
           "schema": [
-            {
-              "id": "Employeur",
-              "displayName": "Employeur",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "Email",
-              "displayName": "Email",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": " Nom et Prenom",
-              "displayName": " Nom et Prenom",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "Fonction",
-              "displayName": "Fonction",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "Statut",
-              "displayName": "Statut",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "Date d'envoie",
-              "displayName": "Date d'envoie",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": true
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
+            { "id": "Employeur", "displayName": "Employeur", "type": "string" },
+            { "id": "Email", "displayName": "Email", "type": "string" },
+            { "id": " Nom et Prenom", "displayName": " Nom et Prenom", "type": "string" },
+            { "id": "Fonction", "displayName": "Fonction", "type": "string" },
+            { "id": "Statut", "displayName": "Statut", "type": "string" }
+          ]
         },
         "options": {}
       },
@@ -198,7 +135,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// On récupère la liste créée par le nœud Aggregate\nconst items = $input.all();\nconst toutesLesLignes = items[0].json.data; \n\nlet textePourIA = \"RÉSULTATS DU SONDAGE :\\n\\n\";\n\ntoutesLesLignes.forEach((ligne, index) => {\n  textePourIA += `--- RÉPONSES EMPLOYÉ #${index + 1} ---\\n`;\n  for (const [colonne, reponse] of Object.entries(ligne)) {\n    // On ajoute chaque question et sa réponse au texte\n    textePourIA += `${colonne} : ${reponse}\\n`;\n  }\n  textePourIA += \"\\n\";\n});\n\nreturn {\n  donnees_assemblees: textePourIA\n};"
+        "jsCode": "const items = $input.all();\nconst toutesLesLignes = items[0].json.data;\nlet textePourIA = \"RÉSULTATS DU SONDAGE :\\n\\n\";\ntoutesLesLignes.forEach((ligne, index) => {\n  textePourIA += `--- EMPLOYÉ #${index + 1} ---\\n`;\n  for (const [colonne, reponse] of Object.entries(ligne)) {\n    textePourIA += `${colonne} : ${reponse}\\n`;\n  }\n  textePourIA += \"\\n\";\n});\nreturn { donnees_assemblees: textePourIA };"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -211,7 +148,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const text = items[0].json.output;\n\n// Fonction robuste pour extraire entre deux titres ou jusqu'à la fin\nfunction extract(titleRegex, nextTitleRegex, source) {\n  const startMatch = source.match(titleRegex);\n  if (!startMatch) return \"Section non trouvée\";\n  \n  const startIndex = startMatch.index + startMatch[0].length;\n  const rest = source.substring(startIndex);\n  \n  const endMatch = rest.match(nextTitleRegex);\n  const content = endMatch ? rest.substring(0, endMatch.index) : rest;\n  \n  return content.trim();\n}\n\n// On définit les Regex pour chaque section (insensible à la casse avec 'i')\nconst reIntro = /Introduction|Charge de travail/i;\nconst reTendances = /Tendances Générales|Organisation & Éthique/i;\nconst reAlertes = /Alertes Critiques|Autonomie et Développement/i;\nconst reRecom = /Recommandations Prioritaires|Reconnaissance/i;\nconst reConclusion = /Conclusion/i;\n\nreturn {\n  introduction: extract(reIntro, /Organisation & Éthique|Tendances/i, text),\n  tendances: extract(reTendances, /Autonomie|Alertes/i, text),\n  alertes: extract(reAlertes, /Reconnaissance|Recommandations/i, text),\n  recommandations: extract(reRecom, /Conclusion/i, text),\n  conclusion: extract(reConclusion, /$^/i, text), // $^ pour aller jusqu'à la fin\n  full_text_clean: text.trim()\n};"
+        "jsCode": "const text = items[0].json.output;\nfunction extract(titleRegex, nextTitleRegex, source) {\n  const startMatch = source.match(titleRegex);\n  if (!startMatch) return \"Section non trouvée\";\n  const startIndex = startMatch.index + startMatch[0].length;\n  const rest = source.substring(startIndex);\n  const endMatch = rest.match(nextTitleRegex);\n  return endMatch ? rest.substring(0, endMatch.index).trim() : rest.trim();\n}\nreturn {\n  introduction: extract(/Introduction|Charge de travail/i, /Organisation & Éthique/i, text),\n  tendances: extract(/Organisation & Éthique/i, /Autonomie/i, text),\n  alertes: extract(/Autonomie/i, /Reconnaissance/i, text),\n  recommandations: extract(/Reconnaissance/i, /Conclusion/i, text),\n  conclusion: extract(/Conclusion/i, /$/i, text)\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -226,18 +163,9 @@
       "parameters": {
         "operation": "createFromText",
         "content": "={{ $json.introduction + \"\\n\\n\" + $json.tendances + \"\\n\\n\" + $json.alertes + \"\\n\\n\" + $json.recommandations + \"\\n\\n\" + $json.conclusion }}",
-        "name": "=Rapport_Synthese_Global_RPS_{{ $now.format('dd-MM-yyyy') }}.docx",
-        "driveId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "My Drive"
-        },
-        "folderId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "root",
-          "cachedResultName": "/ (Root folder)"
-        },
+        "name": "=Rapport_RPS_{{ $node[\"Webhook\"].json.body.campaign_name }}_{{ $now.format('dd-MM-yyyy') }}.docx",
+        "driveId": { "__rl": true, "mode": "list", "value": "My Drive" },
+        "folderId": { "__rl": true, "mode": "list", "value": "root" },
         "options": {}
       },
       "type": "n8n-nodes-base.googleDrive",
@@ -258,18 +186,14 @@
     {
       "parameters": {
         "operation": "download",
-        "fileId": {
-          "__rl": true,
-          "value": "={{ $node[\"Enregistrement du rapport dans drive\"].json[\"id\"] }}",
-          "mode": "id"
-        },
+        "fileId": { "__rl": true, "value": "={{ $node[\"Enregistrement du rapport dans drive\"].json[\"id\"] }}", "mode": "id" },
         "options": {}
       },
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
         480,
-        -224
+        -350
       ],
       "id": "12b8efbd-a913-4635-9fd5-3bbe232c8719",
       "name": "Téléchargement du fichier pour l'email",
@@ -279,126 +203,6 @@
           "name": "Google Drive account"
         }
       }
-    },
-    {
-      "parameters": {
-        "documentId": {
-          "__rl": true,
-          "value": "1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig",
-          "mode": "list",
-          "cachedResultName": "Suivi Campagne RPS.",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig/edit?usp=drivesdk"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "gid=0",
-          "mode": "list",
-          "cachedResultName": "Feuille 1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig/edit#gid=0"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        -1200,
-        304
-      ],
-      "id": "5f186f83-b9c3-4bf4-9559-e47e0e9d4470",
-      "name": "Get row(s) in sheet",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "4pk7H53CBEHznX1l",
-          "name": "Google Sheets account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "fromEmail": "cathynomeniavo@gmail.com",
-        "toEmail": "={{ $json.Email }}",
-        "subject": "Rappel : Ton avis est précieux pour l'équipe",
-        "html": "=Bonjour {{ $json[\"Nom et Prenom\"] }},\n\nNous vous contactons car votre diagnostic sur les Risques Psychosociaux (RPS) est toujours en attente de finalisation.\n\nVotre participation est essentielle pour garantir une analyse de qualité et améliorer les conditions de travail au sein de votre organisation. Ce questionnaire est rapide et vos réponses restent confidentielles.\n\nNous vous remercions par avance pour votre contribution.\n\nCordialement,\nL'équipe Solutions Tech",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "position": [
-        -752,
-        304
-      ],
-      "id": "d8ee5c0b-e654-47bc-baca-c3df1d70b971",
-      "name": "Send email1",
-      "webhookId": "da2ab9a4-f885-4c49-b036-02b67454bbe1",
-      "credentials": {
-        "smtp": {
-          "id": "cXE7lBmRMBj2OJwl",
-          "name": "SMTP account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "31c0c48b-099e-49be-b4b4-dc9f45afe4dd",
-              "leftValue": "={{ $json.Statut }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.filter",
-      "typeVersion": 2.3,
-      "position": [
-        -976,
-        304
-      ],
-      "id": "48d96644-3ce7-41c2-9704-6b88b2aff4cb",
-      "name": "Filter"
-    },
-    {
-      "parameters": {
-        "content": "ANALYSE DES RÉPONSES / RAPPORT SUR DRIVE ET EMAIL\n",
-        "height": 512,
-        "width": 2480
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -1488,
-        -400
-      ],
-      "id": "86b35e28-1279-4086-9402-2487a72756f9",
-      "name": "Sticky Note"
-    },
-    {
-      "parameters": {
-        "content": "RELANCE \n**Double click** to edit me. [Guide](https://docs.n8n.io/workflows/components/sticky-notes/)",
-        "height": 416,
-        "width": 1072
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -1488,
-        176
-      ],
-      "id": "6380c7db-1443-435b-afcd-eabfb12b71d8",
-      "name": "Sticky Note1"
     },
     {
       "parameters": {
@@ -432,7 +236,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const employees = items[0].json.body.body; \n\nreturn employees.map(emp => {\n  let formattedData = {\n    \"Employeur\": emp.Employeur, // Plus d'apostrophe ici !\n    \"Email\": emp.Email,\n    \"Nom et Prenom\": emp[\"Nom et Prenom\"],\n    \"Fonction\": emp.Fonction,\n    \"Statut\": \"OK\",\n    \"Date d'envoi\": new Date().toLocaleDateString('fr-FR')\n  };\n\n  for (let i = 1; i <= 28; i++) {\n    const key = `Q${i}`;\n    formattedData[key] = emp[key] || null;\n  }\n\n  return { json: formattedData };\n});"
+        "jsCode": "const employees = items[0].json.body.body || [];\nreturn employees.map(emp => {\n  let formattedData = {\n    \"Employeur\": emp.Employeur,\n    \"Email\": emp.Email,\n    \"Nom et Prenom\": emp[\"Nom et Prenom\"],\n    \"Fonction\": emp.Fonction,\n    \"Statut\": \"OK\"\n  };\n  for (let i = 1; i <= 28; i++) formattedData[`Q${i}`] = emp[`Q${i}`] || null;\n  return { json: formattedData };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -451,14 +255,8 @@
         "contentType": "json",
         "bodyParametersUi": {
           "parameter": [
-            {
-              "name": "campaign_id",
-              "value": "={{ $node['Webhook'].json.body.campaign_id }}"
-            },
-            {
-              "name": "report_path",
-              "value": "={{ $json.webViewLink || ('https://drive.google.com/file/d/' + $json.id + '/view') }}"
-            }
+            { "name": "campaign_id", "value": "={{ $node['Webhook'].json.body.campaign_id }}" },
+            { "name": "report_path", "value": "={{ $json.webViewLink || ('https://drive.google.com/file/d/' + $json.id + '/view') }}" }
           ]
         },
         "options": {}
@@ -475,176 +273,21 @@
   ],
   "pinData": {},
   "connections": {
-    "Mistral Cloud Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI Agent": {
-      "main": [
-        [
-          {
-            "node": "Néttoyage du rapport",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Liste des employés dans google sheet": {
-      "main": [
-        [
-          {
-            "node": "Aggregate",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Assemblage des réponses": {
-      "main": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Néttoyage du rapport": {
-      "main": [
-        [
-          {
-            "node": "Enregistrement du rapport dans drive",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Enregistrement du rapport dans drive": {
-      "main": [
-        [
-          {
-            "node": "Enregistrer rapport dans backend",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Téléchargement du fichier pour l'email": {
-      "main": [
-        [
-          {
-            "node": "Send email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Schedule Trigger": {
-      "main": [
-        [
-          {
-            "node": "Get row(s) in sheet",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get row(s) in sheet": {
-      "main": [
-        [
-          {
-            "node": "Filter",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filter": {
-      "main": [
-        [
-          {
-            "node": "Send email1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Webhook": {
-      "main": [
-        [
-          {
-            "node": "Code in JavaScript",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Aggregate": {
-      "main": [
-        [
-          {
-            "node": "Assemblage des réponses",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code in JavaScript": {
-      "main": [
-        [
-          {
-            "node": "Liste des employés dans google sheet",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send email1": {
-      "main": [
-        []
-      ]
-    },
-    "Enregistrer rapport dans backend": {
-      "main": [
-        [
-          {
-            "node": "Téléchargement du fichier pour l'email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
+    "Mistral Cloud Chat Model": { "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]] },
+    "AI Agent": { "main": [[{ "node": "Néttoyage du rapport", "type": "main", "index": 0 }]] },
+    "Liste des employés dans google sheet": { "main": [[{ "node": "Aggregate", "type": "main", "index": 0 }]] },
+    "Assemblage des réponses": { "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]] },
+    "Néttoyage du rapport": { "main": [[{ "node": "Enregistrement du rapport dans drive", "type": "main", "index": 0 }]] },
+    "Enregistrement du rapport dans drive": { "main": [[{ "node": "Enregistrer rapport dans backend", "type": "main", "index": 0 }]] },
+    "Téléchargement du fichier pour l'email": { "main": [[{ "node": "Send email (SendGrid)", "type": "main", "index": 0 }]] },
+    "Enregistrer rapport dans backend": { "main": [[{ "node": "Téléchargement du fichier pour l'email", "type": "main", "index": 0 }]] },
+    "Webhook": { "main": [[{ "node": "Code in JavaScript", "type": "main", "index": 0 }]] },
+    "Aggregate": { "main": [[{ "node": "Assemblage des réponses", "type": "main", "index": 0 }]] },
+    "Code in JavaScript": { "main": [[{ "node": "Liste des employés dans google sheet", "type": "main", "index": 0 }]] }
   },
-  "active": true,
-  "settings": {
-    "executionOrder": "v1",
-    "availableInMCP": false
-  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
   "versionId": "2797e3db-2816-46ad-9d00-6aa894f132bd",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "e13e6ceb71ea035352efd36881a07478385b706e1a6ef8688b92d999ba345118"
-  },
   "id": "h2wX9HQ8teo_MAcikY6Y5",
   "tags": []
 }
