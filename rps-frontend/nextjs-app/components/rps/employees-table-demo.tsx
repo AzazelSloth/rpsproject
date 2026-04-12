@@ -294,7 +294,10 @@ export function EmployeesTableDemo({
       router.refresh();
     } catch {
       try {
-        const response = await fetch("/api/webhook/n8n/remind", {
+        const apiUrl = typeof window !== 'undefined'
+          ? `${window.location.origin}/api/webhook/n8n/remind`
+          : '/api/webhook/n8n/remind';
+        const response = await fetch(apiUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

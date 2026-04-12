@@ -6,13 +6,13 @@ import { NextRequest, NextResponse } from 'next/server';
 const publicRoutes = ['/login', '/signup', '/forgot-password', '/survey-response'];
 
 /**
- * Middleware de protection des routes - MODE SOUPLE
- * 
+ * Proxy de protection des routes - MODE SOUPLE
+ *
  * Permet l'accès à toutes les routes (mode demo)
  * La protection côté backend se fait via AuthGuard
- * Le frontendfallback sur les données de démo si pas de backend
+ * Le frontend fallback sur les données de démo si pas de backend
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Autoriser les routes publiques
