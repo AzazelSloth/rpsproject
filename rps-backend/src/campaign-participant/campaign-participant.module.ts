@@ -8,6 +8,7 @@ import { CampaignParticipantController } from './campaign-participant.controller
 import { CampaignParticipant } from './campaign-participant.entity';
 import { CampaignParticipantService } from './campaign-participant.service';
 import { AuthModule } from '../auth/auth.module';
+import { CampaignModule } from '../campaign/campaign.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AuthModule } from '../auth/auth.module';
       Campaign,
     ]),
     AuthModule,
+    CampaignModule,
   ],
   controllers: [CampaignParticipantController],
   providers: [CampaignParticipantService],
