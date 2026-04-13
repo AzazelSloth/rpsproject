@@ -89,6 +89,11 @@ export class ImportCampaignEmployeeRowDto {
   @IsString()
   @MaxLength(100)
   department?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  company_name?: string;
 }
 
 export class ImportCampaignEmployeesDto {

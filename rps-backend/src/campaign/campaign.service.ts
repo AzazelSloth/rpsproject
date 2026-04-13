@@ -131,9 +131,13 @@ export class CampaignService {
   async analyze(campaignId: number, userEmail: string) {
     const campaign = await this.findOne(campaignId);
 
+    // Get company name from campaign
+    const companyName = campaign.company?.name || 'Entreprise';
+
     const payload = {
       campaign_id: campaignId,
       campaign_name: campaign.name,
+      company_name: companyName,
       user_email: userEmail,
     };
 
@@ -154,7 +158,52 @@ export class CampaignService {
       }
 
       this.logger.log(
-        `Analysis triggered for campaign ${campaignId} by ${userEmail}`,
+        `Analysis triggered for campaign ${campaignId} (${companyName}) by ${userEmail}`,
+      );
+      return {
+        success: true,
+        message:
+          'Analyse lancée. Vous recevrez le rapport par email dans 1 à 2 minutes.',
+      };
+    } catch (error) {
+      this.logger.error('Failed to call n8n webhook', error);
+      throw new InternalServerErrorException(
+        "Erreur lors du lancement de l'analyse. Vérifiez que n8n est démarré.",
+      );
+    }
+  }
+
+  async analyzeWithCompanyName(campaignId: number, userEmail: string, companyName?: string) {
+    const campaign = await this.findOne(campaignId);
+
+    // Use provided company name or fallback to campaign's company
+    const finalCompanyName = companyName || campaign.company?.name || 'Entreprise';
+
+    const payload = {
+      campaign_id: campaignId,
+      campaign_name: campaign.name,
+      company_name: finalCompanyName,
+      user_email: userEmail,
+    };
+
+    try {
+      const response = await fetch(this.n8nWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        this.logger.error(
+          `n8n webhook failed: ${response.status} ${response.statusText}`,
+        );
+        throw new InternalServerErrorException(
+          "Erreur lors de l'envoi de l'analyse à n8n",
+        );
+      }
+
+      this.logger.log(
+        `Analysis triggered for campaign ${campaignId} (${finalCompanyName}) by ${userEmail}`,
       );
       return {
         success: true,

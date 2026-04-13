@@ -66,10 +66,12 @@ type ImportedParticipantPayload = {
     first_name?: string;
     last_name?: string;
     email?: string;
+    company_name?: string;
   };
   first_name?: string;
   last_name?: string;
   email?: string;
+  company_name?: string;
   participation_token?: string;
   token?: string;
 };
@@ -169,7 +171,8 @@ export function SurveyBuilderDemo({
     Boolean(companyId) && effectiveCampaignTitle.length >= 3 && !isDateRangeInvalid;
   const isSurveyReadyForImport = Boolean(
     campaignId && companyId && status === "active" && questions.length > 0,
-  );  const hasImportedEmployees = Boolean(
+  );
+  const hasImportedEmployees = Boolean(
     importSuccess && (importSuccess.count > 0 || importSuccess.participants.length > 0),
   );
   const builderTitle = mode === "edit" ? "Modifier un sondage" : "Creer un sondage";
@@ -401,10 +404,69 @@ export function SurveyBuilderDemo({
       }
 
       const firstSheet = workbook.Sheets[firstSheetName];
-      const parsedCsv = XLSX.utils.sheet_to_csv(firstSheet);
+
+      // Use sheet_to_json for better data extraction and column mapping
+      const jsonData: Record<string, any>[] = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+
+      if (jsonData.length === 0) {
+        setImportError("Le fichier Excel est vide ou ne contient aucune donnée.");
+        return;
+      }
+
+      console.log(`[Excel Import] Extracted ${jsonData.length} rows from Excel file`);
+      console.log("[Excel Import] Column headers:", Object.keys(jsonData[0]));
+
+      // Map Excel columns to expected CSV format with flexible column name matching
+      // NOTE: Company name is NOT in Excel - it comes from the selected campaign
+      const normalizedData = jsonData.map((row) => {
+        const keys = Object.keys(row);
+
+        // Flexible column mapping
+        const findColumn = (aliases: string[]): string => {
+          const foundKey = keys.find((key) =>
+            aliases.some((alias) => key.toLowerCase().trim().includes(alias))
+          );
+          return foundKey ? row[foundKey] : "";
+        };
+
+        const nom = findColumn(["nom", "name", "last name", "nom de famille"]);
+        const prenom = findColumn(["prenom", "prénom", "first name", "prenom "]);
+        const email = findColumn(["adresse courriel", "courriel", "email", "e-mail", "mail"]);
+        const fonction = findColumn(["fonction", "poste", "role", "titre", "department"]);
+
+        return {
+          Nom: String(nom).trim(),
+          Prenom: String(prenom).trim(),
+          Email: String(email).trim(),
+          Fonction: String(fonction).trim(),
+        };
+      });
+
+      // Convert to CSV with proper formatting
+      // NOTE: Entreprise column is NOT included - backend uses campaign.company.name automatically
+      const csvHeaders = ["Nom", "Prenom", "Adresse courriel", "Fonction"];
+      const csvLines = [csvHeaders.join(",")];
+
+      normalizedData.forEach((row: Record<string, string>) => {
+        const values = csvHeaders.map((header) => {
+          const value = row[header] || "";
+          // Escape quotes and wrap in quotes if contains comma, quotes, or newlines
+          if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        });
+        csvLines.push(values.join(","));
+      });
+
+      const parsedCsv = csvLines.join("\n");
+
+      console.log("[Excel Import] Generated CSV preview (first 500 chars):", parsedCsv.slice(0, 500));
+      console.log(`[Excel Import] Total rows in CSV: ${csvLines.length - 1}`);
+      console.log(`[Excel Import] Company will be auto-set from campaign: ${selectedCompanyName || "N/A"}`);
 
       setImportCsv(normalizeCsv(parsedCsv));
-      setImportFeedback(`Fichier chargé : ${file.name}`);
+      setImportFeedback(`Fichier chargé : ${file.name} (${jsonData.length} employés extraits, entreprise: ${selectedCompanyName || "auto"})`);
     } catch {
       setImportError("Le fichier n'a pas pu être lu. Vérifiez le format et réessayez.");
     } finally {
@@ -511,14 +573,21 @@ export function SurveyBuilderDemo({
 
     startTransition(async () => {
       try {
+        // Log data being sent to backend for debugging
+        const csvLines = importCsv.split("\n").filter((line) => line.trim());
+        console.log(`[Import Employees] Sending ${csvLines.length - 1} employees to backend`);
+        console.log("[Import Employees] CSV headers:", csvLines[0]);
+        console.log("[Import Employees] Company ID:", companyId);
+        console.log("[Import Employees] Campaign ID:", campaignId);
+        
         const rawResult = await getTrpcClient().campaignParticipants.importEmployees.mutate({
           campaignId,
           companyId,
           csv: importCsv,
         });
         const result = rawResult as ImportEmployeesResponse;
-        
-        console.log("Import result:", result);
+
+        console.log("[Import Employees] Backend response:", result);
         
         const participants = (result.participants ?? []).map((participant) => {
           // Backend returns employee data nested in employee object
@@ -837,8 +906,9 @@ export function SurveyBuilderDemo({
           <p className="mt-2 text-sm text-slate-500">Configuration en 6 etapes simples</p>
         </div>
 
-        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-[1.45fr_1.1fr_1.9fr_0.7fr_0.7fr_0.85fr]">
-          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4">
+        <div className="mt-6 grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {/* Card 1: Entreprise */}
+          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               1
             </span>
@@ -879,7 +949,8 @@ export function SurveyBuilderDemo({
             ) : null}
           </div>
 
-          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4">
+          {/* Card 2: Periode */}
+          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               2
             </span>
@@ -914,7 +985,8 @@ export function SurveyBuilderDemo({
             ) : null}
           </div>
 
-          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4">
+          {/* Card 3: Nom et description */}
+          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               3
             </span>
@@ -936,7 +1008,8 @@ export function SurveyBuilderDemo({
             />
           </div>
 
-          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4">
+          {/* Card 4: Import */}
+          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               4
             </span>
@@ -958,7 +1031,8 @@ export function SurveyBuilderDemo({
             ) : null}
           </div>
 
-          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4">
+          {/* Card 5: Statut */}
+          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               5
             </span>
@@ -992,7 +1066,8 @@ export function SurveyBuilderDemo({
             )}
           </div>
 
-          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4">
+          {/* Card 6: Deploiement */}
+          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               6
             </span>
@@ -1562,12 +1637,43 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
     return { valid: false, errors, lineCount: 0 };
   }
 
-  const headers = lines[0].split(",").map((header) => header.trim().toLowerCase());
+  // Parse headers (handle quoted CSV fields)
+  const parseCsvLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++; // Skip next quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === "," && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    
+    result.push(current.trim());
+    return result;
+  };
+
+  const headers = parseCsvLine(lines[0]).map((header) => header.trim().toLowerCase().replace(/^["']|["']$/g, ""));
+  console.log("[CSV Validation] Detected headers:", headers);
+  
+  // Required columns (Entreprise is NOT required - backend auto-attaches from campaign)
   const requiredHeaders = ["nom", "prenom", "adresse courriel", "fonction"];
   const missingHeaders = requiredHeaders.filter((required) => !headers.some((header) => header.includes(required)));
 
   if (missingHeaders.length > 0) {
-    errors.push(`Colonnes manquantes : ${missingHeaders.join(", ")}`);
+    errors.push(`Colonnes manquantes : ${missingHeaders.join(", ")}. Colonnes détectées : ${headers.join(", ")}`);
   }
 
   const emailIndex = headers.findIndex(
@@ -1581,7 +1687,7 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
   let validEmails = 0;
 
   for (let index = 1; index < lines.length; index += 1) {
-    const values = lines[index].split(",").map((value) => value.trim());
+    const values = parseCsvLine(lines[index]);
 
     if (values.length < headers.length) {
       errors.push(`Ligne ${index + 1}: nombre de colonnes insuffisant.`);
@@ -1589,7 +1695,7 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
     }
 
     if (emailIndex >= 0) {
-      const email = values[emailIndex];
+      const email = values[emailIndex].replace(/^["']|["']$/g, "");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         errors.push(`Ligne ${index + 1}: email invalide "${email}"`);
       } else {
@@ -1633,4 +1739,5 @@ function isEndDateBeforeStartDate(startDate: string, endDate: string) {
 
   return new Date(`${endDate}T00:00:00`) < new Date(`${startDate}T00:00:00`);
 }
-
+
+

@@ -76,6 +76,20 @@ export class CampaignController {
     return this.campaignService.analyze(id, req.user.email);
   }
 
+  @Post(':id/analyze-with-company')
+  @UseGuards(AuthGuard)
+  async analyzeWithCompany(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { company_name?: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.campaignService.analyzeWithCompanyName(
+      id,
+      req.user.email,
+      body.company_name,
+    );
+  }
+
   @Delete(':id')
   @UseGuards(AuthGuard)
   remove(@Param('id', ParseIntPipe) id: number) {
