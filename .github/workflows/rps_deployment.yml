@@ -302,17 +302,75 @@ jobs:
             pm2 start ecosystem.config.cjs
             pm2 save
 
+            # ---------------------------------------------
+            # Health Check with Retry (Starlink Mini tolerant)
+            # ---------------------------------------------
             echo "Waiting for services to initialize..."
-            sleep 8
 
-            echo "Smoke testing backend..."
-            curl --fail --silent --show-error http://127.0.0.1:3000/api/health >/dev/null
+            # Backend health check with retry loop
+            MAX_RETRIES=15
+            RETRY_INTERVAL=5
+            BACKEND_READY=false
 
-            echo "Smoke testing frontend login page..."
-            curl --fail --silent --show-error http://127.0.0.1:3001/login >/dev/null
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "Checking backend health... (attempt $i/$MAX_RETRIES)"
+              if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3000/api/health >/dev/null 2>&1; then
+                echo "✓ Backend is ready!"
+                BACKEND_READY=true
+                break
+              fi
+              
+              # Show PM2 logs if first attempt fails
+              if [ $i -eq 1 ]; then
+                echo "Backend not ready yet, checking PM2 status..."
+                pm2 list
+              fi
+              
+              # Show recent backend logs on failure
+              if [ $i -eq 5 ] || [ $i -eq 10 ]; then
+                echo "--- Backend PM2 logs (last 10 lines) ---"
+                pm2 logs rps-backend --lines 10 --nostream 2>/dev/null || true
+              fi
+              
+              echo "Waiting ${RETRY_INTERVAL}s before next attempt..."
+              sleep $RETRY_INTERVAL
+            done
 
-            echo "Smoke testing frontend results page..."
-            curl --fail --silent --show-error http://127.0.0.1:3001/results >/dev/null
+            if [ "$BACKEND_READY" != "true" ]; then
+              echo "✗ ERROR: Backend failed to start after $((MAX_RETRIES * RETRY_INTERVAL))s"
+              echo "--- Final PM2 status ---"
+              pm2 list
+              echo "--- Final backend logs ---"
+              pm2 logs rps-backend --lines 30 --nostream 2>/dev/null || true
+              exit 1
+            fi
+
+            # Frontend health check with retry loop
+            FRONTEND_MAX_RETRIES=10
+            FRONTEND_READY=false
+
+            for i in $(seq 1 $FRONTEND_MAX_RETRIES); do
+              echo "Checking frontend health... (attempt $i/$FRONTEND_MAX_RETRIES)"
+              if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/login >/dev/null 2>&1; then
+                echo "✓ Frontend is ready!"
+                FRONTEND_READY=true
+                break
+              fi
+              echo "Waiting ${RETRY_INTERVAL}s before next attempt..."
+              sleep $RETRY_INTERVAL
+            done
+
+            if [ "$FRONTEND_READY" != "true" ]; then
+              echo "⚠ WARNING: Frontend not ready yet, but deployment continues (frontend may need more time)"
+            fi
+
+            # Final smoke tests (now that services are confirmed ready)
+            echo "Running final smoke tests..."
+            curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3000/api/health >/dev/null
+            curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/login >/dev/null
+            curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/results >/dev/null
+
+            echo "✓ All smoke tests passed!"
 
             # Enable PM2 startup on reboot
             sudo env PATH="$PATH" "$(command -v pm2)" startup systemd -u "$USER" --hp "$HOME" >/dev/null 2>&1 || true
