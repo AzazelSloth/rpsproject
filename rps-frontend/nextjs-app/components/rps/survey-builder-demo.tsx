@@ -420,19 +420,43 @@ export function SurveyBuilderDemo({
       // NOTE: Company name is NOT in Excel - it comes from the selected campaign
       const normalizedData = jsonData.map((row) => {
         const keys = Object.keys(row);
+        
+        console.log("[Excel Import] Processing row with keys:", keys);
 
-        // Flexible column mapping
+        // Flexible column mapping - exact match first, then partial match
         const findColumn = (aliases: string[]): string => {
-          const foundKey = keys.find((key) =>
-            aliases.some((alias) => key.toLowerCase().trim().includes(alias))
-          );
-          return foundKey ? row[foundKey] : "";
+          // Try exact match first (case-insensitive)
+          for (const alias of aliases) {
+            const exactMatch = keys.find(
+              (key) => key.toLowerCase().trim() === alias.toLowerCase().trim()
+            );
+            if (exactMatch) {
+              console.log(`[Excel Import] Exact match for "${alias}": "${exactMatch}"`);
+              return row[exactMatch];
+            }
+          }
+          
+          // Then try partial match
+          for (const alias of aliases) {
+            const partialMatch = keys.find(
+              (key) => key.toLowerCase().trim().includes(alias.toLowerCase().trim())
+            );
+            if (partialMatch) {
+              console.log(`[Excel Import] Partial match for "${alias}": "${partialMatch}"`);
+              return row[partialMatch];
+            }
+          }
+          
+          console.warn(`[Excel Import] No match found for aliases:`, aliases);
+          return "";
         };
 
-        const nom = findColumn(["nom", "name", "last name", "nom de famille"]);
-        const prenom = findColumn(["prenom", "prénom", "first name", "prenom "]);
-        const email = findColumn(["adresse courriel", "courriel", "email", "e-mail", "mail"]);
-        const fonction = findColumn(["fonction", "poste", "role", "titre", "department"]);
+        const nom = findColumn(["Nom", "name", "last name", "nom de famille"]);
+        const prenom = findColumn(["Prenom", "Prénom", "first name", "prenom"]);
+        const email = findColumn(["Adresse courriel", "Adresse email", "Email", "Courriel", "E-mail", "Mail"]);
+        const fonction = findColumn(["Fonction", "poste", "role", "titre", "department"]);
+
+        console.log("[Excel Import] Extracted values:", { nom, prenom, email, fonction });
 
         return {
           Nom: String(nom).trim(),

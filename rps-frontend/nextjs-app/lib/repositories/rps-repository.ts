@@ -267,8 +267,10 @@ export async function getSurveyBuilderData(
         name: currentCampaign.companyName || demoDataset.campaign.companyName,
       },
     ],
-    title: currentCampaign.title || "",
-    description: currentCampaign.description || "",
+    title: currentCampaign.title || demoDataset.campaign.title,
+    description:
+      currentCampaign.description ||
+      "Sondage trimestriel visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.",
     status: currentCampaign.status,
     startDate: currentCampaign.startDate ?? "",
     endDate: currentCampaign.endDate ?? "",
