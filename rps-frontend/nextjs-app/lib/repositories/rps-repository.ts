@@ -103,6 +103,7 @@ export type SurveyBuilderData = {
   campaignId: number | null;
   companyId: number | null;
   companies: { id: number; name: string }[];
+  campaigns: { id: number; name: string; status: string; companyId: number | null }[];
   title: string;
   description: string;
   status: string;
@@ -223,13 +224,23 @@ export async function getSurveyBuilderData(
         name: company.name,
       }));
 
+      // Formater les campagnes disponibles
+      const campaignOptions = campaigns.map((campaign) => ({
+        id: campaign.id,
+        name: campaign.name,
+        status: campaign.status,
+        companyId: campaign.company?.id ?? null,
+      }));
+
       if (activeCampaign) {
         const mappedCampaign = mapBackendCampaign(activeCampaign);
+        const activeCompanyId = activeCampaign.company?.id ?? null;
 
         return {
           campaignId: activeCampaign.id,
-          companyId: activeCampaign.company?.id ?? null,
+          companyId: activeCompanyId,
           companies: companyOptions,
+          campaigns: campaignOptions.filter((c) => c.companyId === activeCompanyId),
           title: mappedCampaign.title,
           description: mappedCampaign.description,
           status: mappedCampaign.status,
@@ -243,6 +254,7 @@ export async function getSurveyBuilderData(
         campaignId: null,
         companyId: companyOptions[0]?.id ?? null,
         companies: companyOptions,
+        campaigns: campaignOptions,
         title: "Nouveau sondage RPS",
         description:
           "Sondage trimestriel visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.",
@@ -265,6 +277,14 @@ export async function getSurveyBuilderData(
       {
         id: 1,
         name: currentCampaign.companyName || demoDataset.campaign.companyName,
+      },
+    ],
+    campaigns: [
+      {
+        id: currentCampaign.id ?? 1,
+        name: currentCampaign.title,
+        status: currentCampaign.status,
+        companyId: 1,
       },
     ],
     title: "",

@@ -131,6 +131,7 @@ export function SurveyBuilderDemo({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [companies, setCompanies] = useState(initialData.companies);
+  const [campaigns, setCampaigns] = useState(initialData.campaigns);
   const [campaignId, setCampaignId] = useState(initialData.campaignId);
   const [companyId, setCompanyId] = useState(initialData.companyId);
   const [newCompanyName, setNewCompanyName] = useState("");
@@ -277,6 +278,14 @@ export function SurveyBuilderDemo({
 
   function handleCompanySelection(nextCompanyId: number) {
     setCompanyId(nextCompanyId);
+    
+    // Filtrer les campagnes pour l'entreprise sélectionnée
+    const companyCampaigns = campaigns.filter((c) => c.companyId === nextCompanyId);
+    
+    // Si on change d'entreprise et qu'il y a d'autres campagnes, réinitialiser la campagne
+    if (companyCampaigns.length > 0 && campaignId && !companyCampaigns.find((c) => c.id === campaignId)) {
+      setCampaignId(companyCampaigns[0]?.id ?? null);
+    }
 
     const nextCompanyName =
       companies.find((company) => company.id === nextCompanyId)?.name?.trim() ?? "";
@@ -941,22 +950,29 @@ export function SurveyBuilderDemo({
             </p>
             
             {/* Survey Selection Dropdown (Edit Mode) */}
-            {mode === "edit" && campaignId && (
+            {mode === "edit" && (
               <div className="mt-3">
                 <label className="text-xs font-medium text-slate-600">Sondage</label>
                 <select
-                  value={campaignId}
+                  value={campaignId ?? ""}
                   onChange={(event) => {
                     const newCampaignId = Number(event.target.value);
                     if (newCampaignId) {
-                      router.push(`/surveys?tab=edit&id=${newCampaignId}`);
+                      router.push(`/surveys?tab=edit&campaignId=${newCampaignId}`);
                     }
                   }}
                   className="mt-1 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
                 >
-                  <option value={campaignId}>
-                    {title || selectedCompanyName || "Sondage"}
+                  <option value="" disabled>
+                    Choisir un sondage
                   </option>
+                  {campaigns
+                    .filter((c) => c.companyId === companyId)
+                    .map((campaign) => (
+                      <option key={campaign.id} value={campaign.id}>
+                        {campaign.name} ({campaign.status})
+                      </option>
+                    ))}
                 </select>
               </div>
             )}
