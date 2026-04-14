@@ -949,7 +949,6 @@ export function SurveyBuilderDemo({
                   onChange={(event) => {
                     const newCampaignId = Number(event.target.value);
                     if (newCampaignId) {
-                      // Navigate to edit the selected survey
                       router.push(`/surveys?tab=edit&id=${newCampaignId}`);
                     }
                   }}
@@ -958,13 +957,11 @@ export function SurveyBuilderDemo({
                   <option value={campaignId}>
                     {title || selectedCompanyName || "Sondage"}
                   </option>
-                  {/* Additional surveys would be listed here if available */}
                 </select>
               </div>
             )}
-            
-            <div className={mode === "edit" ? "mt-3" : "mt-3"}>
-              <select
+
+            <select
               value={companyId ?? ""}
               onChange={(event) => handleCompanySelection(Number(event.target.value))}
               className="mt-3 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
