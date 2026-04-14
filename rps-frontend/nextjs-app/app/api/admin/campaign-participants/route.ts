@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { isBackendConfigured, postBackend } from "@/lib/backend/client";
+import { isBackendConfigured } from "@/lib/backend/client";
+import { postServerBackend as postBackend } from "@/lib/backend/server";
 
 type ImportPayload = {
   action: "import";

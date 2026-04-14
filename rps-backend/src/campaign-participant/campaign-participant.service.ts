@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Campaign } from '../campaign/campaign.entity';
 import { Employee } from '../employee/employee.entity';
 import { Question } from '../question/question.entity';
@@ -253,7 +253,9 @@ export class CampaignParticipantService {
       (participant) =>
         participant.status === CampaignParticipantStatus.REMINDED,
     ).length;
-    const pending = total - completed;
+    const pending = participants.filter(
+      (participant) => participant.status === CampaignParticipantStatus.PENDING,
+    ).length;
 
     return {
       campaign_id: campaignId,
@@ -333,20 +335,22 @@ export class CampaignParticipantService {
         const batch = normalizedRows.slice(i, i + BATCH_SIZE);
         console.log(`[Import] Processing batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} rows)`);
 
-        const batchEmails = batch.map(r => r.email.trim());
+        const batchEmails = batch.map((row) => row.email.trim().toLowerCase());
 
         try {
           // Fetch existing employees in batch
           const existingEmployees = await this.employeeRepository.find({
-            where: [{ email: batchEmails }] as any,
+            where: { email: In(batchEmails) },
             relations: { company: true },
           });
 
-          const existingMap = new Map(existingEmployees.map(e => [e.email, e]));
+          const existingMap = new Map(
+            existingEmployees.map((employee) => [employee.email?.toLowerCase(), employee]),
+          );
           const newEmployeesData: Employee[] = [];
 
           for (const row of batch) {
-            const email = row.email.trim();
+            const email = row.email.trim().toLowerCase();
             let employee = existingMap.get(email);
 
             if (!employee) {
@@ -417,8 +421,9 @@ export class CampaignParticipantService {
         const existingParticipants = await this.campaignParticipantRepository.find({
           where: {
             campaign: { id: campaignId },
-            employee: { id: employeeIds } as any,
+            employee: { id: In(employeeIds) },
           },
+          relations: { employee: true },
         });
 
         const existingSet = new Set(existingParticipants.map(p => p.employee.id));

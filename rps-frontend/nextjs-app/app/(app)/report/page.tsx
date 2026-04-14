@@ -1,6 +1,7 @@
 import { Card, SectionHeader } from "@/components/rps/ui";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
-import { getBackendCollection, isBackendConfigured } from "@/lib/backend/client";
+import { isBackendConfigured } from "@/lib/backend/client";
+import { getServerBackendCollection as getBackendCollection } from "@/lib/backend/server";
 import type { BackendCampaign, BackendReport, BackendCompany } from "@/lib/backend/types";
 import { CampaignReportsTable } from "./CampaignReportsTable";
 

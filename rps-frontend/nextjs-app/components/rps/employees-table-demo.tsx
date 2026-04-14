@@ -130,7 +130,13 @@ export function EmployeesTableDemo({
   const [surveyDetails, setSurveyDetails] = useState<any>(null);
   const [loadingSurveyDetails, setLoadingSurveyDetails] = useState(false);
 
-  const availableSurveys = useMemo(() => surveys, [surveys]);
+  const availableSurveys = useMemo(() => {
+    if (!selectedCompanyId) {
+      return surveys;
+    }
+
+    return surveys.filter((survey) => String(survey.companyId) === selectedCompanyId);
+  }, [selectedCompanyId, surveys]);
 
   const selectedSurvey =
     surveys.find((survey) => String(survey.id) === selectedCampaignId) ??
@@ -143,8 +149,9 @@ export function EmployeesTableDemo({
       selectedCompanyId &&
       String(selectedSurvey.companyId) !== selectedCompanyId,
   );
-  const pendingParticipantsCount =
-    managementData.pendingParticipants + managementData.remindedParticipants;
+  const pendingParticipantsCount = managementData.participants.filter(
+    (participant) => participant.status !== "completed",
+  ).length;
 
   const [remindCompanyId, setRemindCompanyId] = useState<string>(
     selectedCompanyId || (companies[0] ? String(companies[0].id) : "")
@@ -187,7 +194,8 @@ export function EmployeesTableDemo({
       params.delete("campaignId");
     }
 
-    router.push(`${pathname}?${params.toString()}`);
+    const queryString = params.toString();
+    router.push(queryString ? `${pathname}?${queryString}` : pathname);
   }
 
   function handleSurveySelection(nextCampaignId: string) {
@@ -471,7 +479,7 @@ export function EmployeesTableDemo({
                   value={remindCompanyId}
                   onChange={(event) => {
                     setRemindCompanyId(event.target.value);
-                    const companySurveys = remindAvailableSurveys.filter(
+                    const companySurveys = surveys.filter(
                       (survey) => String(survey.companyId) === event.target.value
                     );
                     if (companySurveys.length > 0) {
@@ -552,7 +560,7 @@ export function EmployeesTableDemo({
             Détails du sondage
           </p>
           <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold">
-            {surveyDetails?.title || "Chargement..."}
+            {loadingSurveyDetails ? "Chargement..." : (surveyDetails?.title || "Sondage sans titre")}
           </h3>
           
           {loadingSurveyDetails ? (

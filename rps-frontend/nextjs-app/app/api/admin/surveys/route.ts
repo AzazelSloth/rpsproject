@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
+import { isBackendConfigured } from "@/lib/backend/client";
 import {
-  deleteBackend,
-  isBackendConfigured,
-  patchBackend,
-  postBackend,
-} from "@/lib/backend/client";
+  deleteServerBackend as deleteBackend,
+  patchServerBackend as patchBackend,
+  postServerBackend as postBackend,
+} from "@/lib/backend/server";
 
 type CreateCompanyPayload = {
   action: "createCompany";

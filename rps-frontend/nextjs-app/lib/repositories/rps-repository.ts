@@ -6,10 +6,12 @@ import {
   trendByRange,
 } from "@/lib/demo-data";
 import {
-  getBackendCollection,
-  getBackendItem,
   isBackendConfigured,
 } from "@/lib/backend/client";
+import {
+  getServerBackendCollection as getBackendCollection,
+  getServerBackendItem as getBackendItem,
+} from "@/lib/backend/server";
 import type {
   BackendCampaign,
   BackendCampaignProgress,
@@ -265,10 +267,8 @@ export async function getSurveyBuilderData(
         name: currentCampaign.companyName || demoDataset.campaign.companyName,
       },
     ],
-    title: currentCampaign.title || demoDataset.campaign.title,
-    description:
-      currentCampaign.description ||
-      "Sondage trimestriel visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.",
+    title: currentCampaign.title || "",
+    description: currentCampaign.description || "",
     status: currentCampaign.status,
     startDate: currentCampaign.startDate ?? "",
     endDate: currentCampaign.endDate ?? "",

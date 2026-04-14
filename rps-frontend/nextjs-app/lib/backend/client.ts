@@ -1,4 +1,7 @@
 import { ApiResponseError, apiFetch, getApiBaseUrl } from "@/lib/api";
+import { process } from "zod/v4/core";
+
+const DEMO_AUTH_TOKEN = "auth-disabled";
 
 function resolveBackendUrl() {
   return getApiBaseUrl();
@@ -16,7 +19,7 @@ function getAuthHeaders(customToken?: string): Record<string, string> {
     token = localStorage.getItem("auth_token");
   }
 
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return token && token !== DEMO_AUTH_TOKEN ? { Authorization: `Bearer ${token}` } : {};
 }
 
 function mergeHeaders(initHeaders?: HeadersInit, customToken?: string) {
