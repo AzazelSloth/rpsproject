@@ -939,7 +939,32 @@ export function SurveyBuilderDemo({
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
               Entreprise
             </p>
-            <select
+            
+            {/* Survey Selection Dropdown (Edit Mode) */}
+            {mode === "edit" && campaignId && (
+              <div className="mt-3">
+                <label className="text-xs font-medium text-slate-600">Sondage</label>
+                <select
+                  value={campaignId}
+                  onChange={(event) => {
+                    const newCampaignId = Number(event.target.value);
+                    if (newCampaignId) {
+                      // Navigate to edit the selected survey
+                      router.push(`/surveys?tab=edit&id=${newCampaignId}`);
+                    }
+                  }}
+                  className="mt-1 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                >
+                  <option value={campaignId}>
+                    {title || selectedCompanyName || "Sondage"}
+                  </option>
+                  {/* Additional surveys would be listed here if available */}
+                </select>
+              </div>
+            )}
+            
+            <div className={mode === "edit" ? "mt-3" : "mt-3"}>
+              <select
               value={companyId ?? ""}
               onChange={(event) => handleCompanySelection(Number(event.target.value))}
               className="mt-3 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
