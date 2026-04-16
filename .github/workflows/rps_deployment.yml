@@ -171,6 +171,7 @@ jobs:
             N8N_PROTOCOL=${{ secrets.N8N_PROTOCOL }}
             N8N_USER_FOLDER=${{ secrets.N8N_USER_FOLDER }}
             N8N_PATH=/n8n/
+            N8N_SECURE_COOKIE=${{ secrets.N8N_SECURE_COOKIE }}
             N8N_EDITOR_BASE_URL=http://${{ secrets.VPS_HOST }}:8786/n8n/
             WEBHOOK_URL=http://${{ secrets.VPS_HOST }}:8786/n8n/
             N8NEOF
@@ -325,6 +326,7 @@ jobs:
                     N8N_PROTOCOL: "${{ secrets.N8N_PROTOCOL }}",
                     N8N_USER_FOLDER: "${{ secrets.N8N_USER_FOLDER }}",
                     N8N_PATH: "/n8n/",
+                    N8N_SECURE_COOKIE: "${{ secrets.N8N_SECURE_COOKIE }}",
                     N8N_EDITOR_BASE_URL: "http://${{ secrets.VPS_HOST }}:8786/n8n/",
                     WEBHOOK_URL: "http://${{ secrets.VPS_HOST }}:8786/n8n/"
                   },
