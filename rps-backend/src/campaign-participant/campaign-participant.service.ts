@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Campaign } from '../campaign/campaign.entity';
 import { Employee } from '../employee/employee.entity';
 import { Question } from '../question/question.entity';
@@ -22,6 +22,7 @@ import {
   SubmitCampaignResponsesDto,
   UpdateCampaignParticipantDto,
 } from './dto/campaign-participant.dto';
+import { CampaignService } from '../campaign/campaign.service';
 
 @Injectable()
 export class CampaignParticipantService {
@@ -36,6 +37,7 @@ export class CampaignParticipantService {
     private readonly employeeRepository: Repository<Employee>,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
+    private readonly campaignService: CampaignService,
   ) {}
 
   create(createCampaignParticipantDto: CreateCampaignParticipantDto) {
@@ -259,7 +261,9 @@ export class CampaignParticipantService {
       (participant) =>
         participant.status === CampaignParticipantStatus.REMINDED,
     ).length;
-    const pending = total - completed;
+    const pending = participants.filter(
+      (participant) => participant.status === CampaignParticipantStatus.PENDING,
+    ).length;
 
     return {
       campaign_id: campaignId,
@@ -339,20 +343,22 @@ export class CampaignParticipantService {
         const batch = normalizedRows.slice(i, i + BATCH_SIZE);
         console.log(`[Import] Processing batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} rows)`);
 
-        const batchEmails = batch.map(r => r.email.trim());
+        const batchEmails = batch.map((row) => row.email.trim().toLowerCase());
 
         try {
           // Fetch existing employees in batch
           const existingEmployees = await this.employeeRepository.find({
-            where: [{ email: batchEmails }] as any,
+            where: { email: In(batchEmails) },
             relations: { company: true },
           });
 
-          const existingMap = new Map(existingEmployees.map(e => [e.email, e]));
+          const existingMap = new Map(
+            existingEmployees.map((employee) => [employee.email?.toLowerCase(), employee]),
+          );
           const newEmployeesData: Employee[] = [];
 
           for (const row of batch) {
-            const email = row.email.trim();
+            const email = row.email.trim().toLowerCase();
             let employee = existingMap.get(email);
 
             if (!employee) {
@@ -363,6 +369,7 @@ export class CampaignParticipantService {
                   email,
                   phone: row.phone?.trim() || undefined,
                   department: row.department?.trim() || undefined,
+                  company_name: row.company_name?.trim() || undefined,
                   survey_token: randomUUID(),
                   company: { id: payload.company_id } as any,
                 }),
@@ -422,8 +429,9 @@ export class CampaignParticipantService {
         const existingParticipants = await this.campaignParticipantRepository.find({
           where: {
             campaign: { id: campaignId },
-            employee: { id: employeeIds } as any,
+            employee: { id: In(employeeIds) },
           },
+          relations: { employee: true },
         });
 
         const existingSet = new Set(existingParticipants.map(p => p.employee.id));
@@ -461,7 +469,16 @@ export class CampaignParticipantService {
       // Build employee map for return data
       const employeeMap = new Map(employees.map(e => [e.id, e]));
 
-      return {
+      // Extract company names from imported employees for n8n filtering
+      const companyNames = employees
+        .map(e => e.company_name)
+        .filter(Boolean) as string[];
+      
+      const uniqueCompanyNames = [...new Set(companyNames)];
+      
+      console.log('[Import] Company names extracted:', uniqueCompanyNames);
+
+      const result = {
         imported_employees: employees.length,
         participants: participants.map((p) => {
           const emp = employeeMap.get(p.employee?.id);
@@ -471,10 +488,20 @@ export class CampaignParticipantService {
               first_name: emp?.first_name || 'N/A',
               last_name: emp?.last_name || 'N/A',
               email: emp?.email || '',
+              company_name: emp?.company_name || '',
             },
           };
         }),
+        company_names: uniqueCompanyNames,
       };
+
+      // Auto-trigger analysis if all responses are completed
+      // Check if campaign has responses before triggering
+      this.triggerAnalysisIfReady(campaignId, uniqueCompanyNames[0]).catch((error) => {
+        console.error('[Import] Error in auto-trigger analysis:', error);
+      });
+
+      return result;
     } catch (error) {
       console.error('[Import] Fatal error during import:', error);
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
@@ -483,6 +510,68 @@ export class CampaignParticipantService {
       throw new Error(
         `Employee import failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
+    }
+  }
+
+  /**
+   * Automatically triggers analysis if campaign responses are ready
+   * This runs in background after import completes
+   */
+  private async triggerAnalysisIfReady(campaignId: number, companyName?: string): Promise<void> {
+    try {
+      // Get campaign with company info
+      const campaign = await this.campaignRepository.findOne({
+        where: { id: campaignId },
+        relations: { company: true },
+      });
+
+      if (!campaign) {
+        console.warn(`[Auto-Analysis] Campaign ${campaignId} not found`);
+        return;
+      }
+
+      // Get all participants for this campaign
+      const participants = await this.campaignParticipantRepository.find({
+        where: { campaign: { id: campaignId } as any },
+        relations: { employee: true },
+      });
+
+      // Count how many participants have completed the survey
+      const completedCount = participants.filter(
+        (p) => p.status === CampaignParticipantStatus.COMPLETED,
+      ).length;
+
+      const participantCount = participants.length;
+
+      // Trigger analysis if at least 50% of participants have responded
+      // or if there are at least 5 responses (adjust threshold as needed)
+      const completionRate = participantCount > 0 ? completedCount / participantCount : 0;
+      
+      if (completedCount >= 5 || completionRate >= 0.5) {
+        console.log(
+          `[Auto-Analysis] Triggering analysis for campaign ${campaignId} ` +
+          `(${completedCount}/${participantCount} completed, ${companyName})`,
+        );
+
+        // Use a generic admin email - this should be configured based on your needs
+        const userEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
+
+        await this.campaignService.analyzeWithCompanyName(
+          campaignId,
+          userEmail,
+          companyName,
+        );
+
+        console.log(`[Auto-Analysis] Analysis triggered successfully`);
+      } else {
+        console.log(
+          `[Auto-Analysis] Skipping analysis for campaign ${campaignId} ` +
+          `(${completedCount}/${participantCount} completed - not enough data)`,
+        );
+      }
+    } catch (error) {
+      console.error('[Auto-Analysis] Error:', error);
+      // Don't throw - this is a background task
     }
   }
 
@@ -577,6 +666,7 @@ export class CampaignParticipantService {
           last_name: (row.last_name ?? row.nom ?? '').trim() || undefined,
           phone: (row.phone ?? '').trim() || undefined,
           department: (row.department ?? row.fonction ?? row.titre_professionnel ?? '').trim() || undefined,
+          company_name: (row.company_name ?? row.entreprise ?? row.company ?? '').trim() || undefined,
         });
       } catch (error) {
         console.error(`[CSV] Error parsing row ${i + 2}:`, error);

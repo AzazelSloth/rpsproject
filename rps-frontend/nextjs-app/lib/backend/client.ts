@@ -1,53 +1,9 @@
+import { ApiResponseError, apiFetch, getApiBaseUrl } from "@/lib/api";
+
+const DEMO_AUTH_TOKEN = "auth-disabled";
+
 function resolveBackendUrl() {
-  const isServer = typeof window === "undefined";
-
-  // Côté serveur (Node.js/SSR) - a TOUJOURS besoin d'une URL absolue
-  if (isServer) {
-    // IMPORTANT: process.env.API_URL est lu au RUNTIME (PM2), pas au build
-    const runtimeApiUrl = process.env.API_URL?.trim();
-
-    // Si PM2 a défini API_URL avec une URL absolue, on l'utilise
-    if (runtimeApiUrl && runtimeApiUrl.startsWith('http')) {
-      return runtimeApiUrl.replace(/\/$/, "");
-    }
-
-    // Fallback: try NEXT_PUBLIC_API_URL if it's an absolute URL
-    const publicUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-    if (publicUrl && publicUrl.startsWith('http')) {
-      return publicUrl.replace(/\/$/, "");
-    }
-
-    // Sinon, fallback garanti: localhost (backend sur le même serveur)
-    // On N'utilise JAMAIS "/api" côté serveur car Node.js ne supporte pas les URLs relatives
-    return "http://127.0.0.1:3000/api";
-  }
-
-  // Côté navigateur (client-side)
-  // NEXT_PUBLIC_API_URL est bakeé au BUILD time, donc s'il pointe vers 127.0.0.1,
-  // il sera incorrect quand l'utilisateur accède au site depuis l'extérieur.
-  // Solution: détecter l'origine de la page dynamiquement.
-  const publicUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-  
-  // Si NEXT_PUBLIC_API_URL est vide ou relatif, utiliser "/api" (proxy Nginx)
-  if (!publicUrl || !publicUrl.startsWith('http')) {
-    return publicUrl || "/api";
-  }
-
-  // Si NEXT_PUBLIC_API_URL contient 127.0.0.1 ou localhost, on remplace l'hôte par l'origine actuelle
-  // Le backend est sur le MÊME serveur que le frontend, donc on garde le même port (3000)
-  if (publicUrl.includes('127.0.0.1') || publicUrl.includes('localhost')) {
-    // Détecter l'origine de la page (ex: http://104.254.182.46:8786)
-    if (typeof window !== 'undefined' && window.location) {
-      const { protocol, hostname } = window.location;
-      // Extraire le port du backend depuis l'URL configurée (ex: http://127.0.0.1:3000/api -> 3000)
-      const backendPortMatch = publicUrl.match(/:(\d+)/);
-      const backendPort = backendPortMatch ? backendPortMatch[1] : '3000';
-      return `${protocol}//${hostname}:${backendPort}/api`;
-    }
-  }
-
-  // Sinon, utiliser la valeur configurée (cas où NEXT_PUBLIC_API_URL pointe vers le bon serveur)
-  return publicUrl.replace(/\/$/, "");
+  return getApiBaseUrl();
 }
 
 export function isBackendConfigured() {
@@ -59,11 +15,10 @@ function getAuthHeaders(customToken?: string): Record<string, string> {
   let token: string | null = customToken || null;
 
   if (!token && typeof window !== "undefined") {
-    // Client-side: localStorage
     token = localStorage.getItem("auth_token");
   }
 
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return token && token !== DEMO_AUTH_TOKEN ? { Authorization: `Bearer ${token}` } : {};
 }
 
 function mergeHeaders(initHeaders?: HeadersInit, customToken?: string) {
@@ -84,7 +39,6 @@ function logBackendWarning(message: string) {
 }
 
 async function backendFetch<T>(path: string, init?: RequestInit) {
-  // Résolution dynamique à CHAQUE appel pour éviter les problèmes de cache module
   const backendUrl = resolveBackendUrl();
 
   if (!backendUrl) {
@@ -95,53 +49,43 @@ async function backendFetch<T>(path: string, init?: RequestInit) {
   }
 
   const controller = new AbortController();
-  const timeoutMs = path.includes('/import-employees') ? 120000 : 30000; // 2min for import, 30s for others
+  const timeoutMs = path.includes("/import-employees") ? 120000 : 30000;
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(`${backendUrl}${path}`, {
+    return await apiFetch<T>(path, {
       ...init,
       signal: controller.signal,
       headers: mergeHeaders(init?.headers),
       cache: "no-store",
     });
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      const errorPreview = errorText ? ` - ${errorText.slice(0, 180)}` : "";
-      logBackendWarning(
-        `Request failed ${response.status} ${response.statusText} on ${path}${errorPreview}`
-      );
-      throw new Error(
-        `Backend request failed: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return (await response.json()) as T;
   } catch (error) {
     clearTimeout(timeout);
 
     const message =
       error instanceof Error ? error.message : "Unknown backend fetch error";
 
-    // Check for abort/timeout
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (error instanceof Error && error.name === "AbortError") {
       const timeoutSec = timeoutMs / 1000;
       logBackendWarning(
         `Request timeout after ${timeoutSec}s on ${path}. Check network connectivity.`
       );
       throw new Error(
-        `Délai d'attente dépassé après ${timeoutSec}s. Vérifie ta connexion réseau et réessaie.`
+        `Delai d'attente depasse apres ${timeoutSec}s. Verifie ta connexion reseau et reessaie.`
       );
+    }
+
+    if (error instanceof ApiResponseError) {
+      const errorPreview = error.body ? ` - ${error.body.slice(0, 180)}` : "";
+      logBackendWarning(
+        `Request failed ${error.status} ${error.statusText} on ${path}${errorPreview}`
+      );
+      throw new Error(`Backend request failed: ${error.status} ${error.statusText}`);
     }
 
     const isNetworkFailure =
       error instanceof TypeError ||
-      /fetch failed|ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|ETIMEDOUT/i.test(
-        message
-      );
+      /fetch failed|ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|ETIMEDOUT/i.test(message);
 
     if (isNetworkFailure) {
       logBackendWarning(
@@ -155,6 +99,8 @@ async function backendFetch<T>(path: string, init?: RequestInit) {
     }
 
     throw error;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

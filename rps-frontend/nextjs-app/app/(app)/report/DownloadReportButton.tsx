@@ -1,5 +1,6 @@
 "use client";
 
+import { appFetch } from "@/lib/api";
 import { PrimaryButton } from "@/components/rps/ui";
 import { useState } from "react";
 
@@ -9,7 +10,7 @@ export default function DownloadReportButton({ href }: { href: string }) {
   const handleDownload = async () => {
     setLoading(true);
     try {
-      const res = await fetch(href);
+      const res = await appFetch(href);
       if (!res.ok) throw new Error("Download failed");
       const blob = await res.blob();
       const disposition = res.headers.get("content-disposition");

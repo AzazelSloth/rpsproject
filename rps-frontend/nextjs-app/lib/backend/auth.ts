@@ -27,6 +27,17 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+export function createDemoAuthResponse(name?: string, email?: string): AuthResponse {
+  return {
+    user: {
+      id: 0,
+      email: normalizeEmail(email || "roxanne@laroche360.ca"),
+      name: name?.trim() || "Admin demo",
+    },
+    token: "auth-disabled",
+  };
+}
+
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
   return postBackend<AuthResponse, LoginCredentials>("/auth/login", {
     ...credentials,

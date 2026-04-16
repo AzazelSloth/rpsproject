@@ -1,15 +1,16 @@
 import {
-  Injectable,
-  UnauthorizedException,
   ConflictException,
   ForbiddenException,
+  Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import bcryptModule from 'bcrypt';
-import { User } from './user.entity';
+import { Repository } from 'typeorm';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { DEMO_AUTH_USER, isAuthDisabled } from './auth.guard';
+import { User } from './user.entity';
 
 const bcrypt = bcryptModule as unknown as {
   compare(data: string, encrypted: string): Promise<boolean>;
@@ -25,6 +26,17 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function buildDemoAuthResponse(name?: string, email?: string) {
+  return {
+    user: {
+      id: DEMO_AUTH_USER.sub,
+      email: normalizeEmail(email || DEMO_AUTH_USER.email),
+      name: name?.trim() || 'Admin demo',
+    },
+    token: 'auth-disabled',
+  };
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -34,6 +46,10 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
+    if (isAuthDisabled()) {
+      return buildDemoAuthResponse(registerDto.name, registerDto.email);
+    }
+
     const normalizedEmail = normalizeEmail(registerDto.email);
     if (!allowedAdminEmails.has(normalizedEmail)) {
       throw new ForbiddenException('Registration not allowed for this email');
@@ -64,6 +80,10 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
+    if (isAuthDisabled()) {
+      return buildDemoAuthResponse(undefined, loginDto.email);
+    }
+
     const normalizedEmail = normalizeEmail(loginDto.email);
     if (!allowedAdminEmails.has(normalizedEmail)) {
       throw new ForbiddenException('Login not allowed for this email');
@@ -101,6 +121,15 @@ export class AuthService {
   }
 
   async validateUser(id: number) {
+    if (isAuthDisabled()) {
+      const demoResponse = buildDemoAuthResponse();
+      return {
+        ...demoResponse.user,
+        id: id || demoResponse.user.id,
+        created_at: new Date(),
+      };
+    }
+
     const user = await this.userRepository.findOne({
       where: { id },
       select: ['id', 'email', 'name', 'created_at'],

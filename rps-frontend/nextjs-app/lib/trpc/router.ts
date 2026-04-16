@@ -1,12 +1,14 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
-	deleteBackend,
-	getBackendItem,
 	isBackendConfigured,
-	patchBackend,
-	postBackend,
 } from "@/lib/backend/client";
+import {
+	deleteServerBackend as deleteBackend,
+	getServerBackendItem as getBackendItem,
+	patchServerBackend as patchBackend,
+	postServerBackend as postBackend,
+} from "@/lib/backend/server";
 import {
 	getDashboardData,
 	getEmployeeManagementData,

@@ -66,7 +66,7 @@ jobs:
 
       - name: Build
         working-directory: rps-frontend/nextjs-app
-        run: npm run build
+        run: rm -rf .next && npm run build
 
       - name: List build output
         working-directory: rps-frontend/nextjs-app
@@ -186,7 +186,8 @@ jobs:
             DB_NAME=${{ secrets.DB_NAME }}
             DB_SYNCHRONIZE=false
             DB_LOGGING=false
-            CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001,http://104.254.182.46:8786
+            AUTH_DISABLED=true
+            CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001,http://${{ secrets.VPS_HOST }}:8786
             SWAGGER_ENABLED=true
             SWAGGER_PATH=api-docs
             ENVEOF
@@ -208,13 +209,14 @@ jobs:
 
             # Configure frontend environment BEFORE build so NEXT_PUBLIC_* variables are baked correctly
             cat > .env.local << 'ENVEOF'
-            NEXT_PUBLIC_API_URL=http://127.0.0.1:3000/api
+            NEXT_PUBLIC_API_URL=http://${{ secrets.VPS_HOST }}:3000/api
             API_URL=http://127.0.0.1:3000/api
             NEXT_PUBLIC_STRAPI_URL=
             STRAPI_API_TOKEN=
             ENVEOF
 
             # Build frontend
+            rm -rf .next
             npm run build
 
             # Verify .next was created
@@ -265,7 +267,7 @@ jobs:
                     NODE_ENV: "production",
                     PORT: 3001,
                     PATH: "$PATH",
-                    NEXT_PUBLIC_API_URL: "http://127.0.0.1:3000/api",
+                    NEXT_PUBLIC_API_URL: "http://${{ secrets.VPS_HOST }}:3000/api",
                     API_URL: "http://127.0.0.1:3000/api",
                     NEXT_PUBLIC_STRAPI_URL: "",
                     STRAPI_API_TOKEN: ""
@@ -294,10 +296,81 @@ jobs:
 
             # Stop existing processes
             pm2 delete all 2>/dev/null || true
+            pm2 flush >/dev/null 2>&1 || true
 
             # Start with new code
             pm2 start ecosystem.config.cjs
             pm2 save
+
+            # ---------------------------------------------
+            # Health Check with Retry (Starlink Mini tolerant)
+            # ---------------------------------------------
+            echo "Waiting for services to initialize..."
+
+            # Backend health check with retry loop
+            MAX_RETRIES=15
+            RETRY_INTERVAL=5
+            BACKEND_READY=false
+
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "Checking backend health... (attempt $i/$MAX_RETRIES)"
+              if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3000/api/health >/dev/null 2>&1; then
+                echo "✓ Backend is ready!"
+                BACKEND_READY=true
+                break
+              fi
+              
+              # Show PM2 logs if first attempt fails
+              if [ $i -eq 1 ]; then
+                echo "Backend not ready yet, checking PM2 status..."
+                pm2 list
+              fi
+              
+              # Show recent backend logs on failure
+              if [ $i -eq 5 ] || [ $i -eq 10 ]; then
+                echo "--- Backend PM2 logs (last 10 lines) ---"
+                pm2 logs rps-backend --lines 10 --nostream 2>/dev/null || true
+              fi
+              
+              echo "Waiting ${RETRY_INTERVAL}s before next attempt..."
+              sleep $RETRY_INTERVAL
+            done
+
+            if [ "$BACKEND_READY" != "true" ]; then
+              echo "✗ ERROR: Backend failed to start after $((MAX_RETRIES * RETRY_INTERVAL))s"
+              echo "--- Final PM2 status ---"
+              pm2 list
+              echo "--- Final backend logs ---"
+              pm2 logs rps-backend --lines 30 --nostream 2>/dev/null || true
+              exit 1
+            fi
+
+            # Frontend health check with retry loop
+            FRONTEND_MAX_RETRIES=10
+            FRONTEND_READY=false
+
+            for i in $(seq 1 $FRONTEND_MAX_RETRIES); do
+              echo "Checking frontend health... (attempt $i/$FRONTEND_MAX_RETRIES)"
+              if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/login >/dev/null 2>&1; then
+                echo "✓ Frontend is ready!"
+                FRONTEND_READY=true
+                break
+              fi
+              echo "Waiting ${RETRY_INTERVAL}s before next attempt..."
+              sleep $RETRY_INTERVAL
+            done
+
+            if [ "$FRONTEND_READY" != "true" ]; then
+              echo "⚠ WARNING: Frontend not ready yet, but deployment continues (frontend may need more time)"
+            fi
+
+            # Final smoke tests (now that services are confirmed ready)
+            echo "Running final smoke tests..."
+            curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3000/api/health >/dev/null
+            curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/login >/dev/null
+            curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/results >/dev/null
+
+            echo "✓ All smoke tests passed!"
 
             # Enable PM2 startup on reboot
             sudo env PATH="$PATH" "$(command -v pm2)" startup systemd -u "$USER" --hp "$HOME" >/dev/null 2>&1 || true

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Pill, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
+import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { SurveyBuilderData } from "@/lib/repositories/rps-repository";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
 import { getTrpcClient } from "@/lib/trpc/client";
@@ -66,10 +66,12 @@ type ImportedParticipantPayload = {
     first_name?: string;
     last_name?: string;
     email?: string;
+    company_name?: string;
   };
   first_name?: string;
   last_name?: string;
   email?: string;
+  company_name?: string;
   participation_token?: string;
   token?: string;
 };
@@ -129,6 +131,7 @@ export function SurveyBuilderDemo({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [companies, setCompanies] = useState(initialData.companies);
+  const [campaigns, setCampaigns] = useState(initialData.campaigns);
   const [campaignId, setCampaignId] = useState(initialData.campaignId);
   const [companyId, setCompanyId] = useState(initialData.companyId);
   const [newCompanyName, setNewCompanyName] = useState("");
@@ -160,46 +163,20 @@ export function SurveyBuilderDemo({
   const [hasDownloadedLinks, setHasDownloadedLinks] = useState(false);
   const canEditQuestions = status !== "active";
   const isCreateMode = mode === "create";
-  const isEditMode = mode === "edit";
   const selectedCompanyName =
     companies.find((company) => company.id === companyId)?.name?.trim() ?? "";
   const trimmedTitle = title.trim();
-  const effectiveCampaignTitle = selectedCompanyName || trimmedTitle;
+  const effectiveCampaignTitle = trimmedTitle || selectedCompanyName;
   const isDateRangeInvalid = isEndDateBeforeStartDate(startDate, endDate);
   const canSaveCampaign =
     Boolean(companyId) && effectiveCampaignTitle.length >= 3 && !isDateRangeInvalid;
   const isSurveyReadyForImport = Boolean(
     campaignId && companyId && status === "active" && questions.length > 0,
   );
-  const isSurveyStepCompleted = Boolean(
-    campaignId && companyId && status === "active" && questions.length > 0,
-  );
-  const isEditDetailsReady = Boolean(campaignId && companyId && !isDateRangeInvalid);
   const hasImportedEmployees = Boolean(
     importSuccess && (importSuccess.count > 0 || importSuccess.participants.length > 0),
   );
-  const statusLabel = formatSurveyStatus(status);
-  const progressTone = isCreateMode
-    ? hasDownloadedLinks
-      ? "success"
-      : isSurveyStepCompleted
-        ? "warning"
-        : "neutral"
-    : status === "active"
-      ? "success"
-      : "warning";
-  const progressLabel = isCreateMode
-    ? hasDownloadedLinks
-      ? "Parcours complété"
-      : hasImportedEmployees
-        ? "Étape 3 en cours"
-        : isSurveyStepCompleted || isImportModalOpen
-          ? "Étape 2 en cours"
-          : "Étape 1 en cours"
-    : status === "active"
-      ? "Sondage actif"
-      : "Modification en cours";
-
+  const builderTitle = mode === "edit" ? "Modifier un sondage" : "Creer un sondage";
   function runMutation<TResponse>(
     mutation: () => Promise<TResponse>,
     successMessage: string,
@@ -301,6 +278,14 @@ export function SurveyBuilderDemo({
 
   function handleCompanySelection(nextCompanyId: number) {
     setCompanyId(nextCompanyId);
+    
+    // Filtrer les campagnes pour l'entreprise sélectionnée
+    const companyCampaigns = campaigns.filter((c) => c.companyId === nextCompanyId);
+    
+    // Si on change d'entreprise et qu'il y a d'autres campagnes, réinitialiser la campagne
+    if (companyCampaigns.length > 0 && campaignId && !companyCampaigns.find((c) => c.id === campaignId)) {
+      setCampaignId(companyCampaigns[0]?.id ?? null);
+    }
 
     const nextCompanyName =
       companies.find((company) => company.id === nextCompanyId)?.name?.trim() ?? "";
@@ -428,10 +413,93 @@ export function SurveyBuilderDemo({
       }
 
       const firstSheet = workbook.Sheets[firstSheetName];
-      const parsedCsv = XLSX.utils.sheet_to_csv(firstSheet);
+
+      // Use sheet_to_json for better data extraction and column mapping
+      const jsonData: Record<string, any>[] = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+
+      if (jsonData.length === 0) {
+        setImportError("Le fichier Excel est vide ou ne contient aucune donnée.");
+        return;
+      }
+
+      console.log(`[Excel Import] Extracted ${jsonData.length} rows from Excel file`);
+      console.log("[Excel Import] Column headers:", Object.keys(jsonData[0]));
+
+      // Map Excel columns to expected CSV format with flexible column name matching
+      // NOTE: Company name is NOT in Excel - it comes from the selected campaign
+      const normalizedData = jsonData.map((row) => {
+        const keys = Object.keys(row);
+        
+        console.log("[Excel Import] Processing row with keys:", keys);
+
+        // Flexible column mapping - exact match first, then partial match
+        const findColumn = (aliases: string[]): string => {
+          // Try exact match first (case-insensitive)
+          for (const alias of aliases) {
+            const exactMatch = keys.find(
+              (key) => key.toLowerCase().trim() === alias.toLowerCase().trim()
+            );
+            if (exactMatch) {
+              console.log(`[Excel Import] Exact match for "${alias}": "${exactMatch}"`);
+              return row[exactMatch];
+            }
+          }
+          
+          // Then try partial match
+          for (const alias of aliases) {
+            const partialMatch = keys.find(
+              (key) => key.toLowerCase().trim().includes(alias.toLowerCase().trim())
+            );
+            if (partialMatch) {
+              console.log(`[Excel Import] Partial match for "${alias}": "${partialMatch}"`);
+              return row[partialMatch];
+            }
+          }
+          
+          console.warn(`[Excel Import] No match found for aliases:`, aliases);
+          return "";
+        };
+
+        const nom = findColumn(["Nom", "name", "last name", "nom de famille"]);
+        const prenom = findColumn(["Prenom", "Prénom", "first name", "prenom"]);
+        const email = findColumn(["Adresse courriel", "Adresse email", "Email", "Courriel", "E-mail", "Mail"]);
+        const fonction = findColumn(["Fonction", "poste", "role", "titre", "department"]);
+
+        console.log("[Excel Import] Extracted values:", { nom, prenom, email, fonction });
+
+        return {
+          Nom: String(nom).trim(),
+          Prenom: String(prenom).trim(),
+          Email: String(email).trim(),
+          Fonction: String(fonction).trim(),
+        };
+      });
+
+      // Convert to CSV with proper formatting
+      // NOTE: Entreprise column is NOT included - backend uses campaign.company.name automatically
+      const csvHeaders = ["Nom", "Prenom", "Adresse courriel", "Fonction"];
+      const csvLines = [csvHeaders.join(",")];
+
+      normalizedData.forEach((row: Record<string, string>) => {
+        const values = csvHeaders.map((header) => {
+          const value = row[header] || "";
+          // Escape quotes and wrap in quotes if contains comma, quotes, or newlines
+          if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        });
+        csvLines.push(values.join(","));
+      });
+
+      const parsedCsv = csvLines.join("\n");
+
+      console.log("[Excel Import] Generated CSV preview (first 500 chars):", parsedCsv.slice(0, 500));
+      console.log(`[Excel Import] Total rows in CSV: ${csvLines.length - 1}`);
+      console.log(`[Excel Import] Company will be auto-set from campaign: ${selectedCompanyName || "N/A"}`);
 
       setImportCsv(normalizeCsv(parsedCsv));
-      setImportFeedback(`Fichier chargé : ${file.name}`);
+      setImportFeedback(`Fichier chargé : ${file.name} (${jsonData.length} employés extraits, entreprise: ${selectedCompanyName || "auto"})`);
     } catch {
       setImportError("Le fichier n'a pas pu être lu. Vérifiez le format et réessayez.");
     } finally {
@@ -538,14 +606,21 @@ export function SurveyBuilderDemo({
 
     startTransition(async () => {
       try {
+        // Log data being sent to backend for debugging
+        const csvLines = importCsv.split("\n").filter((line) => line.trim());
+        console.log(`[Import Employees] Sending ${csvLines.length - 1} employees to backend`);
+        console.log("[Import Employees] CSV headers:", csvLines[0]);
+        console.log("[Import Employees] Company ID:", companyId);
+        console.log("[Import Employees] Campaign ID:", campaignId);
+        
         const rawResult = await getTrpcClient().campaignParticipants.importEmployees.mutate({
           campaignId,
           companyId,
           csv: importCsv,
         });
         const result = rawResult as ImportEmployeesResponse;
-        
-        console.log("Import result:", result);
+
+        console.log("[Import Employees] Backend response:", result);
         
         const participants = (result.participants ?? []).map((participant) => {
           // Backend returns employee data nested in employee object
@@ -832,191 +907,255 @@ export function SurveyBuilderDemo({
     );
   }
 
+  function handleActivateStep() {
+    if (questions.length === 0) {
+      setError("Ajoute d'abord des questions avant d'activer le sondage.");
+      return;
+    }
+
+    if (!confirm("Es-tu sur que toutes les questions du sondage sont correctes avant activation ?")) {
+      return;
+    }
+
+    changeCampaignStatus("activateCampaign");
+  }
+
+  function handleDeploymentStep() {
+    if (importSuccess && importSuccess.count > 0) {
+      downloadLinksList();
+      return;
+    }
+
+    saveCampaign();
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* 4 BLOCS HORIZONTAUX COMPACTS - Basés sur les screenshots client */}
-      <div className="grid gap-2 sm:gap-3 grid-cols-2 lg:grid-cols-4">
-        {/* Bloc 1: Entreprise */}
-        <div className="relative rounded-lg border border-slate-200 bg-slate-50 p-2 sm:p-3">
-          <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-            1
-          </span>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Entreprise</p>
-          <select
-            value={companyId ?? ""}
-            onChange={(event) => handleCompanySelection(Number(event.target.value))}
-            className="mt-1 w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none"
-          >
-            <option value="" disabled>Choisir</option>
-            {companies.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.name}
-              </option>
-            ))}
-          </select>
-          {isCreateMode && (
-            <div className="mt-2 flex gap-1">
-              <input
-                value={newCompanyName}
-                onChange={(event) => setNewCompanyName(event.target.value)}
-                className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-                placeholder="Nouvelle..."
-              />
-              <SecondaryButton
-                disabled={isPending || newCompanyName.trim().length < 2}
-                onClick={createCompany}
-                className="px-2 py-1 text-xs"
-              >
-                +
-              </SecondaryButton>
-            </div>
-          )}
+      <Card className="overflow-hidden border border-slate-200 bg-white p-4 sm:p-6">
+        <div>
+          <h2 className="font-[family-name:var(--font-manrope)] text-3xl font-extrabold tracking-tight text-slate-900">
+            {builderTitle}
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">Configuration en 6 etapes simples</p>
         </div>
 
-        {/* Bloc 2: Date */}
-        <div className="relative rounded-lg border border-slate-200 bg-white p-2">
-          <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-            2
-          </span>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Date</p>
-          <div className="mt-1 space-y-0.5">
-            {/* Date début */}
-            <div>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
-                className="w-full rounded border border-slate-200 bg-blue-50/50 px-1.5 py-1 text-[9px] font-medium text-slate-900 outline-none"
-              />
-            </div>
-            
-            {/* Date fin */}
-            <div>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(event) => setEndDate(event.target.value)}
-                className="w-full rounded border border-slate-200 bg-emerald-50/50 px-1.5 py-1 text-[9px] font-medium text-slate-900 outline-none"
-              />
-            </div>
-          </div>
-          {isDateRangeInvalid && (
-            <p className="mt-0.5 flex items-center gap-1 text-[9px] font-medium text-rose-700">
-              <TriangleAlert className="h-3 w-3" />
-              <span>Fin ≥ Début</span>
+        <div className="mt-6 grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {/* Card 1: Entreprise */}
+          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+              1
+            </span>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+              Entreprise
             </p>
-          )}
-        </div>
+            
+            {/* Survey Selection Dropdown (Edit Mode) */}
+            {mode === "edit" && (
+              <div className="mt-3">
+                <label className="text-xs font-medium text-slate-600">Sondage</label>
+                <select
+                  value={campaignId ?? ""}
+                  onChange={(event) => {
+                    const newCampaignId = Number(event.target.value);
+                    if (newCampaignId) {
+                      router.push(`/surveys?tab=edit&campaignId=${newCampaignId}`);
+                    }
+                  }}
+                  className="mt-1 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                >
+                  <option value="" disabled>
+                    Choisir un sondage
+                  </option>
+                  {campaigns
+                    .filter((c) => c.companyId === companyId)
+                    .map((campaign) => (
+                      <option key={campaign.id} value={campaign.id}>
+                        {campaign.name} ({campaign.status})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
 
-        {/* Bloc 3: Nom et Description */}
-        <div className="relative rounded-lg border border-slate-200 bg-white p-2 sm:p-3">
-          <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-            3
-          </span>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Nom et Description</p>
-          <input
-            className="mt-1 w-full rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs outline-none"
-            value={effectiveCampaignTitle}
-            readOnly
-            placeholder="Titre auto"
-          />
-          <textarea
-            className="mt-1 w-full rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs outline-none resize-none"
-            rows={2}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Description..."
-          />
-        </div>
-
-        {/* Bloc 4: Import & Envoi */}
-        <div className="relative rounded-lg border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-3 sm:p-4">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1">
-              <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-                4
-              </span>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-700">Import & Envoi</p>
-              
-              {/* Import section */}
-              <div className="mt-2">
-                <p className="text-[10px] text-slate-600 mb-1">Employés Excel/CSV</p>
+            <select
+              value={companyId ?? ""}
+              onChange={(event) => handleCompanySelection(Number(event.target.value))}
+              className="mt-3 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+            >
+              <option value="" disabled>
+                Choisir
+              </option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
+            {isCreateMode ? (
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={newCompanyName}
+                  onChange={(event) => setNewCompanyName(event.target.value)}
+                  className="min-w-0 flex-1 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                  placeholder="Nouvelle..."
+                />
                 <button
                   type="button"
-                  onClick={openImportModal}
-                  disabled={!isSurveyReadyForImport || isPending}
-                  className="w-full inline-flex items-center justify-center rounded bg-[#181818] px-2 py-1.5 text-[10px] font-semibold transition hover:bg-[#242424] disabled:opacity-60"
-                  style={{ color: "#ffffff" }}
+                  disabled={isPending || newCompanyName.trim().length < 2}
+                  onClick={createCompany}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-slate-300 bg-[#4b5563] text-base font-bold text-white transition hover:bg-[#374151] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Importer
+                  +
                 </button>
-                {importSuccess && (
-                  <div className="mt-1 rounded bg-emerald-100 px-2 py-1 text-center">
-                    <p className="flex items-center justify-center gap-1 text-[10px] font-semibold text-emerald-700">
-                      <Check className="h-3 w-3" />
-                      <span>{importSuccess.count} importé(s)</span>
-                    </p>
-                  </div>
-                )}
+              </div>
+            ) : null}
+          </div>
+
+          {/* Card 2: Periode */}
+          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+              2
+            </span>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+              Periode
+            </p>
+            <div className="mt-3 space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-600">Debut</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  className="w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-600">Fin</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  className="w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                />
               </div>
             </div>
-            
-            {/* Step 5 divider */}
-            <div className="flex flex-col items-center border-l-2 border-dashed border-emerald-400 pl-2">
-              <span className="text-[10px] font-bold text-emerald-700 mb-1">5</span>
-              
-              {/* Activation section */}
-              {status !== "active" ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (questions.length === 0) {
-                      setError("Êtes-vous sûr que le sondage est correct ? Ajoutez d'abord des questions avant d'activer.");
-                      return;
-                    }
-                    if (!confirm("Êtes-vous sûr que toutes les questions du sondage sont correctes avant d'activer ?")) {
-                      return;
-                    }
-                    changeCampaignStatus("activateCampaign");
-                  }}
-                  disabled={!canSaveCampaign || isPending}
-                  className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-[10px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60 shadow-sm"
-                >
-                  Activer
-                </button>
-              ) : (
-                <div className="space-y-1">
-                  <div className="rounded-lg bg-emerald-100 px-2 py-1 text-center">
-                    <p className="flex items-center justify-center gap-1 text-[10px] font-bold text-emerald-700">
-                      <CheckCircle2 className="h-3 w-3" />
-                      <span>Actif</span>
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => changeCampaignStatus("terminateCampaign")}
-                    disabled={isPending}
-                    className="w-full rounded-lg border border-rose-200 bg-white px-2 py-1 text-[9px] font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
-                  >
-                    Désactiver
-                  </button>
+            {isDateRangeInvalid ? (
+              <p className="mt-2 flex items-center gap-1 text-[11px] font-medium text-rose-700">
+                <TriangleAlert className="h-3.5 w-3.5" />
+                <span>La date de fin doit etre superieure ou egale au debut.</span>
+              </p>
+            ) : null}
+          </div>
+
+          {/* Card 3: Nom et description */}
+          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+              3
+            </span>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+              Nom et description
+            </p>
+            <input
+              className="mt-3 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Nom..."
+            />
+            <textarea
+              className="mt-2 w-full resize-none rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+              rows={3}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Description..."
+            />
+          </div>
+
+          {/* Card 4: Import */}
+          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+              4
+            </span>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+              Import
+            </p>
+            <button
+              type="button"
+              onClick={openImportModal}
+              disabled={!isSurveyReadyForImport || isPending}
+              className="mt-3 inline-flex w-full items-center justify-center rounded-[10px] bg-[#111827] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Importer
+            </button>
+            {importSuccess ? (
+              <p className="mt-2 text-center text-[11px] font-medium text-emerald-700">
+                {importSuccess.count} employe(s) importe(s)
+              </p>
+            ) : null}
+          </div>
+
+          {/* Card 5: Statut */}
+          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+              5
+            </span>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+              Statut
+            </p>
+            {status !== "active" ? (
+              <button
+                type="button"
+                onClick={handleActivateStep}
+                disabled={!canSaveCampaign || isPending}
+                className="mt-3 inline-flex w-full items-center justify-center rounded-[10px] bg-[#111827] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Activer
+              </button>
+            ) : (
+              <div className="mt-3 space-y-2">
+                <div className="inline-flex w-full items-center justify-center rounded-[10px] bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                  <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                  Actif
                 </div>
-              )}
-              
-              {/* Download links button */}
-              {importSuccess && importSuccess.count > 0 && (
                 <button
                   type="button"
-                  onClick={downloadLinksList}
-                  className="mt-1 w-full rounded-lg bg-amber-600 px-2 py-1 text-[9px] font-semibold text-white transition hover:bg-amber-700"
+                  onClick={() => changeCampaignStatus("terminateCampaign")}
+                  disabled={isPending}
+                  className="inline-flex w-full items-center justify-center rounded-[10px] border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {hasDownloadedLinks ? "Liens téléchargés" : "Télécharger"}
+                  Desactiver
                 </button>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
+
+          {/* Card 6: Deploiement */}
+          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+              6
+            </span>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+              Deploiement
+            </p>
+            <button
+              type="button"
+              onClick={handleDeploymentStep}
+              disabled={isPending || (!hasImportedEmployees && !canSaveCampaign)}
+              className="mt-3 inline-flex w-full items-center justify-center rounded-[10px] bg-[#111827] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Envoyer
+            </button>
+            {hasDownloadedLinks ? (
+              <p className="mt-2 text-center text-[11px] font-medium text-emerald-700">
+                Liens telecharges
+              </p>
+            ) : hasImportedEmployees ? (
+              <p className="mt-2 text-center text-[11px] font-medium text-slate-500">
+                Pret a diffuser
+              </p>
+            ) : null}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Boutons d'action principaux */}
       <div className="flex flex-wrap gap-2 sm:gap-3">
@@ -1560,12 +1699,43 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
     return { valid: false, errors, lineCount: 0 };
   }
 
-  const headers = lines[0].split(",").map((header) => header.trim().toLowerCase());
+  // Parse headers (handle quoted CSV fields)
+  const parseCsvLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++; // Skip next quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === "," && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    
+    result.push(current.trim());
+    return result;
+  };
+
+  const headers = parseCsvLine(lines[0]).map((header) => header.trim().toLowerCase().replace(/^["']|["']$/g, ""));
+  console.log("[CSV Validation] Detected headers:", headers);
+  
+  // Required columns (Entreprise is NOT required - backend auto-attaches from campaign)
   const requiredHeaders = ["nom", "prenom", "adresse courriel", "fonction"];
   const missingHeaders = requiredHeaders.filter((required) => !headers.some((header) => header.includes(required)));
 
   if (missingHeaders.length > 0) {
-    errors.push(`Colonnes manquantes : ${missingHeaders.join(", ")}`);
+    errors.push(`Colonnes manquantes : ${missingHeaders.join(", ")}. Colonnes détectées : ${headers.join(", ")}`);
   }
 
   const emailIndex = headers.findIndex(
@@ -1579,7 +1749,7 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
   let validEmails = 0;
 
   for (let index = 1; index < lines.length; index += 1) {
-    const values = lines[index].split(",").map((value) => value.trim());
+    const values = parseCsvLine(lines[index]);
 
     if (values.length < headers.length) {
       errors.push(`Ligne ${index + 1}: nombre de colonnes insuffisant.`);
@@ -1587,7 +1757,7 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
     }
 
     if (emailIndex >= 0) {
-      const email = values[emailIndex];
+      const email = values[emailIndex].replace(/^["']|["']$/g, "");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         errors.push(`Ligne ${index + 1}: email invalide "${email}"`);
       } else {
@@ -1632,18 +1802,4 @@ function isEndDateBeforeStartDate(startDate: string, endDate: string) {
   return new Date(`${endDate}T00:00:00`) < new Date(`${startDate}T00:00:00`);
 }
 
-function formatSurveyStatus(value: string) {
-  if (value === "preparation" || value === "draft") {
-    return "brouillon";
-  }
-  if (value === "active") {
-    return "actif";
-  }
-  if (value === "terminated" || value === "closed") {
-    return "termine";
-  }
-  if (value === "archived") {
-    return "archive";
-  }
-  return value || "inconnu";
-}
+

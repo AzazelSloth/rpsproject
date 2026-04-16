@@ -67,13 +67,16 @@ async function bootstrap() {
     });
   }
 
-  await app.listen(process.env.PORT ?? 3000, () => {
-    const server = app.getHttpServer();
-    // Augmente les timeouts pour les connexions lentes (Starlink, etc.)
-    server.keepAliveTimeout = 90000; // 90s
-    server.headersTimeout = 100000; // 100s
-    server.requestTimeout = 120000; // 120s
-  });
+  const port = process.env.PORT ?? 3000;
+
+  await app.listen(port, '0.0.0.0');
+
+  const server = app.getHttpServer();
+  server.keepAliveTimeout = 90000;
+  server.headersTimeout = 100000;
+  server.requestTimeout = 120000;
+
+  console.log(`Backend running on http://0.0.0.0:${port}`);
 }
 
 bootstrap();

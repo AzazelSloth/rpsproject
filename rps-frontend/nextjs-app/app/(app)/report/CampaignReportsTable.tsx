@@ -192,7 +192,7 @@ export function CampaignReportsTable({
                           disabled={analyzingId !== null}
                           className="!py-2 !px-4 !text-xs"
                         >
-                          {analyzingId === campaign.id ? "Lancement..." : "🚀 Analyser"}
+                          {analyzingId === campaign.id ? "Lancement..." : "Analyser"}
                         </PrimaryButton>
                       )}
                     </td>
