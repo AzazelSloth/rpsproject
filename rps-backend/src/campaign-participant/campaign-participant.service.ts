@@ -242,14 +242,6 @@ export class CampaignParticipantService {
       relations: { employee: true },
       order: { id: 'ASC' },
     });
-    
-    console.log('[DEBUG] getCampaignProgress - participants:', JSON.stringify(participants.map(p => ({
-      id: p.id,
-      email: p.employee?.email,
-      firstName: p.employee?.first_name,
-      lastName: p.employee?.last_name
-    }))));
-    
     await this.ensureParticipationTokens(participants);
 
     const total = participants.length;

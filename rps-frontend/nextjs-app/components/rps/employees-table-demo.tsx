@@ -685,7 +685,6 @@ export function EmployeesTableDemo({
                   <tr key={participant.id} className="border-t border-slate-100 align-top">
                     <td className="px-4 py-4 sm:px-6">
                       <p className="font-semibold">{participant.name}</p>
-                      {console.log('[DEBUG] Rendering participant email:', participant.id, participant.email)}
                       <p className="mt-1 text-xs text-slate-600 sm:text-sm">
                         {participant.email}
                       </p>
