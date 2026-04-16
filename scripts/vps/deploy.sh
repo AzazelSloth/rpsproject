@@ -33,6 +33,7 @@ fi
 APP_DIR="$HOME/rps-$ENVIRONMENT"
 LOG_FILE="$APP_DIR/deployment.log"
 BACKEND_SCRIPT="dist/main.js"
+N8N_DIR="$HOME/n8n"
 
 # Logging function
 log() {
@@ -195,6 +196,7 @@ CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001
 ADMIN_BOOTSTRAP_PASSWORD=${ADMIN_BOOTSTRAP_PASSWORD:-password}
 SWAGGER_ENABLED=true
 SWAGGER_PATH=api-docs
+N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://127.0.0.1:5678/webhook/sondage-rps-solutions-tech}
 EOF
     log "INFO" "Backend .env configured"
 
@@ -205,8 +207,31 @@ NEXT_PUBLIC_API_URL=http://127.0.0.1:3000/api
 API_URL=http://127.0.0.1:3000/api
 NEXT_PUBLIC_STRAPI_URL=
 STRAPI_API_TOKEN=
+N8N_WEBHOOK_URL=${FRONTEND_N8N_WEBHOOK_URL:-http://127.0.0.1:5678}
 EOF
     log "INFO" "Frontend .env.local configured"
+
+    # n8n environment
+    mkdir -p "$N8N_DIR"
+    mkdir -p "${N8N_USER_FOLDER:-$N8N_DIR/data}"
+    chmod 700 "$N8N_DIR"
+
+    cat > "$N8N_DIR/.env" << EOF
+N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE:-true}
+N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-changeme}
+N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-}
+N8N_HOST=${N8N_HOST:-127.0.0.1}
+N8N_PORT=${N8N_PORT:-5678}
+N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+N8N_USER_FOLDER=${N8N_USER_FOLDER:-$N8N_DIR/data}
+N8N_PATH=${N8N_PATH:-/n8n/}
+N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL:-http://127.0.0.1:8786/n8n/}
+WEBHOOK_URL=${WEBHOOK_URL:-http://127.0.0.1:8786/n8n/}
+EOF
+
+    chmod 600 "$N8N_DIR/.env"
+    log "INFO" "n8n .env configured at $N8N_DIR/.env"
 }
 
 build_backend() {
@@ -325,6 +350,39 @@ module.exports = {
       error_file: "./logs/frontend-error.log",
       out_file: "./logs/frontend-out.log",
       log_date_format: "YYYY-MM-DD HH:mm:ss Z"
+        },
+        {
+            name: "rps-n8n",
+            cwd: "$N8N_DIR",
+            script: "n8n",
+            args: "start",
+            interpreter: "none",
+            env: {
+                PATH: "/root/.nvm/versions/node/v24.14.1/bin:/usr/local/bin:/usr/bin:/bin",
+                N8N_BASIC_AUTH_ACTIVE: "${N8N_BASIC_AUTH_ACTIVE:-true}",
+                N8N_BASIC_AUTH_PASSWORD: "${N8N_BASIC_AUTH_PASSWORD:-changeme}",
+                N8N_BASIC_AUTH_USER: "${N8N_BASIC_AUTH_USER:-admin}",
+                N8N_ENCRYPTION_KEY: "${N8N_ENCRYPTION_KEY:-}",
+                N8N_HOST: "${N8N_HOST:-127.0.0.1}",
+                N8N_PORT: "${N8N_PORT:-5678}",
+                N8N_PROTOCOL: "${N8N_PROTOCOL:-http}",
+                N8N_USER_FOLDER: "${N8N_USER_FOLDER:-$N8N_DIR/data}",
+                N8N_PATH: "${N8N_PATH:-/n8n/}",
+                N8N_EDITOR_BASE_URL: "${N8N_EDITOR_BASE_URL:-http://127.0.0.1:8786/n8n/}",
+                WEBHOOK_URL: "${WEBHOOK_URL:-http://127.0.0.1:8786/n8n/}"
+            },
+            instances: 1,
+            exec_mode: "fork",
+            watch: false,
+            max_memory_restart: "500M",
+            autorestart: true,
+            max_restarts: 10,
+            min_uptime: "10s",
+            kill_timeout: 5000,
+            listen_timeout: 10000,
+            error_file: "./logs/n8n-error.log",
+            out_file: "./logs/n8n-out.log",
+            log_date_format: "YYYY-MM-DD HH:mm:ss Z"
     }
   ]
 };
@@ -362,6 +420,33 @@ EOF
     pm2 logs --lines 10 --nostream
 
     log "INFO" "PM2 configured successfully"
+}
+
+check_n8n_health() {
+    log "INFO" "Checking n8n health..."
+
+    local max_retries=15
+    local retry_interval=5
+    local n8n_port="${N8N_PORT:-5678}"
+
+    for i in $(seq 1 "$max_retries"); do
+        if curl --fail --silent --show-error --max-time 10 "http://127.0.0.1:${n8n_port}/healthz" >/dev/null 2>&1; then
+            log "INFO" "n8n is ready"
+            return 0
+        fi
+
+        if [ "$i" -eq 5 ] || [ "$i" -eq 10 ]; then
+            pm2 logs rps-n8n --lines 10 --nostream 2>/dev/null || true
+        fi
+
+        log "INFO" "n8n not ready yet (attempt $i/$max_retries), waiting ${retry_interval}s..."
+        sleep "$retry_interval"
+    done
+
+    log "ERROR" "n8n health check failed after $((max_retries * retry_interval))s"
+    pm2 list
+    pm2 logs rps-n8n --lines 30 --nostream 2>/dev/null || true
+    exit 1
 }
 
 configure_nginx() {
@@ -443,6 +528,8 @@ main() {
     # Prerequisites
     require_command git
     require_command npm
+    require_command curl
+    require_command n8n
 
     # Setup environment
     setup_node
@@ -473,6 +560,9 @@ main() {
 
     setup_pm2
 
+    # Verify n8n readiness
+    check_n8n_health
+
     # Nginx configuration
     configure_nginx
 
@@ -489,6 +579,7 @@ main() {
     log "INFO" "Deployment completed successfully!"
     log "INFO" "Backend API: http://localhost:3000/api"
     log "INFO" "Frontend: http://localhost:3001"
+    log "INFO" "n8n: http://localhost:${N8N_PORT:-5678}"
     log "INFO" "=============================================="
 }
 
