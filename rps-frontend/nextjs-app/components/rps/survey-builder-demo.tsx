@@ -136,8 +136,8 @@ export function SurveyBuilderDemo({
   const [companyId, setCompanyId] = useState(initialData.companyId);
   const [newCompanyName, setNewCompanyName] = useState("");
   const [status, setStatus] = useState(initialData.status);
-  const [title, setTitle] = useState(initialData.title);
-  const [description, setDescription] = useState(initialData.description);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState(toDateInputValue(initialData.startDate));
   const [endDate, setEndDate] = useState(toDateInputValue(initialData.endDate));
   const [questions, setQuestions] = useState(
