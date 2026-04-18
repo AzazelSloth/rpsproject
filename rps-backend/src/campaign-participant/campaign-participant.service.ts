@@ -450,6 +450,16 @@ export class CampaignParticipantService {
         try {
           participants = await this.campaignParticipantRepository.save(participantsToCreate);
           console.log(`[Import] Created ${participants.length} new participants`);
+          
+          // Reload participants with employee relation to ensure we have complete data
+          if (participants.length > 0) {
+            const participantIds = participants.map(p => p.id);
+            participants = await this.campaignParticipantRepository.find({
+              where: { id: In(participantIds) },
+              relations: { employee: true },
+            });
+            console.log('[Import] Reloaded participants with employee relations');
+          }
         } catch (error) {
           console.error('[Import] Error saving participants:', error);
           throw new Error(
@@ -458,8 +468,8 @@ export class CampaignParticipantService {
         }
       }
 
-      // Build employee map for return data
-      const employeeMap = new Map(employees.map(e => [e.id, e]));
+      // Build employee map for return data - use email as key for fallback lookup
+      const employeeMap = new Map(employees.map(e => [e.email?.toLowerCase(), e]));
 
       // Extract company names from imported employees for n8n filtering
       const companyNames = employees
@@ -473,14 +483,32 @@ export class CampaignParticipantService {
       const result = {
         imported_employees: employees.length,
         participants: participants.map((p) => {
-          const emp = employeeMap.get(p.employee?.id);
+          // Try to get employee from map - fallback to direct relation if available
+          let emp = employeeMap.get(p.employee?.email?.toLowerCase() || '');
+          if (!emp && p.employee) {
+            emp = p.employee;
+          }
+          
+          if (!emp) {
+            console.warn(`[Import] Could not find employee data for participant ${p.participation_token}`);
+            return {
+              participation_token: p.participation_token,
+              employee: {
+                first_name: 'N/A',
+                last_name: 'N/A',
+                email: '',
+                company_name: '',
+              },
+            };
+          }
+          
           return {
             participation_token: p.participation_token,
             employee: {
-              first_name: emp?.first_name || 'N/A',
-              last_name: emp?.last_name || 'N/A',
-              email: emp?.email || '',
-              company_name: emp?.company_name || '',
+              first_name: emp.first_name || 'N/A',
+              last_name: emp.last_name || 'N/A',
+              email: emp.email || '',
+              company_name: emp.company_name || '',
             },
           };
         }),

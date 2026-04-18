@@ -1730,23 +1730,38 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
   const headers = parseCsvLine(lines[0]).map((header) => header.trim().toLowerCase().replace(/^["']|["']$/g, ""));
   console.log("[CSV Validation] Detected headers:", headers);
   
-  // Required columns (Entreprise is NOT required - backend auto-attaches from campaign)
-  const requiredHeaders = ["nom", "prenom", "adresse courriel", "fonction"];
-  const missingHeaders = requiredHeaders.filter((required) => !headers.some((header) => header.includes(required)));
+  // Required columns with flexible matching (backend is flexible, so frontend should be too)
+  // Email column can be: "adresse courriel", "courriel", "email", "adresse email", etc.
+  const hasNameColumn = headers.some((h) => h.includes("nom") || h.includes("name") || h.includes("last"));
+  const hasFirstNameColumn = headers.some((h) => h.includes("prenom") || h.includes("first") || h.includes("prénom"));
+  const hasEmailColumn = headers.some((h) => 
+    h.includes("email") || h.includes("courriel") || h.includes("mail")
+  );
+  const hasFunctionColumn = headers.some((h) => 
+    h.includes("fonction") || h.includes("role") || h.includes("poste") || h.includes("title") || h.includes("department")
+  );
+  
+  const missingHeaders = [];
+  if (!hasNameColumn) missingHeaders.push("nom/name");
+  if (!hasFirstNameColumn) missingHeaders.push("prenom/first name");
+  if (!hasEmailColumn) missingHeaders.push("email/courriel");
+  if (!hasFunctionColumn) missingHeaders.push("fonction/role");
 
   if (missingHeaders.length > 0) {
     errors.push(`Colonnes manquantes : ${missingHeaders.join(", ")}. Colonnes détectées : ${headers.join(", ")}`);
   }
 
+  // Find email column (flexible matching)
   const emailIndex = headers.findIndex(
-    (header) => header.includes("adresse courriel") || header.includes("courriel") || header.includes("email"),
+    (header) => header.includes("email") || header.includes("courriel") || header.includes("mail"),
   );
 
   if (emailIndex === -1) {
-    errors.push("Colonne Adresse courriel non trouvee.");
+    errors.push("Aucune colonne email trouvée. Utilisez email, courriel, ou adresse courriel.");
   }
 
   let validEmails = 0;
+  let emptyEmailCount = 0;
 
   for (let index = 1; index < lines.length; index += 1) {
     const values = parseCsvLine(lines[index]);
@@ -1757,8 +1772,11 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
     }
 
     if (emailIndex >= 0) {
-      const email = values[emailIndex].replace(/^["']|["']$/g, "");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      const email = values[emailIndex].replace(/^["']|["']$/g, "").trim();
+      if (!email) {
+        emptyEmailCount++;
+        errors.push(`Ligne ${index + 1}: email vide. Tous les employés doivent avoir une adresse email.`);
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         errors.push(`Ligne ${index + 1}: email invalide "${email}"`);
       } else {
         validEmails += 1;
