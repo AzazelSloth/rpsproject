@@ -452,13 +452,24 @@ export class CampaignParticipantService {
           console.log(`[Import] Created ${participants.length} new participants`);
           
           // Reload participants with employee relation to ensure we have complete data
-          if (participants.length > 0) {
-            const participantIds = participants.map(p => p.id);
-            participants = await this.campaignParticipantRepository.find({
-              where: { id: In(participantIds) },
-              relations: { employee: true },
-            });
-            console.log('[Import] Reloaded participants with employee relations');
+          try {
+            if (participants.length > 0) {
+              const participantIds = participants
+                .map(p => p.id)
+                .filter((id): id is number => id !== undefined && id !== null);
+              
+              console.log(`[Import] Reloading ${participantIds.length} participants with employee relations`);
+              
+              if (participantIds.length > 0) {
+                participants = await this.campaignParticipantRepository.find({
+                  where: { id: In(participantIds) },
+                  relations: { employee: true },
+                });
+                console.log(`[Import] Reloaded ${participants.length} participants with employee relations`);
+              }
+            }
+          } catch (reloadError) {
+            console.warn('[Import] Could not reload participants with relations, continuing with direct mapping:', reloadError);
           }
         } catch (error) {
           console.error('[Import] Error saving participants:', error);
@@ -468,13 +479,15 @@ export class CampaignParticipantService {
         }
       }
 
-      // Build employee map for return data - use email as key for fallback lookup
-      const employeeMap = new Map(employees.map(e => [e.email?.toLowerCase(), e]));
+      // Build employee map - key by email for reliable lookup
+      const employeeMap = new Map(
+        employees.map(e => [e.email?.toLowerCase() || '', e])
+      );
 
       // Extract company names from imported employees for n8n filtering
       const companyNames = employees
         .map(e => e.company_name)
-        .filter(Boolean) as string[];
+        .filter((name): name is string => Boolean(name));
       
       const uniqueCompanyNames = [...new Set(companyNames)];
       
@@ -483,14 +496,16 @@ export class CampaignParticipantService {
       const result = {
         imported_employees: employees.length,
         participants: participants.map((p) => {
-          // Try to get employee from map - fallback to direct relation if available
-          let emp = employeeMap.get(p.employee?.email?.toLowerCase() || '');
-          if (!emp && p.employee) {
+          let emp: Employee | undefined;
+          
+          // If relation was loaded, use it directly
+          if (p.employee) {
             emp = p.employee;
           }
           
+          // Final safety: use N/A if no employee found
           if (!emp) {
-            console.warn(`[Import] Could not find employee data for participant ${p.participation_token}`);
+            console.warn(`[Import] No employee data found for participant ${p.participation_token}`);
             return {
               participation_token: p.participation_token,
               employee: {
