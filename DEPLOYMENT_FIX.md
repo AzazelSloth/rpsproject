@@ -1,9 +1,11 @@
 # Guide de Déploiement - Correction Erreur 500
 
 ## Problème
+
 Erreur `500 Internal Server Error` sur `/trpc/adminSurveys.createCompany` lors de l'ajout d'entreprise sur le serveur de déploiement.
 
 ## Cause
+
 Le backend NestJS n'est pas accessible ou n'est pas configuré correctement sur le serveur de production.
 
 ## Étapes de Correction
@@ -38,6 +40,7 @@ nano .env
 ```
 
 **Variables critiques à vérifier :**
+
 - `PORT=3000` - Port du backend
 - `CORS_ORIGIN=http://104.254.182.46:8786,http://localhost:3001` - **TRÈS IMPORTANT**
 - `DB_HOST=localhost` - Base de données accessible
@@ -125,22 +128,26 @@ pm2 monit
 ## En Cas de Problème Persistant
 
 1. **Vérifier les logs d'erreur :**
+
    ```bash
    pm2 logs rps-backend --lines 100
    ```
 
 2. **Vérifier la base de données :**
+
    ```bash
    sudo -u postgres psql -d rps_platform -c "SELECT * FROM companies LIMIT 5;"
    ```
 
 3. **Vérifier le pare-feu :**
+
    ```bash
    sudo ufw status
    sudo ufw allow 3000/tcp
    ```
 
 4. **Redémarrer PM2 complètement :**
+
    ```bash
    pm2 delete all
    pm2 start ecosystem.config.cjs
@@ -150,6 +157,7 @@ pm2 monit
 ## Structure des Fichiers .env
 
 ### Backend (.env)
+
 ```env
 PORT=3000
 NODE_ENV=production
@@ -163,6 +171,7 @@ JWT_SECRET=votre-secret-jwt
 ```
 
 ### Frontend (.env.local)
+
 ```env
 NEXT_PUBLIC_API_URL=http://104.254.182.46:3000/api
 API_URL=http://104.254.182.46:3000/api
@@ -171,6 +180,7 @@ API_URL=http://104.254.182.46:3000/api
 ## Support
 
 Si le problème persiste après avoir suivi ce guide :
+
 1. Vérifier que le port 3000 n'est pas utilisé par un autre service
 2. Vérifier les permissions de la base de données
 3. Vérifier les logs d'erreur détaillés avec `pm2 logs`

@@ -3,6 +3,7 @@
 ## 📋 Résumé des modifications
 
 Cette implémentation permet:
+
 1. **Extraire le nom de l'entreprise** depuis le fichier Excel lors de l'import
 2. **Stocker company_name** avec les données employé
 3. **Envoyer company_name à n8n** pour le filtrage des rapports
@@ -17,6 +18,7 @@ Cette implémentation permet:
 **Fichier:** `rps-frontend/nextjs-app/components/rps/survey-builder-demo.tsx`
 
 #### Extraction Excel améliorée (Lignes 396-470)
+
 ```typescript
 // Utilisation de sheet_to_json au lieu de sheet_to_csv
 const jsonData: Record<string, any>[] = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
@@ -36,7 +38,8 @@ const csvHeaders = ["Nom", "Prenom", "Adresse courriel", "Fonction", "Entreprise
 ```
 
 #### Colonnes acceptées:
-```
+
+```text
 Nom: ["nom", "name", "last name", "nom de famille"]
 Prenom: ["prenom", "prénom", "first name"]
 Email: ["adresse courriel", "courriel", "email", "e-mail", "mail"]
@@ -45,6 +48,7 @@ Entreprise: ["entreprise", "company", "société", "employeur", "organisation"] 
 ```
 
 #### Logging ajouté:
+
 ```javascript
 [Excel Import] Extracted X rows from Excel file
 [Excel Import] Column headers: [...]
@@ -58,6 +62,7 @@ Entreprise: ["entreprise", "company", "société", "employeur", "organisation"] 
 ### 2. Backend (NestJS)
 
 #### A. DTO mis à jour
+
 **Fichier:** `rps-backend/src/campaign-participant/dto/campaign-participant.dto.ts`
 
 ```typescript
@@ -71,6 +76,7 @@ export class ImportCampaignEmployeeRowDto {
 ```
 
 #### B. Entity Employee mise à jour
+
 **Fichier:** `rps-backend/src/employee/employee.entity.ts`
 
 ```typescript
@@ -81,6 +87,7 @@ company_name: string | null;  // ✨ NOUVEAU
 ⚠️ **Note:** Nécessite une migration de base de données pour ajouter la colonne.
 
 #### C. Parser CSV amélioré
+
 **Fichier:** `rps-backend/src/campaign-participant/campaign-participant.service.ts`
 
 ```typescript
@@ -95,6 +102,7 @@ rows.push({
 ```
 
 #### D. Stockage pendant l'import
+
 ```typescript
 newEmployeesData.push(
   this.employeeRepository.create({
@@ -110,6 +118,7 @@ newEmployeesData.push(
 ```
 
 #### E. Payload n8n avec company_name
+
 **Fichier:** `rps-backend/src/campaign/campaign.service.ts`
 
 ```typescript
@@ -146,6 +155,7 @@ async analyzeWithCompanyName(campaignId: number, userEmail: string, companyName?
 ```
 
 #### F. Auto-trigger d'analyse après import
+
 **Fichier:** `rps-backend/src/campaign-participant/campaign-participant.service.ts`
 
 ```typescript
@@ -178,6 +188,7 @@ private async triggerAnalysisIfReady(campaignId: number, companyName?: string) {
 ```
 
 #### G. Nouvel endpoint pour analyse manuelle
+
 **Fichier:** `rps-backend/src/campaign/campaign.controller.ts`
 
 ```typescript
@@ -200,7 +211,7 @@ async analyzeWithCompany(
 
 ## 📊 Flux de données complet
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. Frontend - Import Excel                                   │
 │    - Lecture fichier Excel avec sheet_to_json               │
@@ -298,7 +309,8 @@ await queryRunner.query(
 1. **Ouvrir la console du navigateur** (F12)
 2. **Importer le fichier Excel** dans le Survey Builder
 3. **Vérifier les logs:**
-   ```
+
+   ```text
    [Excel Import] Extracted 2 rows from Excel file
    [Excel Import] Column headers: ['Nom', 'Prénom', 'Email', 'Fonction', 'Entreprise']
    [Excel Import] Generated CSV preview: Nom,Prenom,Adresse courriel,Fonction,Entreprise
@@ -310,7 +322,8 @@ await queryRunner.query(
 ### 4. Vérifier le backend
 
 Les logs backend montreront:
-```
+
+```text
 [CSV] Headers detected: ['nom', 'prenom', 'email', 'fonction', 'entreprise']
 [Import] Company names extracted: ['ACME Corp']
 [Auto-Analysis] Triggering analysis for campaign 1 (0/2 completed, ACME Corp)
@@ -328,6 +341,7 @@ curl -X POST http://localhost:3001/campaigns/1/analyze-with-company \
 ### 6. Vérifier n8n
 
 Le workflow n8n recevra:
+
 ```json
 {
   "campaign_id": 1,
@@ -364,6 +378,7 @@ if (completedCount >= 5 || completionRate >= 0.5) {
 ```
 
 Modifiez selon vos besoins:
+
 - `completedCount >= 10` - minimum 10 réponses
 - `completionRate >= 0.7` - 70% de complétion
 - `completedCount >= 3 && completionRate >= 0.3` - 3 réponses ET 30%
@@ -373,23 +388,28 @@ Modifiez selon vos besoins:
 ## 📝 Notes importantes
 
 ### 1. Migration de base de données
+
 ⚠️ **Obligatoire** avant de déployer:
+
 ```bash
 cd rps-backend
 npm run typeorm migration:generate -- -n AddCompanyNameToEmployee
 ```
 
 ### 2. Rétrocompatibilité
+
 - ✅ L'import fonctionne même si la colonne Entreprise est absente
 - ✅ company_name est nullable dans la DB
 - ✅ Fallback sur le nom de l'entreprise du campaign
 
 ### 3. Performance
+
 - L'auto-trigger s'exécute en background (`.catch()` sans await)
 - Ne bloque pas la réponse de l'import
 - Logs détaillés pour le debugging
 
 ### 4. Sécurité
+
 - company_name est validé (MaxLength 255)
 - Injection SQL protégée par TypeORM parameterized queries
 - Endpoints protégés par AuthGuard
@@ -399,24 +419,32 @@ npm run typeorm migration:generate -- -n AddCompanyNameToEmployee
 ## 🔍 Dépannage
 
 ### Problème: "Le fichier Excel est vide"
+
 **Solution:** Vérifiez que le fichier contient des données dans la première feuille
 
 ### Problème: "Colonnes manquantes"
+
 **Solution:** Le fichier Excel doit avoir au minimum: Nom, Prénom, Email, Fonction
 
 ### Problème: "Company name non extrait"
-**Solution:** 
+
+**Solution:**
+
 1. Vérifiez les logs frontend pour les headers détectés
 2. Assurez-vous que la colonne s'appelle: Entreprise, Company, Société, Employeur ou Organisation
 
 ### Problème: "Auto-trigger ne se déclenche pas"
+
 **Solution:**
+
 1. Vérifiez les logs `[Auto-Analysis]`
 2. Assurez-vous qu'il y a assez de réponses complétées
 3. Vérifiez que ADMIN_EMAIL est configuré
 
 ### Problème: "n8n ne reçoit pas company_name"
+
 **Solution:**
+
 1. Vérifiez les logs backend pour le payload envoyé
 2. Testez le webhook manuellement avec curl
 3. Vérifiez que N8N_WEBHOOK_URL est correct
@@ -426,17 +454,20 @@ npm run typeorm migration:generate -- -n AddCompanyNameToEmployee
 ## 📊 Prochaines étapes
 
 ### Pour n8n:
+
 1. **Mettre à jour le workflow n8n** pour utiliser `company_name`
 2. **Ajouter un nœud de filtrage** pour trier par entreprise
 3. **Stocker les rapports** dans des dossiers nommés par entreprise
 4. **Personnaliser l'email** avec le logo/nom de l'entreprise
 
 ### Pour le backend:
+
 1. **Ajouter un endpoint** pour déclencher l'analyse par lot d'entreprises
 2. **Scheduler** l'analyse automatique périodique
 3. **Dashboard** pour suivre l'avancement par entreprise
 
 ### Pour le frontend:
+
 1. **Afficher company_name** dans la liste des employés importés
 2. **Permettre le filtrage** par entreprise dans les rapports
 3. **Exporter les rapports** par entreprise
@@ -446,6 +477,7 @@ npm run typeorm migration:generate -- -n AddCompanyNameToEmployee
 ## 📞 Support
 
 Pour toute question ou problème:
+
 1. Vérifiez les logs frontend (console navigateur)
 2. Vérifiez les logs backend (console serveur)
 3. Consultez la section Dépannage ci-dessus

@@ -188,7 +188,7 @@ pm2 save
 
 ### Le déploiement échoue
 
-- Vérifier les logs GitHub Actions: https://github.com/AzazelSloth/rpsproject/actions
+- Vérifier les logs GitHub Actions: [Github logs](https://github.com/AzazelSloth/rpsproject/actions)
 - Vérifier la connexion SSH avec `id_deploy` : `ssh -i ~/.ssh/id_deploy root@104.254.182.46`
 - Vérifier que Git, Node.js, npm, PM2 sont installés sur le VPS
 - Vérifier que la clé `id_deploy` est valide et dans `authorized_keys`

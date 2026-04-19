@@ -82,11 +82,13 @@ N8N_WEBHOOK_URL=http://localhost:5678
    - **SMTP** : Serveur mail pour envoyer les emails
 
 4. **Ouvrir le port si nécessaire**
+
    ```bash
    sudo ufw allow 5678/tcp
    ```
 
 5. **Tester la connectivité**
+
    ```bash
    # Depuis le VPS
    curl http://localhost:5678/health
@@ -100,11 +102,13 @@ N8N_WEBHOOK_URL=http://localhost:5678
 ### Pour le Développeur
 
 1. **Mettre à jour `.env.local`** (développement)
+
    ```env
    N8N_WEBHOOK_URL=http://localhost:5678
    ```
 
 2. **Démarrer n8n localement**
+
    ```bash
    n8n start
    ```
@@ -112,6 +116,7 @@ N8N_WEBHOOK_URL=http://localhost:5678
 3. **Importer le workflow** dans l'interface locale
 
 4. **Tester l'intégration**
+
    ```bash
    # Test de l'endpoint analyse
    curl -X POST http://localhost:3001/api/webhook/n8n/analyze \
@@ -135,7 +140,7 @@ N8N_WEBHOOK_URL=http://localhost:5678
 
 ## 📊 Flux de Données Complet
 
-```
+```text
 1. Employé répond au sondage
    ↓
 2. Backend collecte les réponses
@@ -162,10 +167,13 @@ N8N_WEBHOOK_URL=http://localhost:5678
 ## 🔧 Dépannage
 
 ### Problème : "n8n non configuré"
+
 **Solution** : Vérifier que `N8N_WEBHOOK_URL` est défini dans `.env.local`
 
 ### Problème : Webhook ne répond pas
+
 **Solution** :
+
 ```bash
 # Vérifier que n8n tourne
 curl http://localhost:5678/health
@@ -177,9 +185,11 @@ n8n start --verbose
 ```
 
 ### Problème : Données manquantes dans le rapport
+
 **Solution** : Vérifier que le payload contient bien `Nom et Prenom` et les champs `Q1`-`Q28`
 
 ### Problème : Email non envoyé
+
 **Solution** : Vérifier les credentials SMTP dans n8n
 
 ---
