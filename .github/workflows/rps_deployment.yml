@@ -130,6 +130,18 @@ jobs:
             # ---------------------------------------------
             echo "Fetching latest code from Git..."
 
+            echo "Disk usage before cleanup:"
+            df -h /
+
+            # Keep only the 3 most recent backups to avoid filling the VPS disk.
+            find "$HOME" -maxdepth 1 -type d -name "rps-${ENV}.backup.*" -printf '%T@ %p\n' 2>/dev/null \
+              | sort -nr \
+              | awk 'NR>3 {print $2}' \
+              | xargs -r rm -rf
+
+            echo "Disk usage after cleanup:"
+            df -h /
+
             # Backup current deployment
             if [ -d "$APP_DIR" ]; then
               echo "Backing up current deployment..."
@@ -219,7 +231,41 @@ jobs:
             SWAGGER_PATH=api-docs
             ENVEOF
 
-            # Wait for database TCP port before running migrations
+            DB_HOST="${{ secrets.DB_HOST }}"
+            DB_PORT="${{ secrets.DB_PORT }}"
+            DB_USER="${{ secrets.DB_USER }}"
+            DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            DB_NAME="${{ secrets.DB_NAME }}"
+
+            DB_ACTIVE_HOST="$DB_HOST"
+            DB_ACTIVE_PORT="$DB_PORT"
+
+            case "$DB_ACTIVE_HOST" in
+              localhost|127.0.0.1|::1)
+                DB_HOST_IS_LOCAL=true
+                ;;
+              *)
+                DB_HOST_IS_LOCAL=false
+                ;;
+            esac
+
+            if [ "$DB_HOST_IS_LOCAL" = "true" ]; then
+              echo "Local PostgreSQL detected; ensuring service is running..."
+              if ! command -v psql >/dev/null 2>&1; then
+                echo "PostgreSQL client/server tools missing; installing PostgreSQL..."
+                apt-get update >/dev/null 2>&1 || true
+                DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib >/dev/null 2>&1 || true
+              fi
+
+              if command -v systemctl >/dev/null 2>&1; then
+                if ! systemctl is-active --quiet postgresql; then
+                  systemctl enable postgresql >/dev/null 2>&1 || true
+                  systemctl start postgresql >/dev/null 2>&1 || sudo systemctl start postgresql >/dev/null 2>&1 || true
+                fi
+              fi
+            fi
+
+            # Wait for database before running migrations
             DB_HOST="${{ secrets.DB_HOST }}"
             DB_PORT="${{ secrets.DB_PORT }}"
             DB_WAIT_RETRIES=24
@@ -228,14 +274,64 @@ jobs:
 
             for i in $(seq 1 $DB_WAIT_RETRIES); do
               echo "Checking database connectivity... (attempt $i/$DB_WAIT_RETRIES)"
-              if node -e "const net=require('net'); const host=process.argv[1]; const port=Number(process.argv[2]); const s=net.connect({host,port}, ()=>{s.end(); process.exit(0);}); s.on('error', ()=>process.exit(1)); setTimeout(()=>process.exit(1), 2000);" "$DB_HOST" "$DB_PORT"; then
-                echo "✓ Database is reachable"
+              if [ "$DB_HOST_IS_LOCAL" = "true" ]; then
+                if command -v pg_isready >/dev/null 2>&1 && PGPASSWORD="$DB_PASSWORD" pg_isready -h "$DB_ACTIVE_HOST" -p "$DB_ACTIVE_PORT" -U "$DB_USER" >/dev/null 2>&1; then
+                  echo "✓ Local PostgreSQL is ready"
+                  DB_READY=true
+                  break
+                fi
+
+                if PGPASSWORD="$DB_PASSWORD" psql -h "$DB_ACTIVE_HOST" -p "$DB_ACTIVE_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" >/dev/null 2>&1; then
+                  echo "✓ Local PostgreSQL is ready"
+                  DB_READY=true
+                  break
+                fi
+              elif node -e "const net=require('net'); const host=process.argv[1]; const port=Number(process.argv[2]); const s=net.connect({host,port}, ()=>{s.end(); process.exit(0);}); s.on('error', ()=>process.exit(1)); setTimeout(()=>process.exit(1), 2000);" "$DB_ACTIVE_HOST" "$DB_ACTIVE_PORT"; then
+                echo "✓ Database TCP port is reachable"
                 DB_READY=true
                 break
               fi
               echo "Database not reachable yet, waiting ${DB_WAIT_INTERVAL}s..."
               sleep $DB_WAIT_INTERVAL
             done
+
+            if [ "$DB_READY" != "true" ] && [ "$DB_HOST_IS_LOCAL" = "false" ]; then
+              echo "Primary database host was unreachable; trying local PostgreSQL fallback on localhost:5432..."
+              DB_ACTIVE_HOST="localhost"
+              DB_ACTIVE_PORT="5432"
+              DB_HOST_IS_LOCAL=true
+
+              if ! command -v psql >/dev/null 2>&1; then
+                echo "PostgreSQL client/server tools missing; installing PostgreSQL for fallback..."
+                apt-get update >/dev/null 2>&1 || true
+                DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib >/dev/null 2>&1 || true
+              fi
+
+              if command -v systemctl >/dev/null 2>&1; then
+                if ! systemctl is-active --quiet postgresql; then
+                  systemctl enable postgresql >/dev/null 2>&1 || true
+                  systemctl start postgresql >/dev/null 2>&1 || sudo systemctl start postgresql >/dev/null 2>&1 || true
+                fi
+              fi
+
+              for i in $(seq 1 $DB_WAIT_RETRIES); do
+                echo "Checking local database fallback... (attempt $i/$DB_WAIT_RETRIES)"
+                if command -v pg_isready >/dev/null 2>&1 && PGPASSWORD="$DB_PASSWORD" pg_isready -h "$DB_ACTIVE_HOST" -p "$DB_ACTIVE_PORT" -U "$DB_USER" >/dev/null 2>&1; then
+                  echo "✓ Local PostgreSQL fallback is ready"
+                  DB_READY=true
+                  break
+                fi
+
+                if PGPASSWORD="$DB_PASSWORD" psql -h "$DB_ACTIVE_HOST" -p "$DB_ACTIVE_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" >/dev/null 2>&1; then
+                  echo "✓ Local PostgreSQL fallback is ready"
+                  DB_READY=true
+                  break
+                fi
+
+                echo "Local PostgreSQL fallback not ready yet, waiting ${DB_WAIT_INTERVAL}s..."
+                sleep $DB_WAIT_INTERVAL
+              done
+            fi
 
             if [ "$DB_READY" != "true" ]; then
               echo "ERROR: Database is not reachable at $DB_HOST:$DB_PORT after $((DB_WAIT_RETRIES * DB_WAIT_INTERVAL))s"
