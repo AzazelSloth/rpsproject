@@ -485,7 +485,7 @@ jobs:
                   instances: 1,
                   exec_mode: "fork",
                   watch: false,
-                  max_memory_restart: "500M",
+                  max_memory_restart: "1G",
                   autorestart: true,
                   max_restarts: 10,
                   min_uptime: "10s",
@@ -507,6 +507,11 @@ jobs:
             # Stop existing processes
             pm2 delete all 2>/dev/null || true
             pm2 flush >/dev/null 2>&1 || true
+
+            # Remove stale RPS logs so deployment output only shows fresh runtime issues.
+            rm -f "$HOME/.pm2/logs/rps-backend"*-error*.log "$HOME/.pm2/logs/rps-backend"*-out*.log 2>/dev/null || true
+            rm -f "$HOME/.pm2/logs/rps-frontend"*-error*.log "$HOME/.pm2/logs/rps-frontend"*-out*.log 2>/dev/null || true
+            rm -f "$HOME/.pm2/logs/rps-n8n"*-error*.log "$HOME/.pm2/logs/rps-n8n"*-out*.log 2>/dev/null || true
 
             # Start with new code
             pm2 start ecosystem.config.cjs
