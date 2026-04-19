@@ -1,187 +1,121 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# RPS Deployment Script - Manual Deployment (SSH-based)
-# ==============================================================================
-# For manual deployment on VPS without GitHub Actions.
-# Clones from Git and builds locally.
-#
-# Usage:
-#   ./deploy.sh <branch>
-#   Example: ./deploy.sh main
-# ==============================================================================
 
 set -euo pipefail
 
-# Script directory and repo root
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# Usage: ./scripts/vps/deploy.sh [branch]
+TARGET_BRANCH="${1:-main}"
+COMMIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo manual)"
 
-# GitHub repository name (auto-detected or override)
-REPO_NAME="${REPO_NAME:-$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null | sed 's|.*github.com/||' | sed 's|\.git$||')}"
-
-# Arguments
-BRANCH="${1:-main}"
-
-# Determine environment based on branch (matching workflow logic)
-if [ "$BRANCH" = "main" ]; then
-    ENVIRONMENT="rps_dev"
+if [ "$TARGET_BRANCH" = "main" ]; then
+    ENV="rps_dev"
 else
-    ENVIRONMENT="development"
+    ENV="development"
 fi
 
-# Configuration
-APP_DIR="$HOME/rps-$ENVIRONMENT"
-LOG_FILE="$APP_DIR/deployment.log"
-BACKEND_SCRIPT="dist/main.js"
+APP_DIR="$HOME/rps-$ENV"
 N8N_DIR="$HOME/n8n"
+REPO_URL="${REPO_URL:-https://github.com/AzazelSloth/rpsproject.git}"
+VPS_HOST="${VPS_HOST:-127.0.0.1}"
 
-# Logging function
-log() {
-    local level="$1"
-    shift
-    local message="$*"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE"
-}
+DB_HOST="${DB_HOST:-localhost}"
+DB_PORT="${DB_PORT:-5432}"
+DB_USER="${DB_USER:-postgres}"
+DB_PASSWORD="${DB_PASSWORD:-postgres}"
+DB_NAME="${DB_NAME:-rps_platform}"
+JWT_SECRET="${JWT_SECRET:-change-me}"
+AUTH_DISABLED="${AUTH_DISABLED:-true}"
 
-# Error handler
-error_handler() {
-    log "ERROR" "Error at line ${LINENO}: ${BASH_COMMAND}"
+N8N_BASIC_AUTH_ACTIVE="${N8N_BASIC_AUTH_ACTIVE:-true}"
+N8N_BASIC_AUTH_PASSWORD="${N8N_BASIC_AUTH_PASSWORD:-changeme}"
+N8N_BASIC_AUTH_USER="${N8N_BASIC_AUTH_USER:-admin}"
+N8N_ENCRYPTION_KEY="${N8N_ENCRYPTION_KEY:-}"
+N8N_HOST="${N8N_HOST:-127.0.0.1}"
+N8N_PORT="${N8N_PORT:-5678}"
+N8N_PROTOCOL="${N8N_PROTOCOL:-http}"
+N8N_USER_FOLDER="${N8N_USER_FOLDER:-$N8N_DIR/data}"
+N8N_SECURE_COOKIE="${N8N_SECURE_COOKIE:-false}"
+
+echo "=== Starting deployment: $ENV ==="
+echo "Branch: $TARGET_BRANCH"
+echo "Commit: $COMMIT_SHA"
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
+
+echo "Node version: $(node -v)"
+echo "npm version: $(npm -v)"
+
+echo "Fetching latest code from Git..."
+echo "Disk usage before cleanup:"
+df -h /
+
+# Keep only the 3 most recent backups to avoid filling the VPS disk.
+find "$HOME" -maxdepth 1 -type d -name "rps-${ENV}.backup.*" -printf '%T@ %p\n' 2>/dev/null \
+    | sort -nr \
+    | awk 'NR>3 {print $2}' \
+    | xargs -r rm -rf
+
+echo "Disk usage after cleanup:"
+df -h /
+
+if [ -d "$APP_DIR" ]; then
+    echo "Backing up current deployment..."
+    mv "$APP_DIR" "${APP_DIR}.backup.$(date +%Y%m%d%H%M%S)" || true
+fi
+
+mkdir -p "$APP_DIR"
+git clone --depth 1 -b "$TARGET_BRANCH" "$REPO_URL" "$APP_DIR"
+
+if [ ! -f "$APP_DIR/rps-backend/package.json" ]; then
+    echo "ERROR: rps-backend/package.json not found"
     exit 1
-}
+fi
 
-trap 'error_handler' ERR
+if [ ! -f "$APP_DIR/rps-frontend/nextjs-app/package.json" ]; then
+    echo "ERROR: rps-frontend/nextjs-app/package.json not found"
+    exit 1
+fi
 
-# ==============================================================================
-# Utility Functions
-# ==============================================================================
+echo "Git repository cloned successfully"
 
-require_command() {
-    if ! command -v "$1" >/dev/null 2>&1; then
-        log "ERROR" "Missing required command: $1"
-        exit 1
-    fi
-    log "INFO" "Found $1 at: $(command -v "$1")"
-}
+echo "Configuring n8n environment..."
+mkdir -p "$N8N_DIR"
+mkdir -p "$N8N_USER_FOLDER"
+chmod 700 "$N8N_DIR"
 
-setup_node() {
-    log "INFO" "Setting up Node.js environment..."
+cat > "$N8N_DIR/.env" << N8NEOF
+N8N_BASIC_AUTH_ACTIVE=$N8N_BASIC_AUTH_ACTIVE
+N8N_BASIC_AUTH_PASSWORD=$N8N_BASIC_AUTH_PASSWORD
+N8N_BASIC_AUTH_USER=$N8N_BASIC_AUTH_USER
+N8N_ENCRYPTION_KEY=$N8N_ENCRYPTION_KEY
+N8N_HOST=$N8N_HOST
+N8N_PORT=$N8N_PORT
+N8N_PROTOCOL=$N8N_PROTOCOL
+N8N_USER_FOLDER=$N8N_USER_FOLDER
+N8N_PATH=/n8n/
+N8N_SECURE_COOKIE=$N8N_SECURE_COOKIE
+N8N_EDITOR_BASE_URL=http://$VPS_HOST:8786/n8n/
+WEBHOOK_URL=http://$VPS_HOST:8786/n8n/
+N8NEOF
 
-    # Try to load nvm if available
-    if [ -s "$HOME/.nvm/nvm.sh" ]; then
-        # shellcheck disable=SC1090
-        source "$HOME/.nvm/nvm.sh" 2>/dev/null || true
-        log "INFO" "Loaded Node.js: $(node -v)"
-    fi
+chmod 600 "$N8N_DIR/.env"
+echo "n8n .env written to $N8N_DIR/.env"
 
-    # Check common Node.js installation paths
-    local node_paths=(
-        "$HOME/.nvm/versions/node/"*/bin/node
-        "/usr/local/bin/node"
-        "/usr/bin/node"
-        "$HOME/.local/bin/node"
-    )
+echo "Building backend..."
+cd "$APP_DIR/rps-backend"
+npm ci
+npm run build
 
-    for node_path in "${node_paths[@]}"; do
-        if [ -x "$node_path" ]; then
-            export PATH="$(dirname "$node_path"):$PATH"
-            log "INFO" "Found Node.js at: $node_path ($(node -v))"
-            break
-        fi
-    done
+BACKEND_SCRIPT="$(find dist -type f -name main.js | head -n 1 || true)"
+if [ -z "$BACKEND_SCRIPT" ]; then
+    echo "ERROR: no main.js found in dist/ after build"
+    ls -la dist/ || echo "dist/ doesn't exist"
+    exit 1
+fi
+echo "Backend entrypoint: $BACKEND_SCRIPT"
 
-    # Verify Node.js version
-    local node_version
-    node_version=$(node -v 2>/dev/null || echo "not found")
-    local major_version
-
-    if [ "$node_version" = "not found" ]; then
-        log "ERROR" "Node.js not found in PATH"
-        exit 1
-    fi
-
-    major_version=$(echo "$node_version" | cut -d. -f1 | tr -d 'v')
-
-    if [ "$major_version" -lt 20 ] || [ "$major_version" -gt 24 ]; then
-        log "ERROR" "Node.js 20-24 required, found: $node_version"
-        exit 1
-    fi
-
-    log "INFO" "Node.js version: $node_version"
-    log "INFO" "npm version: $(npm -v)"
-}
-
-setup_ssh_for_github() {
-    log "INFO" "Setting up SSH for GitHub..."
-
-    # Start SSH agent
-    eval "$(ssh-agent -s)" >/dev/null 2>&1
-
-    # Add SSH key
-    ssh-add "$HOME/.ssh/id_deploy" 2>/dev/null || true
-
-    # Add GitHub to known hosts
-    mkdir -p "$HOME/.ssh"
-    chmod 700 "$HOME/.ssh"
-    ssh-keyscan -H github.com >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
-    chmod 644 "$HOME/.ssh/known_hosts"
-
-    # Configure Git SSH
-    export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i $HOME/.ssh/id_deploy"
-
-    log "INFO" "SSH configured for GitHub"
-}
-
-# ==============================================================================
-# Database Functions
-# ==============================================================================
-
-check_database() {
-    log "INFO" "Checking PostgreSQL database..."
-
-    if ! command -v psql >/dev/null 2>&1; then
-        log "WARN" "psql not found - skipping database check"
-        return 0
-    fi
-
-    # Check if database is accessible
-    if PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" >/dev/null 2>&1; then
-        log "INFO" "Database connection successful"
-    else
-        log "WARN" "Database connection failed - will use application defaults"
-    fi
-}
-
-# ==============================================================================
-# Deployment Functions
-# ==============================================================================
-
-clone_or_update() {
-    log "INFO" "Cloning/updating repository..."
-
-    mkdir -p "$APP_DIR"
-    cd "$APP_DIR"
-
-    if [ -d ".git" ]; then
-        log "INFO" "Updating existing repository..."
-        git remote set-url origin git@github.com:"$REPO_NAME".git 2>/dev/null || true
-        git fetch origin "$BRANCH"
-        git reset --hard "origin/$BRANCH"
-    else
-        log "INFO" "Cloning repository..."
-        export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i $HOME/.ssh/id_deploy"
-        git clone -b "$BRANCH" git@github.com:"$REPO_NAME".git .
-    fi
-
-    log "INFO" "Repository updated to branch: $BRANCH"
-}
-
-configure_environment() {
-    log "INFO" "Configuring environment variables..."
-
-    # Backend environment
-    cd "$APP_DIR/rps-backend"
-    cat > .env << EOF
+cat > .env << ENVEOF
 NODE_ENV=production
 PORT=3000
 JWT_SECRET=$JWT_SECRET
@@ -192,185 +126,170 @@ DB_PASSWORD=$DB_PASSWORD
 DB_NAME=$DB_NAME
 DB_SYNCHRONIZE=false
 DB_LOGGING=false
-CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001
-ADMIN_BOOTSTRAP_PASSWORD=${ADMIN_BOOTSTRAP_PASSWORD:-password}
+AUTH_DISABLED=$AUTH_DISABLED
+CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001,http://$VPS_HOST:8786
 SWAGGER_ENABLED=true
 SWAGGER_PATH=api-docs
-N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://127.0.0.1:5678/webhook/sondage-rps-solutions-tech}
-EOF
-    log "INFO" "Backend .env configured"
+ENVEOF
 
-    # Frontend environment
-    cd "$APP_DIR/rps-frontend/nextjs-app"
-    cat > .env.local << EOF
-NEXT_PUBLIC_API_URL=http://127.0.0.1:3000/api
+DB_ACTIVE_HOST="$DB_HOST"
+DB_ACTIVE_PORT="$DB_PORT"
+
+case "$DB_ACTIVE_HOST" in
+    localhost|127.0.0.1|::1)
+        DB_HOST_IS_LOCAL=true
+        ;;
+    *)
+        DB_HOST_IS_LOCAL=false
+        ;;
+esac
+
+if [ "$DB_HOST_IS_LOCAL" = "true" ]; then
+    echo "Local PostgreSQL detected; ensuring service is running..."
+    if ! command -v psql >/dev/null 2>&1; then
+        echo "PostgreSQL client/server tools missing; installing PostgreSQL..."
+        apt-get update >/dev/null 2>&1 || true
+        DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib >/dev/null 2>&1 || true
+    fi
+
+    if command -v systemctl >/dev/null 2>&1; then
+        if ! systemctl is-active --quiet postgresql; then
+            systemctl enable postgresql >/dev/null 2>&1 || true
+            systemctl start postgresql >/dev/null 2>&1 || sudo systemctl start postgresql >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
+DB_WAIT_RETRIES=24
+DB_WAIT_INTERVAL=5
+DB_READY=false
+
+for i in $(seq 1 $DB_WAIT_RETRIES); do
+    echo "Checking database connectivity... (attempt $i/$DB_WAIT_RETRIES)"
+    if [ "$DB_HOST_IS_LOCAL" = "true" ]; then
+        if command -v pg_isready >/dev/null 2>&1 && PGPASSWORD="$DB_PASSWORD" pg_isready -h "$DB_ACTIVE_HOST" -p "$DB_ACTIVE_PORT" -U "$DB_USER" >/dev/null 2>&1; then
+            echo "✓ Local PostgreSQL is ready"
+            DB_READY=true
+            break
+        fi
+
+        if PGPASSWORD="$DB_PASSWORD" psql -h "$DB_ACTIVE_HOST" -p "$DB_ACTIVE_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" >/dev/null 2>&1; then
+            echo "✓ Local PostgreSQL is ready"
+            DB_READY=true
+            break
+        fi
+    elif node -e "const net=require('net'); const host=process.argv[1]; const port=Number(process.argv[2]); const s=net.connect({host,port}, ()=>{s.end(); process.exit(0);}); s.on('error', ()=>process.exit(1)); setTimeout(()=>process.exit(1), 2000);" "$DB_ACTIVE_HOST" "$DB_ACTIVE_PORT"; then
+        echo "✓ Database TCP port is reachable"
+        DB_READY=true
+        break
+    fi
+    echo "Database not reachable yet, waiting ${DB_WAIT_INTERVAL}s..."
+    sleep $DB_WAIT_INTERVAL
+done
+
+if [ "$DB_READY" != "true" ] && [ "$DB_HOST_IS_LOCAL" = "false" ]; then
+    echo "Primary database host was unreachable; trying local PostgreSQL fallback on localhost:5432..."
+    DB_ACTIVE_HOST="localhost"
+    DB_ACTIVE_PORT="5432"
+    DB_HOST_IS_LOCAL=true
+
+    if ! command -v psql >/dev/null 2>&1; then
+        echo "PostgreSQL client/server tools missing; installing PostgreSQL for fallback..."
+        apt-get update >/dev/null 2>&1 || true
+        DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib >/dev/null 2>&1 || true
+    fi
+
+    if command -v systemctl >/dev/null 2>&1; then
+        if ! systemctl is-active --quiet postgresql; then
+            systemctl enable postgresql >/dev/null 2>&1 || true
+            systemctl start postgresql >/dev/null 2>&1 || sudo systemctl start postgresql >/dev/null 2>&1 || true
+        fi
+    fi
+
+    for i in $(seq 1 $DB_WAIT_RETRIES); do
+        echo "Checking local database fallback... (attempt $i/$DB_WAIT_RETRIES)"
+        if command -v pg_isready >/dev/null 2>&1 && PGPASSWORD="$DB_PASSWORD" pg_isready -h "$DB_ACTIVE_HOST" -p "$DB_ACTIVE_PORT" -U "$DB_USER" >/dev/null 2>&1; then
+            echo "✓ Local PostgreSQL fallback is ready"
+            DB_READY=true
+            break
+        fi
+
+        if PGPASSWORD="$DB_PASSWORD" psql -h "$DB_ACTIVE_HOST" -p "$DB_ACTIVE_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" >/dev/null 2>&1; then
+            echo "✓ Local PostgreSQL fallback is ready"
+            DB_READY=true
+            break
+        fi
+
+        echo "Local PostgreSQL fallback not ready yet, waiting ${DB_WAIT_INTERVAL}s..."
+        sleep $DB_WAIT_INTERVAL
+    done
+fi
+
+if [ "$DB_READY" != "true" ]; then
+    echo "ERROR: Database is not reachable at $DB_HOST:$DB_PORT after $((DB_WAIT_RETRIES * DB_WAIT_INTERVAL))s"
+    exit 1
+fi
+
+MIGRATION_RETRIES=5
+MIGRATION_INTERVAL=4
+MIGRATION_DONE=false
+
+for i in $(seq 1 $MIGRATION_RETRIES); do
+    echo "Running migrations... (attempt $i/$MIGRATION_RETRIES)"
+    if npm run migration:run; then
+        MIGRATION_DONE=true
+        echo "✓ Database migrations applied"
+        break
+    fi
+
+    if [ $i -lt $MIGRATION_RETRIES ]; then
+        echo "Migration attempt failed, retrying in ${MIGRATION_INTERVAL}s..."
+        sleep $MIGRATION_INTERVAL
+    fi
+done
+
+if [ "$MIGRATION_DONE" != "true" ]; then
+    echo "ERROR: Database migration failed after $MIGRATION_RETRIES attempts"
+    exit 1
+fi
+
+echo "Backend built successfully"
+
+echo "Building frontend..."
+cd "$APP_DIR/rps-frontend/nextjs-app"
+npm ci
+
+cat > .env.local << ENVEOF
+NEXT_PUBLIC_API_URL=http://$VPS_HOST:3000/api
 API_URL=http://127.0.0.1:3000/api
 NEXT_PUBLIC_STRAPI_URL=
 STRAPI_API_TOKEN=
-N8N_WEBHOOK_URL=${FRONTEND_N8N_WEBHOOK_URL:-http://127.0.0.1:5678}
-EOF
-    log "INFO" "Frontend .env.local configured"
+ENVEOF
 
-    # n8n environment
-    mkdir -p "$N8N_DIR"
-    mkdir -p "${N8N_USER_FOLDER:-$N8N_DIR/data}"
-    chmod 700 "$N8N_DIR"
+rm -rf .next
+npm run build
 
-    cat > "$N8N_DIR/.env" << EOF
-N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE:-true}
-N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-changeme}
-N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
-N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-}
-N8N_HOST=${N8N_HOST:-127.0.0.1}
-N8N_PORT=${N8N_PORT:-5678}
-N8N_PROTOCOL=${N8N_PROTOCOL:-http}
-N8N_USER_FOLDER=${N8N_USER_FOLDER:-$N8N_DIR/data}
-N8N_PATH=${N8N_PATH:-/n8n/}
-N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL:-http://127.0.0.1:8786/n8n/}
-WEBHOOK_URL=${WEBHOOK_URL:-http://127.0.0.1:8786/n8n/}
-N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE:-false}
-EOF
+if [ ! -d ".next" ]; then
+    echo "ERROR: .next directory not found after build"
+    ls -la . | head -20
+    exit 1
+fi
 
-    chmod 600 "$N8N_DIR/.env"
-    log "INFO" "n8n .env configured at $N8N_DIR/.env"
-}
+echo "Frontend built successfully"
+echo "Configuring PM2..."
 
-build_backend() {
-    log "INFO" "Building backend..."
-
-    # Ensure Node.js v24.14.1 is available
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
-    [ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
-    log "INFO" "Node version: $(node -v)"
-
-    cd "$APP_DIR/rps-backend"
-
-    # Install ALL dependencies (dev dependencies needed for build)
-    npm ci
-
-    # Build
-    npm run build
-
-    # Detect backend entrypoint generated by Nest build (layout can vary)
-    local detected_script
-    detected_script="$(find dist -type f -name main.js | head -n 1 || true)"
-    if [ -z "$detected_script" ]; then
-        log "ERROR" "No main.js found under dist/ after backend build"
-        ls -la dist/ 2>/dev/null || true
-        exit 1
-    fi
-
-    BACKEND_SCRIPT="$detected_script"
-    log "INFO" "Detected backend entrypoint: $BACKEND_SCRIPT"
-
-    # Apply database migrations on every deployment
-    npm run migration:run
-    log "INFO" "Database migrations applied"
-
-    log "INFO" "Backend built successfully"
-}
-
-build_frontend() {
-    log "INFO" "Building frontend..."
-
-    # Ensure Node.js v24.14.1 is available
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
-    [ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
-    log "INFO" "Node version: $(node -v)"
-
-    cd "$APP_DIR/rps-frontend/nextjs-app"
-
-    # Install ALL dependencies (dev dependencies needed for build)
-    npm ci
-
-    # Build
-    npm run build
-
-    log "INFO" "Frontend built successfully"
-}
-
-setup_pm2() {
-    log "INFO" "Configuring PM2..."
-
-    # Check if PM2 is installed
-    if ! command -v pm2 >/dev/null 2>&1; then
-        log "INFO" "Installing PM2..."
-        sudo npm install -g pm2
-    fi
-
-    # Create ecosystem config
-    cd "$APP_DIR"
-        cat > ecosystem.config.cjs << EOF
+cat > "$APP_DIR/ecosystem.config.cjs" << PM2EOF
 module.exports = {
-  apps: [
-    {
-      name: "rps-backend",
-      cwd: "./rps-backend",
+    apps: [
+        {
+            name: "rps-backend",
+            cwd: "$APP_DIR/rps-backend",
             script: "$BACKEND_SCRIPT",
             interpreter: "node",
-      env: {
-        NODE_ENV: "production",
-        PORT: 3000,
-        PATH: "/root/.nvm/versions/node/v24.14.1/bin:/usr/local/bin:/usr/bin:/bin"
-      },
-      instances: 1,
-      exec_mode: "fork",
-      watch: false,
-      max_memory_restart: "500M",
-      autorestart: true,
-      max_restarts: 10,
-      min_uptime: "10s",
-      kill_timeout: 5000,
-      listen_timeout: 10000,
-      error_file: "./logs/backend-error.log",
-      out_file: "./logs/backend-out.log",
-      log_date_format: "YYYY-MM-DD HH:mm:ss Z"
-    },
-    {
-      name: "rps-frontend",
-      cwd: "./rps-frontend/nextjs-app",
-      script: "node_modules/next/dist/bin/next",
-      args: "start -p 3001",
-            interpreter: "node",
-      env: {
-        NODE_ENV: "production",
-        PORT: 3001,
-        PATH: "/root/.nvm/versions/node/v24.14.1/bin:/usr/local/bin:/usr/bin:/bin"
-      },
-      instances: 1,
-      exec_mode: "fork",
-      watch: false,
-      max_memory_restart: "500M",
-      autorestart: true,
-      max_restarts: 10,
-      min_uptime: "10s",
-      kill_timeout: 5000,
-      listen_timeout: 10000,
-      error_file: "./logs/frontend-error.log",
-      out_file: "./logs/frontend-out.log",
-      log_date_format: "YYYY-MM-DD HH:mm:ss Z"
-        },
-        {
-            name: "rps-n8n",
-            cwd: "$N8N_DIR",
-            script: "n8n",
-            args: "start",
-            interpreter: "none",
             env: {
-                PATH: "/root/.nvm/versions/node/v24.14.1/bin:/usr/local/bin:/usr/bin:/bin",
-                N8N_BASIC_AUTH_ACTIVE: "${N8N_BASIC_AUTH_ACTIVE:-true}",
-                N8N_BASIC_AUTH_PASSWORD: "${N8N_BASIC_AUTH_PASSWORD:-changeme}",
-                N8N_BASIC_AUTH_USER: "${N8N_BASIC_AUTH_USER:-admin}",
-                N8N_ENCRYPTION_KEY: "${N8N_ENCRYPTION_KEY:-}",
-                N8N_HOST: "${N8N_HOST:-127.0.0.1}",
-                N8N_PORT: "${N8N_PORT:-5678}",
-                N8N_PROTOCOL: "${N8N_PROTOCOL:-http}",
-                N8N_USER_FOLDER: "${N8N_USER_FOLDER:-$N8N_DIR/data}",
-                N8N_PATH: "${N8N_PATH:-/n8n/}",
-                N8N_EDITOR_BASE_URL: "${N8N_EDITOR_BASE_URL:-http://127.0.0.1:8786/n8n/}",
-                WEBHOOK_URL: "${WEBHOOK_URL:-http://127.0.0.1:8786/n8n/}"
+                NODE_ENV: "production",
+                PORT: 3000,
+                PATH: "$PATH"
             },
             instances: 1,
             exec_mode: "fork",
@@ -380,209 +299,175 @@ module.exports = {
             max_restarts: 10,
             min_uptime: "10s",
             kill_timeout: 5000,
-            listen_timeout: 10000,
-            error_file: "./logs/n8n-error.log",
-            out_file: "./logs/n8n-out.log",
-            log_date_format: "YYYY-MM-DD HH:mm:ss Z"
-    }
-  ]
+            listen_timeout: 10000
+        },
+        {
+            name: "rps-frontend",
+            cwd: "$APP_DIR/rps-frontend/nextjs-app",
+            script: "node_modules/next/dist/bin/next",
+            args: "start -p 3001",
+            interpreter: "node",
+            env: {
+                NODE_ENV: "production",
+                PORT: 3001,
+                PATH: "$PATH",
+                NEXT_PUBLIC_API_URL: "http://$VPS_HOST:3000/api",
+                API_URL: "http://127.0.0.1:3000/api",
+                NEXT_PUBLIC_STRAPI_URL: "",
+                STRAPI_API_TOKEN: ""
+            },
+            instances: 1,
+            exec_mode: "fork",
+            watch: false,
+            max_memory_restart: "500M",
+            autorestart: true,
+            max_restarts: 10,
+            min_uptime: "10s",
+            kill_timeout: 5000,
+            listen_timeout: 10000
+        },
+        {
+            name: "rps-n8n",
+            cwd: "$N8N_DIR",
+            script: "n8n",
+            args: "start",
+            interpreter: "none",
+            env: {
+                PATH: "$PATH",
+                N8N_BASIC_AUTH_ACTIVE: "$N8N_BASIC_AUTH_ACTIVE",
+                N8N_BASIC_AUTH_PASSWORD: "$N8N_BASIC_AUTH_PASSWORD",
+                N8N_BASIC_AUTH_USER: "$N8N_BASIC_AUTH_USER",
+                N8N_ENCRYPTION_KEY: "$N8N_ENCRYPTION_KEY",
+                N8N_HOST: "$N8N_HOST",
+                N8N_PORT: "$N8N_PORT",
+                N8N_PROTOCOL: "$N8N_PROTOCOL",
+                N8N_USER_FOLDER: "$N8N_USER_FOLDER",
+                N8N_PATH: "/n8n/",
+                N8N_SECURE_COOKIE: "$N8N_SECURE_COOKIE",
+                N8N_EDITOR_BASE_URL: "http://$VPS_HOST:8786/n8n/",
+                WEBHOOK_URL: "http://$VPS_HOST:8786/n8n/"
+            },
+            instances: 1,
+            exec_mode: "fork",
+            watch: false,
+            max_memory_restart: "500M",
+            autorestart: true,
+            max_restarts: 10,
+            min_uptime: "10s",
+            kill_timeout: 5000,
+            listen_timeout: 10000
+        }
+    ]
 };
-EOF
+PM2EOF
 
-    # Create logs directory
-    mkdir -p "$APP_DIR/logs"
+cd "$APP_DIR"
 
-    # Use correct Node.js version from NVM
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
-    [ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
-    log "INFO" "Node version: $(node -v)"
+if ! command -v pm2 >/dev/null 2>&1; then
+    echo "Installing PM2..."
+    npm install -g pm2
+fi
 
-    # Check if PM2 is installed
-    if ! command -v pm2 >/dev/null 2>&1; then
-        log "INFO" "Installing PM2..."
-        sudo npm install -g pm2
+pm2 delete all 2>/dev/null || true
+pm2 flush >/dev/null 2>&1 || true
+pm2 start ecosystem.config.cjs
+pm2 save
+
+echo "Waiting for services to initialize..."
+MAX_RETRIES=15
+RETRY_INTERVAL=5
+BACKEND_READY=false
+
+for i in $(seq 1 $MAX_RETRIES); do
+    echo "Checking backend health... (attempt $i/$MAX_RETRIES)"
+    if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3000/api/health >/dev/null 2>&1; then
+        echo "✓ Backend is ready!"
+        BACKEND_READY=true
+        break
     fi
 
-    # Stop existing processes to ensure clean start
-    pm2 delete all 2>/dev/null || true
+    if [ $i -eq 1 ]; then
+        echo "Backend not ready yet, checking PM2 status..."
+        pm2 list
+    fi
 
-    # Start PM2
-    pm2 start ecosystem.config.cjs
-    pm2 save
+    if [ $i -eq 5 ] || [ $i -eq 10 ]; then
+        echo "--- Backend PM2 logs (last 10 lines) ---"
+        pm2 logs rps-backend --lines 10 --nostream 2>/dev/null || true
+    fi
 
-    # Ensure PM2 restarts applications after server reboot.
-    sudo env PATH="$PATH" "$(command -v pm2)" startup systemd -u "$USER" --hp "$HOME" >/dev/null 2>&1 || true
-    pm2 save
+    echo "Waiting ${RETRY_INTERVAL}s before next attempt..."
+    sleep $RETRY_INTERVAL
+done
 
-    # Verify services are running
-    log "INFO" "PM2 Status:"
-    pm2 status
-    pm2 logs --lines 10 --nostream
+if [ "$BACKEND_READY" != "true" ]; then
+    echo "✗ ERROR: Backend failed to start after $((MAX_RETRIES * RETRY_INTERVAL))s"
+    echo "--- Final PM2 status ---"
+    pm2 list
+    echo "--- Final backend logs ---"
+    pm2 logs rps-backend --lines 30 --nostream 2>/dev/null || true
+    exit 1
+fi
 
-    log "INFO" "PM2 configured successfully"
-}
+FRONTEND_MAX_RETRIES=10
+FRONTEND_READY=false
 
-check_n8n_health() {
-    log "INFO" "Checking n8n health..."
+for i in $(seq 1 $FRONTEND_MAX_RETRIES); do
+    echo "Checking frontend health... (attempt $i/$FRONTEND_MAX_RETRIES)"
+    if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/login >/dev/null 2>&1; then
+        echo "✓ Frontend is ready!"
+        FRONTEND_READY=true
+        break
+    fi
+    echo "Waiting ${RETRY_INTERVAL}s before next attempt..."
+    sleep $RETRY_INTERVAL
+done
 
-    local max_retries=15
-    local retry_interval=5
-    local n8n_port="${N8N_PORT:-5678}"
+if [ "$FRONTEND_READY" != "true" ]; then
+    echo "⚠ WARNING: Frontend not ready yet, but deployment continues (frontend may need more time)"
+fi
 
-    for i in $(seq 1 "$max_retries"); do
-        if curl --fail --silent --show-error --max-time 10 "http://127.0.0.1:${n8n_port}/healthz" >/dev/null 2>&1; then
-            log "INFO" "n8n is ready"
-            return 0
-        fi
+N8N_MAX_RETRIES=15
+N8N_READY=false
 
-        if [ "$i" -eq 5 ] || [ "$i" -eq 10 ]; then
-            pm2 logs rps-n8n --lines 10 --nostream 2>/dev/null || true
-        fi
+for i in $(seq 1 $N8N_MAX_RETRIES); do
+    echo "Checking n8n health... (attempt $i/$N8N_MAX_RETRIES)"
+    if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:5678/healthz >/dev/null 2>&1; then
+        echo "✓ n8n is ready!"
+        N8N_READY=true
+        break
+    fi
+    if [ $i -eq 5 ] || [ $i -eq 10 ]; then
+        echo "--- n8n PM2 logs (last 10 lines) ---"
+        pm2 logs rps-n8n --lines 10 --nostream 2>/dev/null || true
+    fi
+    echo "Waiting ${RETRY_INTERVAL}s before next attempt..."
+    sleep $RETRY_INTERVAL
+done
 
-        log "INFO" "n8n not ready yet (attempt $i/$max_retries), waiting ${retry_interval}s..."
-        sleep "$retry_interval"
-    done
-
-    log "ERROR" "n8n health check failed after $((max_retries * retry_interval))s"
+if [ "$N8N_READY" != "true" ]; then
+    echo "✗ ERROR: n8n failed to start after $((N8N_MAX_RETRIES * RETRY_INTERVAL))s"
     pm2 list
     pm2 logs rps-n8n --lines 30 --nostream 2>/dev/null || true
     exit 1
-}
+fi
 
-configure_nginx() {
-    log "INFO" "Nginx configuration step skipped (disabled to prevent overwriting server config)"
-}
+echo "Running final smoke tests..."
+curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3000/api/health >/dev/null
+curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/login >/dev/null
+curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/results >/dev/null
+curl --fail --silent --show-error --max-time 10 http://127.0.0.1:5678/healthz >/dev/null
 
-# ==============================================================================
-# Docker Compose Functions (for future n8n)
-# ==============================================================================
+echo "✓ All smoke tests passed!"
 
-create_docker_compose() {
-    log "INFO" "Creating Docker Compose configuration..."
+sudo env PATH="$PATH" "$(command -v pm2)" startup systemd -u "$USER" --hp "$HOME" >/dev/null 2>&1 || true
+pm2 save
 
-    cd "$APP_DIR"
+pm2 status
+pm2 logs --lines 20 --nostream
 
-    cat > docker-compose.yml << 'EOF'
-version: '3.8'
-
-services:
-  # PostgreSQL is external on the server
-  # This file is prepared for future n8n integration
-
-  n8n:
-    # n8n will be added in a future version
-    image: n8nio/n8n
-    restart: unless-stopped
-    ports:
-      - "5678:5678"
-    environment:
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
-      - N8N_HOST=${N8N_HOST:-localhost}
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=${DB_HOST}
-      - DB_POSTGRESDB_PORT=${DB_PORT}
-      - DB_POSTGRESDB_DATABASE=${DB_NAME}
-      - DB_POSTGRESDB_USER=${DB_USER}
-      - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD}
-    volumes:
-      - n8n_data:/home/node/.n8n
-    networks:
-      - rps_network
-
-volumes:
-  n8n_data:
-    driver: local
-
-networks:
-  rps_network:
-    driver: bridge
-EOF
-
-    log "INFO" "Docker Compose configuration created (n8n ready for future)"
-}
-
-# ==============================================================================
-# SSL Functions (prepared for Certbot)
-# ==============================================================================
-
-setup_ssl() {
-    log "INFO" "SSL setup is prepared for Certbot..."
-    log "INFO" "Run 'sudo certbot --nginx -d your-domain.com' to enable SSL"
-}
-
-# ==============================================================================
-# Main Deployment
-# ==============================================================================
-
-main() {
-    log "INFO" "=============================================="
-    log "INFO" "RPS Deployment - Starting"
-    log "INFO" "Branch: $BRANCH"
-    log "INFO" "Environment: $ENVIRONMENT"
-    log "INFO" "=============================================="
-
-    # Prerequisites
-    require_command git
-    require_command npm
-    require_command curl
-    require_command n8n
-
-    # Setup environment
-    setup_node
-
-    # Database check (optional)
-    if [ -n "${DB_HOST:-}" ]; then
-        check_database
-    fi
-
-    # Setup SSH
-    setup_ssh_for_github
-
-    # Clone/Update repository
-    clone_or_update
-
-    # Configure environment
-    configure_environment
-
-    # Build applications
-    build_backend
-    build_frontend
-
-    # PM2 setup
-    # Ensure Node.js v24.14.1 is available
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
-    [ -s "$NVM_DIR/versions/node/v24.14.1/bin/node" ] && export PATH="$NVM_DIR/versions/node/v24.14.1/bin:$PATH"
-
-    setup_pm2
-
-    # Verify n8n readiness
-    check_n8n_health
-
-    # Nginx configuration
-    configure_nginx
-
-    # Docker Compose (prepared for n8n)
-    create_docker_compose
-
-    # Show status
-    log "INFO" "=============================================="
-    log "INFO" "PM2 Status:"
-    pm2 status
-    pm2 logs --lines 20 --nostream
-
-    log "INFO" "=============================================="
-    log "INFO" "Deployment completed successfully!"
-    log "INFO" "Backend API: http://localhost:3000/api"
-    log "INFO" "Frontend: http://localhost:3001"
-    log "INFO" "n8n: http://localhost:${N8N_PORT:-5678}"
-    log "INFO" "=============================================="
-}
-
-# Run main
-main "$@"
+echo "=== Deployment completed: $ENV ==="
+echo "Commit deployed: $COMMIT_SHA"
+echo "Backend API: http://localhost:3000"
+echo "Frontend: http://localhost:3001"
+echo "n8n: http://localhost:5678"
