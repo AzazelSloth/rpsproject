@@ -219,8 +219,52 @@ jobs:
             SWAGGER_PATH=api-docs
             ENVEOF
 
-            # Apply database migrations before starting services
-            npm run migration:run
+            # Wait for database TCP port before running migrations
+            DB_HOST="${{ secrets.DB_HOST }}"
+            DB_PORT="${{ secrets.DB_PORT }}"
+            DB_WAIT_RETRIES=24
+            DB_WAIT_INTERVAL=5
+            DB_READY=false
+
+            for i in $(seq 1 $DB_WAIT_RETRIES); do
+              echo "Checking database connectivity... (attempt $i/$DB_WAIT_RETRIES)"
+              if node -e "const net=require('net'); const host=process.argv[1]; const port=Number(process.argv[2]); const s=net.connect({host,port}, ()=>{s.end(); process.exit(0);}); s.on('error', ()=>process.exit(1)); setTimeout(()=>process.exit(1), 2000);" "$DB_HOST" "$DB_PORT"; then
+                echo "✓ Database is reachable"
+                DB_READY=true
+                break
+              fi
+              echo "Database not reachable yet, waiting ${DB_WAIT_INTERVAL}s..."
+              sleep $DB_WAIT_INTERVAL
+            done
+
+            if [ "$DB_READY" != "true" ]; then
+              echo "ERROR: Database is not reachable at $DB_HOST:$DB_PORT after $((DB_WAIT_RETRIES * DB_WAIT_INTERVAL))s"
+              exit 1
+            fi
+
+            # Apply database migrations with retry for transient connection failures
+            MIGRATION_RETRIES=5
+            MIGRATION_INTERVAL=4
+            MIGRATION_DONE=false
+
+            for i in $(seq 1 $MIGRATION_RETRIES); do
+              echo "Running migrations... (attempt $i/$MIGRATION_RETRIES)"
+              if npm run migration:run; then
+                MIGRATION_DONE=true
+                echo "✓ Database migrations applied"
+                break
+              fi
+
+              if [ $i -lt $MIGRATION_RETRIES ]; then
+                echo "Migration attempt failed, retrying in ${MIGRATION_INTERVAL}s..."
+                sleep $MIGRATION_INTERVAL
+              fi
+            done
+
+            if [ "$MIGRATION_DONE" != "true" ]; then
+              echo "ERROR: Database migration failed after $MIGRATION_RETRIES attempts"
+              exit 1
+            fi
 
             echo "Backend built successfully"
 
