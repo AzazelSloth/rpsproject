@@ -412,7 +412,19 @@ jobs:
                   env: {
                     NODE_ENV: "production",
                     PORT: 3000,
-                    PATH: "$PATH"
+                    PATH: "$PATH",
+                    JWT_SECRET: "${{ secrets.JWT_SECRET }}",
+                    DB_HOST: "${{ secrets.DB_HOST }}",
+                    DB_PORT: "${{ secrets.DB_PORT }}",
+                    DB_USER: "${{ secrets.DB_USER }}",
+                    DB_PASSWORD: "${{ secrets.DB_PASSWORD }}",
+                    DB_NAME: "${{ secrets.DB_NAME }}",
+                    DB_SYNCHRONIZE: "false",
+                    DB_LOGGING: "false",
+                    AUTH_DISABLED: "true",
+                    CORS_ORIGIN: "http://localhost:3001,http://127.0.0.1:3001,http://${{ secrets.VPS_HOST }}:3001",
+                    SWAGGER_ENABLED: "true",
+                    SWAGGER_PATH: "api-docs"
                   },
                   instances: 1,
                   exec_mode: "fork",
@@ -495,12 +507,6 @@ jobs:
             # Stop existing processes
             pm2 delete all 2>/dev/null || true
             pm2 flush >/dev/null 2>&1 || true
-
-            # Load .env variables into current shell before starting PM2
-            # This ensures PM2-managed processes inherit database and other env vars
-            set -a
-            [ -f "$APP_DIR/rps-backend/.env" ] && source "$APP_DIR/rps-backend/.env"
-            set +a
 
             # Start with new code
             pm2 start ecosystem.config.cjs
