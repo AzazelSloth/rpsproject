@@ -173,7 +173,7 @@ jobs:
             mkdir -p "$N8N_DIR"
             chmod 700 "$N8N_DIR"
 
-            cat > "$N8N_DIR/.env" << 'N8NEOF'
+            cat > "$N8N_DIR/.env" << N8NEOF
             N8N_BASIC_AUTH_ACTIVE=${{ secrets.N8N_BASIC_AUTH_ACTIVE }}
             N8N_BASIC_AUTH_PASSWORD=${{ secrets.N8N_BASIC_AUTH_PASSWORD }}
             N8N_BASIC_AUTH_USER=${{ secrets.N8N_BASIC_AUTH_USER }}
@@ -184,8 +184,8 @@ jobs:
             N8N_USER_FOLDER=${{ secrets.N8N_USER_FOLDER }}
             N8N_PATH=/n8n/
             N8N_SECURE_COOKIE=${{ secrets.N8N_SECURE_COOKIE }}
-            N8N_EDITOR_BASE_URL=http://${{ secrets.VPS_HOST }}:8786/n8n/
-            WEBHOOK_URL=http://${{ secrets.VPS_HOST }}:8786/n8n/
+            N8N_EDITOR_BASE_URL=${{ secrets.N8N_PROTOCOL }}://${{ secrets.VPS_HOST }}:${{ secrets.N8N_PORT }}/n8n/
+            WEBHOOK_URL=${{ secrets.N8N_PROTOCOL }}://${{ secrets.VPS_HOST }}:${{ secrets.N8N_PORT }}/n8n/
             N8NEOF
 
             chmod 600 "$N8N_DIR/.env"
@@ -214,7 +214,7 @@ jobs:
             echo "Backend entrypoint: $BACKEND_SCRIPT"
 
             # Configure backend environment
-            cat > .env << 'ENVEOF'
+            cat > .env << ENVEOF
             NODE_ENV=production
             PORT=3000
             JWT_SECRET=${{ secrets.JWT_SECRET }}
@@ -226,7 +226,7 @@ jobs:
             DB_SYNCHRONIZE=false
             DB_LOGGING=false
             AUTH_DISABLED=true
-            CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001,http://${{ secrets.VPS_HOST }}:8786
+            CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001,http://${{ secrets.VPS_HOST }}:3001
             SWAGGER_ENABLED=true
             SWAGGER_PATH=api-docs
             ENVEOF
@@ -375,7 +375,7 @@ jobs:
             npm ci
 
             # Configure frontend environment BEFORE build so NEXT_PUBLIC_* variables are baked correctly
-            cat > .env.local << 'ENVEOF'
+            cat > .env.local << ENVEOF
             NEXT_PUBLIC_API_URL=http://${{ secrets.VPS_HOST }}:3000/api
             API_URL=http://127.0.0.1:3000/api
             NEXT_PUBLIC_STRAPI_URL=
@@ -467,8 +467,8 @@ jobs:
                     N8N_USER_FOLDER: "${{ secrets.N8N_USER_FOLDER }}",
                     N8N_PATH: "/n8n/",
                     N8N_SECURE_COOKIE: "${{ secrets.N8N_SECURE_COOKIE }}",
-                    N8N_EDITOR_BASE_URL: "http://${{ secrets.VPS_HOST }}:8786/n8n/",
-                    WEBHOOK_URL: "http://${{ secrets.VPS_HOST }}:8786/n8n/"
+                    N8N_EDITOR_BASE_URL: "${{ secrets.N8N_PROTOCOL }}://${{ secrets.VPS_HOST }}:${{ secrets.N8N_PORT }}/n8n/",
+                    WEBHOOK_URL: "${{ secrets.N8N_PROTOCOL }}://${{ secrets.VPS_HOST }}:${{ secrets.N8N_PORT }}/n8n/"
                   },
                   instances: 1,
                   exec_mode: "fork",
@@ -495,6 +495,12 @@ jobs:
             # Stop existing processes
             pm2 delete all 2>/dev/null || true
             pm2 flush >/dev/null 2>&1 || true
+
+            # Load .env variables into current shell before starting PM2
+            # This ensures PM2-managed processes inherit database and other env vars
+            set -a
+            [ -f "$APP_DIR/rps-backend/.env" ] && source "$APP_DIR/rps-backend/.env"
+            set +a
 
             # Start with new code
             pm2 start ecosystem.config.cjs
@@ -565,10 +571,11 @@ jobs:
             # n8n health check with retry loop
             N8N_MAX_RETRIES=15
             N8N_READY=false
+            N8N_PORT_CHECK="${{ secrets.N8N_PORT }}"
 
             for i in $(seq 1 $N8N_MAX_RETRIES); do
               echo "Checking n8n health... (attempt $i/$N8N_MAX_RETRIES)"
-              if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:5678/healthz >/dev/null 2>&1; then
+              if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:$N8N_PORT_CHECK/healthz >/dev/null 2>&1; then
                 echo "✓ n8n is ready!"
                 N8N_READY=true
                 break
@@ -593,7 +600,7 @@ jobs:
             curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3000/api/health >/dev/null
             curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/login >/dev/null
             curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/results >/dev/null
-            curl --fail --silent --show-error --max-time 10 http://127.0.0.1:5678/healthz >/dev/null
+            curl --fail --silent --show-error --max-time 10 http://127.0.0.1:$N8N_PORT_CHECK/healthz >/dev/null
 
             echo "✓ All smoke tests passed!"
 
