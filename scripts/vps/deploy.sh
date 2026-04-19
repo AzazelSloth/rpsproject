@@ -95,8 +95,8 @@ N8N_PROTOCOL=$N8N_PROTOCOL
 N8N_USER_FOLDER=$N8N_USER_FOLDER
 N8N_PATH=/n8n/
 N8N_SECURE_COOKIE=$N8N_SECURE_COOKIE
-N8N_EDITOR_BASE_URL=http://$VPS_HOST:8786/n8n/
-WEBHOOK_URL=http://$VPS_HOST:8786/n8n/
+N8N_EDITOR_BASE_URL=$N8N_PROTOCOL://$VPS_HOST:$N8N_PORT/n8n/
+WEBHOOK_URL=$N8N_PROTOCOL://$VPS_HOST:$N8N_PORT/n8n/
 N8NEOF
 
 chmod 600 "$N8N_DIR/.env"
@@ -127,7 +127,7 @@ DB_NAME=$DB_NAME
 DB_SYNCHRONIZE=false
 DB_LOGGING=false
 AUTH_DISABLED=$AUTH_DISABLED
-CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001,http://$VPS_HOST:8786
+CORS_ORIGIN=http://localhost:3001,http://127.0.0.1:3001,http://$VPS_HOST:3001
 SWAGGER_ENABLED=true
 SWAGGER_PATH=api-docs
 ENVEOF
@@ -289,7 +289,19 @@ module.exports = {
             env: {
                 NODE_ENV: "production",
                 PORT: 3000,
-                PATH: "$PATH"
+                PATH: "$PATH",
+                JWT_SECRET: "$JWT_SECRET",
+                DB_HOST: "$DB_HOST",
+                DB_PORT: "$DB_PORT",
+                DB_USER: "$DB_USER",
+                DB_PASSWORD: "$DB_PASSWORD",
+                DB_NAME: "$DB_NAME",
+                DB_SYNCHRONIZE: "false",
+                DB_LOGGING: "false",
+                AUTH_DISABLED: "$AUTH_DISABLED",
+                CORS_ORIGIN: "http://localhost:3001,http://127.0.0.1:3001,http://$VPS_HOST:3001",
+                SWAGGER_ENABLED: "true",
+                SWAGGER_PATH: "api-docs"
             },
             instances: 1,
             exec_mode: "fork",
@@ -344,13 +356,13 @@ module.exports = {
                 N8N_USER_FOLDER: "$N8N_USER_FOLDER",
                 N8N_PATH: "/n8n/",
                 N8N_SECURE_COOKIE: "$N8N_SECURE_COOKIE",
-                N8N_EDITOR_BASE_URL: "http://$VPS_HOST:8786/n8n/",
-                WEBHOOK_URL: "http://$VPS_HOST:8786/n8n/"
+                N8N_EDITOR_BASE_URL: "$N8N_PROTOCOL://$VPS_HOST:$N8N_PORT/n8n/",
+                WEBHOOK_URL: "$N8N_PROTOCOL://$VPS_HOST:$N8N_PORT/n8n/"
             },
             instances: 1,
             exec_mode: "fork",
             watch: false,
-            max_memory_restart: "500M",
+            max_memory_restart: "1G",
             autorestart: true,
             max_restarts: 10,
             min_uptime: "10s",
@@ -370,6 +382,12 @@ fi
 
 pm2 delete all 2>/dev/null || true
 pm2 flush >/dev/null 2>&1 || true
+
+# Remove stale RPS logs so deployment output only shows fresh runtime issues.
+rm -f "$HOME/.pm2/logs/rps-backend"*-error*.log "$HOME/.pm2/logs/rps-backend"*-out*.log 2>/dev/null || true
+rm -f "$HOME/.pm2/logs/rps-frontend"*-error*.log "$HOME/.pm2/logs/rps-frontend"*-out*.log 2>/dev/null || true
+rm -f "$HOME/.pm2/logs/rps-n8n"*-error*.log "$HOME/.pm2/logs/rps-n8n"*-out*.log 2>/dev/null || true
+
 pm2 start ecosystem.config.cjs
 pm2 save
 
@@ -429,10 +447,11 @@ fi
 
 N8N_MAX_RETRIES=15
 N8N_READY=false
+N8N_PORT_CHECK="$N8N_PORT"
 
 for i in $(seq 1 $N8N_MAX_RETRIES); do
     echo "Checking n8n health... (attempt $i/$N8N_MAX_RETRIES)"
-    if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:5678/healthz >/dev/null 2>&1; then
+    if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:$N8N_PORT_CHECK/healthz >/dev/null 2>&1; then
         echo "✓ n8n is ready!"
         N8N_READY=true
         break
@@ -456,7 +475,7 @@ echo "Running final smoke tests..."
 curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3000/api/health >/dev/null
 curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/login >/dev/null
 curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/results >/dev/null
-curl --fail --silent --show-error --max-time 10 http://127.0.0.1:5678/healthz >/dev/null
+curl --fail --silent --show-error --max-time 10 http://127.0.0.1:$N8N_PORT_CHECK/healthz >/dev/null
 
 echo "✓ All smoke tests passed!"
 
