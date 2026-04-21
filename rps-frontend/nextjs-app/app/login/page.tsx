@@ -5,42 +5,19 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
-import { saveAuth, type AuthResponse } from "@/lib/backend/auth";
-
-function isAuthResponse(payload: AuthResponse | { error?: string } | null): payload is AuthResponse {
-  return Boolean(payload && typeof payload === "object" && "user" in payload && "token" in payload);
-}
+import { createDemoAuthResponse, saveAuth } from "@/lib/backend/auth";
 
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  async function openTemporarySession() {
+  function openDemoSession() {
     setError(null);
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/auth/temporary-access", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      const payload = (await response.json().catch(() => null)) as
-        | AuthResponse
-        | { error?: string }
-        | null;
-
-      if (!response.ok || !isAuthResponse(payload)) {
-        const errorMessage =
-          payload && typeof payload === "object" && "error" in payload
-            ? payload.error
-            : undefined;
-        throw new Error(errorMessage || "Ouverture de session temporaire indisponible.");
-      }
-
-      saveAuth(payload);
+      saveAuth(createDemoAuthResponse("Mode demo", "demo@laroche360.ca"));
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ouverture de session indisponible.");
@@ -71,17 +48,17 @@ export default function LoginPage() {
           </h1>
 
           <p className="max-w-2xl text-base leading-7 text-slate-600">
-            Pour acceder a l'application, cliquez simplement sur le bouton d'ouverture de session.
+            Pour acceder a l'application, utilisez simplement le mode demo.
             Vous serez redirige vers le tableau de bord.
           </p>
 
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={() => void openTemporarySession()}
+              onClick={openDemoSession}
               disabled={isLoading}
               className="rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.16)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
             >
-              {isLoading ? "Connexion..." : "Acceder a l'application"}
+              {isLoading ? "Ouverture..." : "Acceder au mode demo"}
             </button>
             <Link
               href="/survey-response"
@@ -100,14 +77,14 @@ export default function LoginPage() {
             Acces a votre espace
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            L'acces est temporairement simplifie. Utilisez le bouton ci-dessous pour ouvrir
-            l'application sans afficher d'informations sensibles a l'ecran.
+            L'acces est simplifie en mode demo. Aucun email ni identifiant sensible n'est affiche
+            a l'ecran.
           </p>
 
           <div className="mt-6 space-y-4">
             <div className="rounded-[14px] border border-[#e7dccb] bg-[#f8f3ea] px-4 py-4 text-sm leading-6 text-slate-700">
-              Cliquez sur <span className="font-semibold">Ouvrir l'application</span> pour acceder
-              directement au tableau de bord.
+              Cliquez sur <span className="font-semibold">Acceder au mode demo</span> pour ouvrir
+              directement le tableau de bord.
             </div>
 
             {error ? (
@@ -118,11 +95,11 @@ export default function LoginPage() {
 
             <button
               type="button"
-              onClick={() => void openTemporarySession()}
+              onClick={openDemoSession}
               disabled={isLoading}
               className="w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.14)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLoading ? "Connexion..." : "Ouvrir l'application"}
+              {isLoading ? "Ouverture..." : "Acceder au mode demo"}
             </button>
           </div>
         </Card>
