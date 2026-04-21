@@ -10,9 +10,10 @@ export const dynamic = "force-dynamic";
 export default async function ReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scenario?: string }>;
+  searchParams: Promise<{ scenario?: string; campaignId?: string }>;
 }) {
-  const { scenario } = await searchParams;
+  const { scenario, campaignId } = await searchParams;
+  const requestedCampaignId = campaignId ? Number(campaignId) : null;
 
   if (!isBackendConfigured()) {
     return (
@@ -56,6 +57,7 @@ export default async function ReportPage({
         reports={reports}
         companies={companies}
         scenario={scenario ?? null}
+        initialCampaignId={requestedCampaignId}
       />
     </section>
   );

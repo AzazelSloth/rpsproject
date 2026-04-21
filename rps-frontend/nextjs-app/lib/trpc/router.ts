@@ -331,9 +331,14 @@ const surveyResponsesRouter = t.router({
 });
 
 const dataRouter = t.router({
-	dashboard: t.procedure.input(z.object({ scenario: scenarioSchema })).query(({ input }) => {
-		return getDashboardData(input.scenario);
-	}),
+	dashboard: t.procedure
+		.input(
+			z.object({
+				scenario: scenarioSchema,
+				campaignId: z.number().int().positive().optional().nullable(),
+			}),
+		)
+		.query(({ input }) => getDashboardData(input.scenario, input.campaignId)),
 	employeeManagement: t.procedure
 		.input(
 			z.object({
@@ -361,12 +366,22 @@ const dataRouter = t.router({
 			}),
 		)
 		.query(({ input }) => getSurveyResponseData(input.token, input.scenario)),
-	results: t.procedure.input(z.object({ scenario: scenarioSchema })).query(({ input }) => {
-		return getResultsData(input.scenario);
-	}),
-	report: t.procedure.input(z.object({ scenario: scenarioSchema })).query(({ input }) => {
-		return getReportData(input.scenario);
-	}),
+	results: t.procedure
+		.input(
+			z.object({
+				scenario: scenarioSchema,
+				campaignId: z.number().int().positive().optional().nullable(),
+			}),
+		)
+		.query(({ input }) => getResultsData(input.scenario, input.campaignId)),
+	report: t.procedure
+		.input(
+			z.object({
+				scenario: scenarioSchema,
+				campaignId: z.number().int().positive().optional().nullable(),
+			}),
+		)
+		.query(({ input }) => getReportData(input.scenario, input.campaignId)),
 });
 
 export const appRouter = t.router({

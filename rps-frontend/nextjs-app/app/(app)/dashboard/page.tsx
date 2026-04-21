@@ -9,19 +9,9 @@ export default async function DashboardPage({
   searchParams: Promise<{ scenario?: string }>;
 }) {
   const { scenario } = await searchParams;
-  const [surveyBuilderData, managementData] = await Promise.all([
-    getServerTrpcCaller().data.surveyBuilder({
-      scenario: scenario ?? null,
-    }),
-    getServerTrpcCaller().data.employeeManagement({
-      scenario: scenario ?? null,
-    }),
-  ]);
+  const surveys = await getServerTrpcCaller().data.listSurveys({
+    scenario: scenario ?? null,
+  });
 
-  return (
-    <DashboardContent
-      initialSurveyData={surveyBuilderData}
-      initialManagementData={managementData}
-    />
-  );
+  return <DashboardContent surveys={surveys} scenario={scenario ?? null} />;
 }

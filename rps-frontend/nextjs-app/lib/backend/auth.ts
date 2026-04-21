@@ -23,6 +23,11 @@ export type RegisterCredentials = {
   password: string;
 };
 
+export type TemporaryAccessCredentials = {
+  email: string;
+  name?: string;
+};
+
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
@@ -49,6 +54,16 @@ export async function register(credentials: RegisterCredentials): Promise<AuthRe
   return postBackend<AuthResponse, RegisterCredentials>("/auth/register", {
     ...credentials,
     email: normalizeEmail(credentials.email),
+  });
+}
+
+export async function temporaryAccess(
+  credentials: TemporaryAccessCredentials,
+): Promise<AuthResponse> {
+  return postBackend<AuthResponse, TemporaryAccessCredentials>("/auth/temporary-access", {
+    ...credentials,
+    email: normalizeEmail(credentials.email),
+    name: credentials.name?.trim() || undefined,
   });
 }
 

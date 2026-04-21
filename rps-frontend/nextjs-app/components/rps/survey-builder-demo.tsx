@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { SurveyBuilderData } from "@/lib/repositories/rps-repository";
@@ -136,8 +136,8 @@ export function SurveyBuilderDemo({
   const [companyId, setCompanyId] = useState(initialData.companyId);
   const [newCompanyName, setNewCompanyName] = useState("");
   const [status, setStatus] = useState(initialData.status);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [title, setTitle] = useState(initialData.title);
+  const [description, setDescription] = useState(initialData.description);
   const [startDate, setStartDate] = useState(toDateInputValue(initialData.startDate));
   const [endDate, setEndDate] = useState(toDateInputValue(initialData.endDate));
   const [questions, setQuestions] = useState(
@@ -177,6 +177,34 @@ export function SurveyBuilderDemo({
     importSuccess && (importSuccess.count > 0 || importSuccess.participants.length > 0),
   );
   const builderTitle = mode === "edit" ? "Modifier un sondage" : "Creer un sondage";
+
+  useEffect(() => {
+    setCompanies(initialData.companies);
+    setCampaigns(initialData.campaigns);
+    setCampaignId(initialData.campaignId);
+    setCompanyId(initialData.companyId);
+    setNewCompanyName("");
+    setStatus(initialData.status);
+    setTitle(initialData.title);
+    setDescription(initialData.description);
+    setStartDate(toDateInputValue(initialData.startDate));
+    setEndDate(toDateInputValue(initialData.endDate));
+    setQuestions(
+      initialData.questions
+        .slice()
+        .sort((a, b) => a.orderIndex - b.orderIndex)
+        .map(ensureQuestionOptions),
+    );
+    setFeedback(null);
+    setError(null);
+    setIsImportModalOpen(false);
+    setImportFeedback(null);
+    setImportError(null);
+    setImportValidationErrors([]);
+    setImportSuccess(null);
+    setHasDownloadedLinks(false);
+    setSelectedFileName(null);
+  }, [initialData]);
   function runMutation<TResponse>(
     mutation: () => Promise<TResponse>,
     successMessage: string,

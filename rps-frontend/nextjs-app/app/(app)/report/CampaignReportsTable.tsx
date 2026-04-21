@@ -10,6 +10,7 @@ type CampaignReportsTableProps = {
   reports: BackendReport[];
   companies: BackendCompany[];
   scenario: string | null;
+  initialCampaignId?: number | null;
 };
 
 type CampaignWithReport = BackendCampaign & {
@@ -20,6 +21,7 @@ export function CampaignReportsTable({
   campaigns,
   reports,
   companies,
+  initialCampaignId,
 }: CampaignReportsTableProps) {
   const [filterCompanyId, setFilterCompanyId] = useState<number | "">("");
   const [analyzingId, setAnalyzingId] = useState<number | null>(null);
@@ -48,11 +50,20 @@ export function CampaignReportsTable({
         return { ...c, report: latestReport };
       })
       .sort((a, b) => {
+        if (initialCampaignId) {
+          if (a.id === initialCampaignId && b.id !== initialCampaignId) {
+            return -1;
+          }
+          if (b.id === initialCampaignId && a.id !== initialCampaignId) {
+            return 1;
+          }
+        }
+
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
         return dateB - dateA;
       });
-  }, [campaigns, reports, filterCompanyId]);
+  }, [campaigns, reports, filterCompanyId, initialCampaignId]);
 
   const handleAnalyze = useCallback(async (campaignId: number) => {
     setAnalyzingId(campaignId);

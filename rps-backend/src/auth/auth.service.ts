@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import bcryptModule from 'bcrypt';
 import { Repository } from 'typeorm';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto, RegisterDto, TemporaryAccessDto } from './dto/auth.dto';
 import { DEMO_AUTH_USER, isAuthDisabled } from './auth.guard';
 import { User } from './user.entity';
 
@@ -24,6 +24,15 @@ const allowedAdminEmails = new Set([
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+function buildDefaultNameFromEmail(email: string) {
+  const localPart = normalizeEmail(email).split('@')[0] ?? 'admin';
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 function buildDemoAuthResponse(name?: string, email?: string) {
@@ -109,6 +118,47 @@ export class AuthService {
 
     return {
       user: { id: user.id, email: user.email, name: user.name },
+      token,
+    };
+  }
+
+  async temporaryAccess(temporaryAccessDto: TemporaryAccessDto) {
+    const normalizedEmail = normalizeEmail(temporaryAccessDto.email);
+
+    if (!allowedAdminEmails.has(normalizedEmail)) {
+      throw new ForbiddenException('Access not allowed for this email');
+    }
+
+    if (isAuthDisabled()) {
+      return buildDemoAuthResponse(temporaryAccessDto.name, normalizedEmail);
+    }
+
+    const requestedName = temporaryAccessDto.name?.trim();
+    let user = await this.userRepository.findOne({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      user = this.userRepository.create({
+        email: normalizedEmail,
+        name: requestedName || buildDefaultNameFromEmail(normalizedEmail),
+        password: null,
+      });
+    } else if (requestedName && requestedName !== user.name) {
+      user.name = requestedName;
+    } else if (!user.name) {
+      user.name = buildDefaultNameFromEmail(normalizedEmail);
+    }
+
+    const savedUser = await this.userRepository.save(user);
+    const token = this.generateToken(savedUser);
+
+    return {
+      user: {
+        id: savedUser.id,
+        email: savedUser.email,
+        name: savedUser.name,
+      },
       token,
     };
   }

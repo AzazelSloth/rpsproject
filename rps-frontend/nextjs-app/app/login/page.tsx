@@ -5,34 +5,45 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
-import { createDemoAuthResponse, saveAuth } from "@/lib/backend/auth";
+import { formatTrpcError } from "@/lib/trpc/client";
+import { saveAuth, temporaryAccess } from "@/lib/backend/auth";
+import {
+  allowedAdminEmails,
+  isAllowedAdminEmail,
+  normalizeAdminEmail,
+} from "@/lib/backend/auth-config";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("demo@laroche360.ca");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState(allowedAdminEmails[0]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function openTemporarySession(nextEmail: string) {
+    const normalizedEmail = normalizeAdminEmail(nextEmail);
+
+    if (!isAllowedAdminEmail(normalizedEmail)) {
+      setError("Seuls les comptes Isabelle et Roxanne sont autorises pour le moment.");
+      return;
+    }
+
     setError(null);
     setIsLoading(true);
 
     try {
-      saveAuth(createDemoAuthResponse("Admin demo", email));
+      const response = await temporaryAccess({ email: normalizedEmail });
+      saveAuth(response);
       router.push("/dashboard");
     } catch (err) {
-      setError("Connexion impossible en mode demo.");
-      console.error(err);
+      setError(formatTrpcError(err));
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  const handleDemoLogin = () => {
-    saveAuth(createDemoAuthResponse("Admin demo", email));
-    router.push("/dashboard");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await openTemporarySession(email);
   };
 
   return (
@@ -58,10 +69,18 @@ export default function LoginPage() {
 
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={handleDemoLogin}
+              onClick={() => openTemporarySession("isabelle@laroche360.ca")}
+              disabled={isLoading}
               className="rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.16)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
             >
-              Acceder a la demo admin
+              Acceder avec Isabelle
+            </button>
+            <button
+              onClick={() => openTemporarySession("roxanne@laroche360.ca")}
+              disabled={isLoading}
+              className="rounded-[12px] border border-[#d8ccba] bg-[#fffaf1] px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-[#f8eedf] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Acceder avec Roxanne
             </button>
             <Link
               href="/survey-response"
@@ -79,6 +98,10 @@ export default function LoginPage() {
           <h2 className="mt-2 font-[family-name:var(--font-manrope)] text-2xl font-extrabold tracking-tight text-slate-900">
             Acces a votre espace
           </h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Acces temporaire en attendant l'authentification finale. Seules les adresses
+            `isabelle@laroche360.ca` et `roxanne@laroche360.ca` sont actives.
+          </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div className="space-y-2">
@@ -92,22 +115,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f8f3ea] px-4 py-3 text-sm outline-none transition focus:border-[#c9a86c] focus:ring-2 focus:ring-[#c9a86c]/30"
-                placeholder="demo@laroche360.ca"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-semibold text-slate-700">
-                Mot de passe
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f8f3ea] px-4 py-3 text-sm outline-none transition focus:border-[#c9a86c] focus:ring-2 focus:ring-[#c9a86c]/30"
-                placeholder="Non utilise en mode demo"
+                placeholder="isabelle@laroche360.ca"
               />
             </div>
 
@@ -122,7 +130,7 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.14)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLoading ? "Connexion..." : "Se connecter"}
+              {isLoading ? "Connexion..." : "Ouvrir la session"}
             </button>
           </form>
         </Card>

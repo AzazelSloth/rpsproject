@@ -5,13 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
-import { createDemoAuthResponse, saveAuth } from "@/lib/backend/auth";
+import { formatTrpcError } from "@/lib/trpc/client";
+import { saveAuth, temporaryAccess } from "@/lib/backend/auth";
+import {
+  allowedAdminEmails,
+  isAllowedAdminEmail,
+  normalizeAdminEmail,
+} from "@/lib/backend/auth-config";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [name, setName] = useState("Admin Laroche");
+  const [email, setEmail] = useState(allowedAdminEmails[0]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,11 +26,22 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      saveAuth(createDemoAuthResponse(name, email));
+      const normalizedEmail = normalizeAdminEmail(email);
+
+      if (!isAllowedAdminEmail(normalizedEmail)) {
+        throw new Error(
+          "Seuls les comptes Isabelle et Roxanne peuvent ouvrir une session pour le moment.",
+        );
+      }
+
+      const response = await temporaryAccess({
+        name: name.trim() || undefined,
+        email: normalizedEmail,
+      });
+      saveAuth(response);
       router.push("/dashboard");
     } catch (err) {
-      setError("Ouverture de session impossible en mode demo.");
-      console.error(err);
+      setError(formatTrpcError(err));
     } finally {
       setIsLoading(false);
     }
@@ -42,22 +58,24 @@ export default function SignupPage() {
             <BrandLogo />
           </div>
           <h1 className="font-[family-name:var(--font-manrope)] text-4xl font-extrabold tracking-tight text-slate-900">
-            Acceder sans authentification
+            Creer un acces temporaire
           </h1>
           <p className="max-w-2xl text-base leading-7 text-slate-600">
-            Renseignez un nom et un email si vous souhaitez personnaliser la session demo.
+            Cette ouverture de session provisoire est reservee a Isabelle et Roxanne en attendant
+            la mise en place de l'authentification definitive.
           </p>
         </div>
 
         <Card className="mx-auto w-full max-w-md p-6 sm:p-8">
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
-            Session demo
+            Acces provisoire
           </p>
           <h2 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold tracking-tight">
             Ouvrir l'application
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Le mot de passe n'est plus requis, mais le formulaire reste disponible pour nommer la session.
+            Le nom sert seulement a personnaliser le profil local. L'email doit etre celui d'un
+            compte autorise.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -86,22 +104,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f7f2ea] px-4 py-3 text-sm outline-none focus:border-[#c9a86c] focus:ring-1 focus:ring-[#c9a86c]"
-                placeholder="demo@laroche360.ca"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Mot de passe
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                minLength={1}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f7f2ea] px-4 py-3 text-sm outline-none focus:border-[#c9a86c] focus:ring-1 focus:ring-[#c9a86c]"
-                placeholder="Non utilise en mode demo"
+                placeholder="isabelle@laroche360.ca"
               />
             </div>
 
@@ -112,7 +115,7 @@ export default function SignupPage() {
               disabled={isLoading}
               className="w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? "Ouverture..." : "Continuer sans authentification"}
+              {isLoading ? "Ouverture..." : "Ouvrir la session"}
             </button>
           </form>
 

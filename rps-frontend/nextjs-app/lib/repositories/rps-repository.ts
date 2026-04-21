@@ -138,7 +138,10 @@ export type ReportDocumentData = {
   template: ReportTemplateData;
 };
 
-export async function getSurveyCampaign(scenario?: string | null) {
+export async function getSurveyCampaign(
+  scenario?: string | null,
+  campaignId?: number | null,
+) {
   const demoDataset = getDemoDataset(scenario);
 
   if (!isBackendConfigured()) {
@@ -147,8 +150,7 @@ export async function getSurveyCampaign(scenario?: string | null) {
 
   try {
     const campaigns = await getBackendCollection<BackendCampaign>("/campaigns");
-    const activeCampaign =
-      campaigns.find((item) => item.status === "active") ?? campaigns[0];
+    const activeCampaign = resolveSelectedCampaign(campaigns, campaignId);
 
     if (!activeCampaign) {
       return demoDataset.campaign;
@@ -170,36 +172,47 @@ export type SurveyOption = {
   title: string;
   status: string;
   companyId: number | null;
+  companyName: string;
+  startDate: string | null;
+  endDate: string | null;
+  participationRate: number;
+  totalParticipants: number;
+  completedParticipants: number;
 };
 
 export async function getAllSurveys(scenario?: string | null): Promise<SurveyOption[]> {
   const demoDataset = getDemoDataset(scenario);
 
   if (!isBackendConfigured()) {
-    // Retourne le sondage demo comme seule option
-    return [{
-      id: demoDataset.campaign.id ?? 1,
-      title: demoDataset.campaign.title,
-      status: demoDataset.campaign.status,
-      companyId: 1,
-    }];
+    return [buildDemoSurveyOption(demoDataset)];
   }
 
   try {
     const campaigns = await getBackendCollection<BackendCampaign>("/campaigns");
-    return campaigns.map(c => ({
-      id: c.id,
-      title: c.name,
-      status: c.status,
-      companyId: c.company?.id ?? null,
-    }));
+    const progressEntries = await Promise.allSettled(
+      campaigns.map((campaign) =>
+        getBackendItem<BackendCampaignProgress>(
+          `/campaign-participants/campaign/${campaign.id}/progress`,
+        ),
+      ),
+    );
+    const progressByCampaignId = new Map<number, BackendCampaignProgress | null>();
+
+    campaigns.forEach((campaign, index) => {
+      const progressEntry = progressEntries[index];
+      progressByCampaignId.set(
+        campaign.id,
+        progressEntry?.status === "fulfilled" ? progressEntry.value : null,
+      );
+    });
+
+    return [...campaigns]
+      .sort(sortCampaignsByRecency)
+      .map((campaign) =>
+        mapSurveyOption(campaign, progressByCampaignId.get(campaign.id) ?? null),
+      );
   } catch {
-    return [{
-      id: demoDataset.campaign.id ?? 1,
-      title: demoDataset.campaign.title,
-      status: demoDataset.campaign.status,
-      companyId: 1,
-    }];
+    return [buildDemoSurveyOption(demoDataset)];
   }
 }
 
@@ -215,20 +228,16 @@ export async function getSurveyBuilderData(
         getBackendCollection<BackendCampaign>("/campaigns"),
         getBackendCollection<BackendCompany>("/companies"),
       ]);
-      const activeCampaign =
-        (campaignId ? campaigns.find((item) => item.id === campaignId) : null) ??
-        campaigns.find((item) => item.status === "active") ??
-        campaigns[0];
+      const activeCampaign = resolveSelectedCampaign(campaigns, campaignId);
       const companyOptions = companies.map((company) => ({
         id: company.id,
         name: company.name,
       }));
 
-      // Formater les campagnes disponibles
       const campaignOptions = campaigns.map((campaign) => ({
         id: campaign.id,
         name: campaign.name,
-        status: campaign.status,
+        status: mapCampaignStatus(campaign.status),
         companyId: campaign.company?.id ?? null,
       }));
 
@@ -240,7 +249,7 @@ export async function getSurveyBuilderData(
           campaignId: activeCampaign.id,
           companyId: activeCompanyId,
           companies: companyOptions,
-          campaigns: campaignOptions.filter((c) => c.companyId === activeCompanyId),
+          campaigns: campaignOptions,
           title: mappedCampaign.title,
           description: mappedCampaign.description,
           status: mappedCampaign.status,
@@ -287,8 +296,8 @@ export async function getSurveyBuilderData(
         companyId: 1,
       },
     ],
-    title: "",
-    description: "",
+    title: currentCampaign.title,
+    description: currentCampaign.description ?? "",
     status: currentCampaign.status,
     startDate: currentCampaign.startDate ?? "",
     endDate: currentCampaign.endDate ?? "",
@@ -433,7 +442,10 @@ export async function getEmployeeManagementData(
   }
 }
 
-export async function getDashboardData(scenario?: string | null): Promise<DashboardData> {
+export async function getDashboardData(
+  scenario?: string | null,
+  campaignId?: number | null,
+): Promise<DashboardData> {
   const demoDataset = getDemoDataset(scenario);
 
   if (!isBackendConfigured()) {
@@ -446,13 +458,21 @@ export async function getDashboardData(scenario?: string | null): Promise<Dashbo
   }
 
   try {
-    const [campaigns, employeeEntries, responses] = await Promise.all([
+    const [campaigns, responses] = await Promise.all([
       getBackendCollection<BackendCampaign>("/campaigns"),
-      getBackendCollection<BackendEmployee>("/employees"),
       getBackendCollection<BackendResponse>("/responses"),
     ]);
+    const selectedCampaign = resolveSelectedCampaign(campaigns, campaignId);
 
-    return buildDashboardData(campaigns, employeeEntries, responses);
+    if (!selectedCampaign) {
+      throw new Error("no_campaign");
+    }
+
+    const progress = await getBackendItem<BackendCampaignProgress>(
+      `/campaign-participants/campaign/${selectedCampaign.id}/progress`,
+    );
+
+    return buildDashboardData(selectedCampaign, progress, responses);
   } catch {
     return {
       metrics: demoDataset.dashboardMetrics,
@@ -463,7 +483,10 @@ export async function getDashboardData(scenario?: string | null): Promise<Dashbo
   }
 }
 
-export async function getResultsData(scenario?: string | null): Promise<ResultsData> {
+export async function getResultsData(
+  scenario?: string | null,
+  campaignId?: number | null,
+): Promise<ResultsData> {
   const demoDataset = getDemoDataset(scenario);
 
   if (!isBackendConfigured()) {
@@ -478,12 +501,21 @@ export async function getResultsData(scenario?: string | null): Promise<ResultsD
   }
 
   try {
-    const [employeeEntries, responses] = await Promise.all([
-      getBackendCollection<BackendEmployee>("/employees"),
+    const [campaigns, responses] = await Promise.all([
+      getBackendCollection<BackendCampaign>("/campaigns"),
       getBackendCollection<BackendResponse>("/responses"),
     ]);
+    const selectedCampaign = resolveSelectedCampaign(campaigns, campaignId);
 
-    return buildResultsData(employeeEntries, responses);
+    if (!selectedCampaign) {
+      throw new Error("no_campaign");
+    }
+
+    const progress = await getBackendItem<BackendCampaignProgress>(
+      `/campaign-participants/campaign/${selectedCampaign.id}/progress`,
+    );
+
+    return buildResultsData(selectedCampaign, progress, responses);
   } catch {
     return {
       metrics: {
@@ -496,7 +528,10 @@ export async function getResultsData(scenario?: string | null): Promise<ResultsD
   }
 }
 
-export async function getReportData(scenario?: string | null) {
+export async function getReportData(
+  scenario?: string | null,
+  campaignId?: number | null,
+) {
   const demoDataset = getDemoDataset(scenario);
   const template = await getReportTemplateData();
 
@@ -509,15 +544,23 @@ export async function getReportData(scenario?: string | null) {
   }
 
   try {
-    const [campaigns, employeeEntries, responses, reports] = await Promise.all([
+    const [campaigns, responses, reports] = await Promise.all([
       getBackendCollection<BackendCampaign>("/campaigns"),
-      getBackendCollection<BackendEmployee>("/employees"),
       getBackendCollection<BackendResponse>("/responses"),
       getBackendCollection<BackendReport>("/reports"),
     ]);
+    const selectedCampaign = resolveSelectedCampaign(campaigns, campaignId);
+
+    if (!selectedCampaign) {
+      throw new Error("no_campaign");
+    }
+
+    const progress = await getBackendItem<BackendCampaignProgress>(
+      `/campaign-participants/campaign/${selectedCampaign.id}/progress`,
+    );
 
     return {
-      ...buildReportData(campaigns, employeeEntries, responses, reports),
+      ...buildReportData(selectedCampaign, progress, responses, reports),
       template,
     };
   } catch {
@@ -636,6 +679,43 @@ function mapBackendQuestionnaire(entry: BackendQuestionnaire): SurveyResponseDat
   };
 }
 
+function buildDemoSurveyOption(demoDataset: ReturnType<typeof getDemoDataset>): SurveyOption {
+  const completedParticipants = demoDataset.employees.filter(
+    (employee) => employee.responseStatus === "Responded",
+  ).length;
+
+  return {
+    id: demoDataset.campaign.id ?? 1,
+    title: demoDataset.campaign.title,
+    status: demoDataset.campaign.status,
+    companyId: 1,
+    companyName: demoDataset.campaign.companyName ?? "Entreprise demo",
+    startDate: demoDataset.campaign.startDate ?? "",
+    endDate: demoDataset.campaign.endDate ?? "",
+    participationRate: demoDataset.dashboardMetrics.participationRate,
+    totalParticipants: demoDataset.employees.length,
+    completedParticipants,
+  };
+}
+
+function mapSurveyOption(
+  campaign: BackendCampaign,
+  progress?: BackendCampaignProgress | null,
+): SurveyOption {
+  return {
+    id: campaign.id,
+    title: campaign.name,
+    status: mapCampaignStatus(campaign.status),
+    companyId: campaign.company?.id ?? null,
+    companyName: campaign.company?.name ?? "Entreprise",
+    startDate: campaign.start_date,
+    endDate: campaign.end_date,
+    participationRate: progress?.participation_rate ?? 0,
+    totalParticipants: progress?.total_participants ?? 0,
+    completedParticipants: progress?.completed_participants ?? 0,
+  };
+}
+
 function mapBackendCampaign(entry: BackendCampaign) {
   return {
     id: entry.id,
@@ -712,8 +792,9 @@ function mapCampaignStatus(status: string) {
     case "active":
       return "active" as const;
     case "archived":
+      return "archived" as const;
     case "terminated":
-      return "closed" as const;
+      return "terminated" as const;
     default:
       return "draft" as const;
   }
@@ -734,17 +815,15 @@ function computeStressScore(responses: Pick<BackendResponse, "answer" | "questio
 }
 
 function buildDashboardData(
-  campaigns: BackendCampaign[],
-  employeeEntries: BackendEmployee[],
+  campaign: BackendCampaign,
+  progress: BackendCampaignProgress,
   responses: BackendResponse[],
 ): DashboardData {
-  const employeesData = employeeEntries.map(mapBackendEmployee);
+  const employeesData = buildCampaignEmployeeRecords(campaign, progress, responses);
   const respondedEmployees = employeesData.filter(
     (employee) => employee.responseStatus === "Responded",
   );
-  const participationRate = employeeEntries.length
-    ? Math.round((respondedEmployees.length / employeeEntries.length) * 100)
-    : 0;
+  const participationRate = progress.participation_rate;
   const stressValues = respondedEmployees
     .map((employee) => employee.stressScore)
     .filter((value) => value > 0);
@@ -752,34 +831,32 @@ function buildDashboardData(
     ? stressValues.reduce((sum, value) => sum + value, 0) / stressValues.length
     : 0;
   const departmentAverages = buildDepartmentStressBars(employeesData);
-  const activeCampaign =
-    campaigns.find((campaignEntry) => campaignEntry.status === "active") ?? campaigns[0];
+  const filteredResponses = filterResponsesForCampaign(campaign, progress, responses);
 
   return {
     metrics: {
       participationRate,
       averageStress: averageStressValue.toFixed(1),
       responded: respondedEmployees.length,
-      totalEmployees: employeeEntries.length,
+      totalEmployees: progress.total_participants,
       alertsDetected: departmentAverages.filter((item) => Number(item.average) >= 4).length,
     },
-    trendByRange: buildTrendByRange(responses),
-    departmentDistribution: buildDepartmentDistribution(employeeEntries),
-    insights: buildInsights(activeCampaign, departmentAverages, participationRate),
+    trendByRange: buildTrendByRange(filteredResponses),
+    departmentDistribution: buildDepartmentDistributionFromParticipants(progress),
+    insights: buildInsights(campaign, departmentAverages, participationRate),
   };
 }
 
 function buildResultsData(
-  employeeEntries: BackendEmployee[],
+  campaign: BackendCampaign,
+  progress: BackendCampaignProgress,
   responses: BackendResponse[],
 ): ResultsData {
-  const employeesData = employeeEntries.map(mapBackendEmployee);
+  const employeesData = buildCampaignEmployeeRecords(campaign, progress, responses);
   const respondedEmployees = employeesData.filter(
     (employee) => employee.responseStatus === "Responded",
   );
-  const participationRate = employeeEntries.length
-    ? Math.round((respondedEmployees.length / employeeEntries.length) * 100)
-    : 0;
+  const participationRate = progress.participation_rate;
   const stressValues = respondedEmployees
     .map((employee) => employee.stressScore)
     .filter((value) => value > 0);
@@ -787,6 +864,7 @@ function buildResultsData(
     ? stressValues.reduce((sum, value) => sum + value, 0) / stressValues.length
     : 0;
   const bars = buildDepartmentStressBars(employeesData);
+  const filteredResponses = filterResponsesForCampaign(campaign, progress, responses);
 
   return {
     metrics: {
@@ -794,21 +872,19 @@ function buildResultsData(
       averageStress: averageStressValue.toFixed(1),
     },
     bars,
-    analysis: buildAnalysis(bars, responses.length),
+    analysis: buildAnalysis(bars, filteredResponses.length),
   };
 }
 
 function buildReportData(
-  campaigns: BackendCampaign[],
-  employeeEntries: BackendEmployee[],
+  campaign: BackendCampaign,
+  progress: BackendCampaignProgress,
   responses: BackendResponse[],
   reports: BackendReport[],
 ) {
-  const activeCampaign =
-    campaigns.find((campaignEntry) => campaignEntry.status === "active") ?? campaigns[0];
   const latestReport = [...reports]
     .filter((entry) =>
-      activeCampaign ? entry.campaign?.id === activeCampaign.id : true,
+      campaign ? entry.campaign?.id === campaign.id : true,
     )
     .sort((left, right) => {
       const leftDate = Date.parse(left.created_at);
@@ -820,20 +896,20 @@ function buildReportData(
 
       return right.id - left.id;
     })[0];
-  const resultsData = buildResultsData(employeeEntries, responses);
-  const dashboardData = buildDashboardData(campaigns, employeeEntries, responses);
+  const resultsData = buildResultsData(campaign, progress, responses);
+  const dashboardData = buildDashboardData(campaign, progress, responses);
   const riskAreas = resultsData.bars
     .filter((item) => Number(item.average) >= 3.5)
     .map((item) => item.department)
     .slice(0, 3);
 
   return {
-    title: activeCampaign
-      ? `${activeCampaign.name}`
+    title: campaign
+      ? `${campaign.name}`
       : reports[0]
         ? `${reports[0].campaign.name}`
         : reportData.title,
-    companyName: activeCampaign?.company?.name ?? reportData.companyName,
+    companyName: campaign?.company?.name ?? reportData.companyName,
     participationRate: dashboardData.metrics.participationRate,
     averageStress: Number(resultsData.metrics.averageStress),
     alertCount: dashboardData.metrics.alertsDetected,
@@ -867,16 +943,16 @@ function buildDepartmentStressBars(employeesData: EmployeeRecord[]) {
   });
 }
 
-function buildDepartmentDistribution(employeeEntries: BackendEmployee[]) {
+function buildDepartmentDistributionFromParticipants(progress: BackendCampaignProgress) {
   const palette = ["#F59E0B", "#FCD34D", "#D97706", "#92400E", "#B45309"];
   const totals = new Map<string, number>();
 
-  for (const employee of employeeEntries) {
-    const department = employee.department ?? "Non renseigne";
+  for (const participant of progress.participants) {
+    const department = participant.employee.department ?? "Non renseigne";
     totals.set(department, (totals.get(department) ?? 0) + 1);
   }
 
-  const employeeCount = employeeEntries.length || 1;
+  const employeeCount = progress.participants.length || 1;
 
   return Array.from(totals.entries()).map(([label, count], index) => ({
     label,
@@ -1032,4 +1108,86 @@ function buildRecommendations(riskAreas: string[], participationRate: number) {
   );
 
   return recommendations;
+}
+
+function resolveSelectedCampaign(
+  campaigns: BackendCampaign[],
+  campaignId?: number | null,
+) {
+  return (
+    (campaignId ? campaigns.find((item) => item.id === campaignId) : null) ??
+    campaigns.find((item) => item.status === "active") ??
+    campaigns[0]
+  );
+}
+
+function sortCampaignsByRecency(left: BackendCampaign, right: BackendCampaign) {
+  const leftTime = Date.parse(left.created_at);
+  const rightTime = Date.parse(right.created_at);
+
+  if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+    return rightTime - leftTime;
+  }
+
+  return right.id - left.id;
+}
+
+function filterResponsesForCampaign(
+  campaign: BackendCampaign,
+  progress: BackendCampaignProgress,
+  responses: BackendResponse[],
+) {
+  const questionIds = new Set((campaign.questions ?? []).map((question) => question.id));
+  const participantIds = new Set(
+    progress.participants.map((participant) => participant.employee.id),
+  );
+
+  return responses.filter((response) => {
+    const employeeId = response.employee?.id;
+    return Boolean(
+      employeeId &&
+        questionIds.has(response.question.id) &&
+        participantIds.has(employeeId),
+    );
+  });
+}
+
+function buildCampaignEmployeeRecords(
+  campaign: BackendCampaign,
+  progress: BackendCampaignProgress,
+  responses: BackendResponse[],
+) {
+  const filteredResponses = filterResponsesForCampaign(campaign, progress, responses);
+  const responsesByEmployee = new Map<number, BackendResponse[]>();
+
+  for (const response of filteredResponses) {
+    const employeeId = response.employee?.id;
+
+    if (!employeeId) {
+      continue;
+    }
+
+    const current = responsesByEmployee.get(employeeId) ?? [];
+    current.push(response);
+    responsesByEmployee.set(employeeId, current);
+  }
+
+  return progress.participants.map((participant) => {
+    const employeeResponses = responsesByEmployee.get(participant.employee.id) ?? [];
+    const fullName =
+      `${participant.employee.first_name ?? ""} ${participant.employee.last_name ?? ""}`.trim();
+
+    return {
+      id: participant.employee.id,
+      documentId: `employee-${participant.employee.id}`,
+      name: fullName || "Employe",
+      email: participant.employee.email,
+      department: participant.employee.department ?? "Non renseigne",
+      stressScore: computeStressScore(employeeResponses),
+      responseStatus:
+        participant.status === "completed" || employeeResponses.length > 0
+          ? "Responded"
+          : "Not responded",
+    } satisfies EmployeeRecord;
+  });
 }
