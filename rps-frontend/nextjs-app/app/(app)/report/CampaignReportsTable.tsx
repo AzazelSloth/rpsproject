@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Card, Pill, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
+import { Card, Pill, PrimaryButton } from "@/components/rps/ui";
+import { isDemoSession } from "@/lib/backend/auth";
 import { getTrpcClient, formatTrpcError } from "@/lib/trpc/client";
 import type { BackendCampaign, BackendReport, BackendCompany } from "@/lib/backend/types";
 
@@ -68,6 +69,16 @@ export function CampaignReportsTable({
   const handleAnalyze = useCallback(async (campaignId: number) => {
     setAnalyzingId(campaignId);
     setMessage(null);
+
+    if (isDemoSession()) {
+      setMessage({
+        text: "Mode demo : analyse simulee. Le rapport general par mail sera disponible une fois n8n active.",
+        type: "success",
+      });
+      setAnalyzingId(null);
+      return;
+    }
+
     try {
       const trpc = getTrpcClient();
       const result = await trpc.adminSurveys.analyzeCampaign.mutate({ campaignId });

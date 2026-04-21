@@ -1,5 +1,7 @@
 import { postBackend } from "./client";
 
+export const DEMO_AUTH_TOKEN = "auth-disabled";
+
 export type User = {
   id: number;
   email: string;
@@ -39,7 +41,7 @@ export function createDemoAuthResponse(name?: string, email?: string): AuthRespo
       email: normalizeEmail(email || "demo@laroche360.ca"),
       name: name?.trim() || "Admin demo",
     },
-    token: "auth-disabled",
+    token: DEMO_AUTH_TOKEN,
   };
 }
 
@@ -110,4 +112,11 @@ export function getUser(): User | null {
 
 export function isAuthenticated(): boolean {
   return getToken() !== null;
+}
+
+export function isDemoSession(): boolean {
+  const token = getToken();
+  const user = getUser();
+
+  return token === DEMO_AUTH_TOKEN || user?.email === "demo@laroche360.ca";
 }
