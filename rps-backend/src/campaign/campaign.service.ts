@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Company } from '../company/company.entity';
+import { getN8nWebhookUrl } from '../n8n/n8n.config';
 import {
   campaignStatuses,
   CampaignStatus,
@@ -25,9 +26,7 @@ export class CampaignService {
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
   ) {
-    this.n8nWebhookUrl =
-      process.env.N8N_WEBHOOK_URL ||
-      'http://localhost:5678/webhook/sondage-rps-solutions-tech';
+    this.n8nWebhookUrl = getN8nWebhookUrl();
   }
 
   create(createCampaignDto: CreateCampaignDto) {

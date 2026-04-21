@@ -5,46 +5,49 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
-import { formatTrpcError } from "@/lib/trpc/client";
-import { saveAuth, temporaryAccess } from "@/lib/backend/auth";
-import {
-  allowedAdminEmails,
-  isAllowedAdminEmail,
-  normalizeAdminEmail,
-} from "@/lib/backend/auth-config";
+import { saveAuth, type AuthResponse } from "@/lib/backend/auth";
+
+function isAuthResponse(payload: AuthResponse | { error?: string } | null): payload is AuthResponse {
+  return Boolean(payload && typeof payload === "object" && "user" in payload && "token" in payload);
+}
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState(allowedAdminEmails[0]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  async function openTemporarySession(nextEmail: string) {
-    const normalizedEmail = normalizeAdminEmail(nextEmail);
-
-    if (!isAllowedAdminEmail(normalizedEmail)) {
-      setError("Seuls les comptes Isabelle et Roxanne sont autorises pour le moment.");
-      return;
-    }
-
+  async function openTemporarySession() {
     setError(null);
     setIsLoading(true);
 
     try {
-      const response = await temporaryAccess({ email: normalizedEmail });
-      saveAuth(response);
+      const response = await fetch("/api/auth/temporary-access", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | AuthResponse
+        | { error?: string }
+        | null;
+
+      if (!response.ok || !isAuthResponse(payload)) {
+        const errorMessage =
+          payload && typeof payload === "object" && "error" in payload
+            ? payload.error
+            : undefined;
+        throw new Error(errorMessage || "Ouverture de session temporaire indisponible.");
+      }
+
+      saveAuth(payload);
       router.push("/dashboard");
     } catch (err) {
-      setError(formatTrpcError(err));
+      setError(err instanceof Error ? err.message : "Ouverture de session indisponible.");
     } finally {
       setIsLoading(false);
     }
   }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await openTemporarySession(email);
-  };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_18%_18%,#f3e4c7_0%,#efe3d1_34%,#ede8df_58%,#e6e3dd_100%)] px-5 py-10 sm:px-8 lg:px-12">
@@ -64,23 +67,21 @@ export default function LoginPage() {
           </div>
 
           <h1 className="max-w-2xl font-[family-name:var(--font-manrope)] text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl">
-            Votre solution complete pour evaluer les risques psychosociaux.
+            Votre espace de pilotage des risques psychosociaux.
           </h1>
+
+          <p className="max-w-2xl text-base leading-7 text-slate-600">
+            Pour acceder a l'application, cliquez simplement sur le bouton d'ouverture de session.
+            Vous serez redirige vers le tableau de bord.
+          </p>
 
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={() => openTemporarySession("isabelle@laroche360.ca")}
+              onClick={() => void openTemporarySession()}
               disabled={isLoading}
               className="rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.16)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
             >
-              Acceder avec Isabelle
-            </button>
-            <button
-              onClick={() => openTemporarySession("roxanne@laroche360.ca")}
-              disabled={isLoading}
-              className="rounded-[12px] border border-[#d8ccba] bg-[#fffaf1] px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-[#f8eedf] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Acceder avec Roxanne
+              {isLoading ? "Connexion..." : "Acceder a l'application"}
             </button>
             <Link
               href="/survey-response"
@@ -99,24 +100,14 @@ export default function LoginPage() {
             Acces a votre espace
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Acces temporaire en attendant l'authentification finale. Seules les adresses
-            `isabelle@laroche360.ca` et `roxanne@laroche360.ca` sont actives.
+            L'acces est temporairement simplifie. Utilisez le bouton ci-dessous pour ouvrir
+            l'application sans afficher d'informations sensibles a l'ecran.
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-semibold text-slate-700">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-[12px] border border-[#ddd2c0] bg-[#f8f3ea] px-4 py-3 text-sm outline-none transition focus:border-[#c9a86c] focus:ring-2 focus:ring-[#c9a86c]/30"
-                placeholder="isabelle@laroche360.ca"
-              />
+          <div className="mt-6 space-y-4">
+            <div className="rounded-[14px] border border-[#e7dccb] bg-[#f8f3ea] px-4 py-4 text-sm leading-6 text-slate-700">
+              Cliquez sur <span className="font-semibold">Ouvrir l'application</span> pour acceder
+              directement au tableau de bord.
             </div>
 
             {error ? (
@@ -126,13 +117,14 @@ export default function LoginPage() {
             ) : null}
 
             <button
-              type="submit"
+              type="button"
+              onClick={() => void openTemporarySession()}
               disabled={isLoading}
               className="w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.14)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLoading ? "Connexion..." : "Ouvrir la session"}
+              {isLoading ? "Connexion..." : "Ouvrir l'application"}
             </button>
-          </form>
+          </div>
         </Card>
       </div>
     </div>
