@@ -1,6 +1,7 @@
 # Instructions de Préparation du VPS
 
 ## Contexte
+
 Une ancienne version tourne sur le serveur mais aucun des changements des développeurs n'apparaît.
 Nous allons **nettoyer et reconstruire** proprement.
 
@@ -14,6 +15,7 @@ ssh -i ~/.ssh/id_deploy root@104.254.182.46
 ```
 
 Si la clé n'est pas dans `~/.ssh/config`, spécifier le chemin complet :
+
 ```bash
 ssh -i /chemin/vers/id_deploy root@104.254.182.46
 ```
@@ -268,6 +270,7 @@ git push origin main
 Le workflow se déclenche automatiquement.
 
 **Vérifier dans GitHub** :
+
 - Aller à: https://github.com/AzazelSloth/rpsproject/actions
 - Le workflow `RPS CI/CD` doit apparaître et tourner
 
@@ -390,7 +393,7 @@ Après avoir suivi toutes les étapes :
 
 ### 1. Vérifier les Logs GitHub Actions
 
-```
+```link
 https://github.com/AzazelSloth/rpsproject/actions
 ```
 

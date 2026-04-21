@@ -23,10 +23,12 @@ API_URL=http://127.0.0.1:3000/api
 ```
 
 **Explication :**
+
 - `NEXT_PUBLIC_API_URL` → Utilisé par le **navigateur** (doit être l'IP publique du VPS)
 - `API_URL` → Utilisé par le **serveur Next.js** (peut rester en localhost car le backend est sur le même VPS)
 
 **Remplacer `<IP_VPS>` par l'IP publique du serveur**, exemple :
+
 ```bash
 NEXT_PUBLIC_API_URL=http://104.254.182.46:3000/api
 API_URL=http://127.0.0.1:3000/api
@@ -44,6 +46,7 @@ CORS_ORIGIN=http://localhost:3001,http://<IP_VPS>:3001,http://<IP_VPS>:8786
 ```
 
 **Exemple complet :**
+
 ```bash
 NODE_ENV=production
 PORT=3000
@@ -66,6 +69,7 @@ SWAGGER_PATH=api-docs
 ### 3. Vérifications réseau (DevOps)
 
 #### **Firewall VPS**
+
 ```bash
 # Vérifier que les ports sont ouverts
 sudo ufw status
@@ -77,6 +81,7 @@ sudo ufw allow 8786/tcp  # Accès public (si utilisé)
 ```
 
 #### **Tester la connectivité**
+
 ```bash
 # Depuis le VPS (test local)
 curl http://127.0.0.1:3000/api/health
@@ -94,7 +99,7 @@ curl -H "Origin: http://<IP_VPS>:3001" -H "Access-Control-Request-Method: POST" 
 
 ### **Flux de communication :**
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. Navigateur utilisateur                                    │
 │    → Lit NEXT_PUBLIC_API_URL                                 │
@@ -210,16 +215,21 @@ curl http://<IP_VPS>:3000/api/health
 ## 📞 En cas de problème
 
 ### **Erreur : "Failed to fetch"**
+
 → Vérifier que `NEXT_PUBLIC_API_URL` pointe vers l'IP publique du VPS
 
 ### **Erreur : CORS**
+
 → Vérifier que `CORS_ORIGIN` dans backend `.env` inclut l'IP du frontend
 
 ### **Erreur : "Connection refused"**
+
 → Vérifier que le backend écoute sur `0.0.0.0` et que le port 3000 est ouvert
 
 ### **Le frontend utilise encore localhost**
+
 → Reconstruire le frontend après avoir modifié `.env.local` :
+
 ```bash
 cd ~/rps-rps_dev/rps-frontend/nextjs-app
 rm -rf .next
