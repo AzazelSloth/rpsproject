@@ -58,11 +58,6 @@ export default function LoginPage() {
             Votre espace de pilotage des risques psychosociaux.
           </h1>
 
-          <p className="max-w-2xl text-base leading-7 text-slate-600">
-            Pour accéder à l'application, utilisez simplement le mode démo.
-            Vous serez redirigé vers le tableau de bord.
-          </p>
-
           <div className="flex flex-wrap gap-3">
             <button
               onClick={openDemoSession}
@@ -118,7 +113,6 @@ export default function LoginPage() {
             </div>
 
             <div className="rounded-[14px] border border-[#e7dccb] bg-[#f8f3ea] px-4 py-4 text-sm leading-6 text-slate-700">
-              <br />
               Cliquez sur <span className="font-semibold">Accéder au mode démo</span> pour ouvrir
               directement le tableau de bord.
             </div>
