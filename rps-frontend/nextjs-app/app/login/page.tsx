@@ -112,11 +112,6 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="rounded-[14px] border border-[#e7dccb] bg-[#f8f3ea] px-4 py-4 text-sm leading-6 text-slate-700">
-              Cliquez sur <span className="font-semibold">Accéder au mode démo</span> pour ouvrir
-              directement le tableau de bord.
-            </div>
-
             {error ? (
               <p className="rounded-[10px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {error}
