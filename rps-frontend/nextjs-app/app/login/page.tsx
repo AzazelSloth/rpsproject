@@ -7,6 +7,17 @@ import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
 import { createDemoAuthResponse, saveAuth } from "@/lib/backend/auth";
 
+const DEMO_EMAIL = "demo@laroche360.ca";
+const DEMO_PASSWORD_MASK = "********";
+const DEMO_BUTTON_LABEL = "Acceder au mode démo";
+const headingFontClass = "font-[family-name:var(--font-manrope)]";
+const disabledInputClassName =
+  "w-full rounded-[12px] border border-[#ddd2c0] bg-[#efe8db] px-4 py-3 text-sm text-slate-500 outline-none disabled:cursor-not-allowed";
+const primaryButtonClassName =
+  "w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.14)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:cursor-not-allowed disabled:opacity-60";
+const secondaryButtonClassName =
+  "rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.16)] transition hover:-translate-y-0.5 hover:bg-[#242424]";
+
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +28,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      saveAuth(createDemoAuthResponse("Mode demo", "demo@laroche360.ca"));
+      saveAuth(createDemoAuthResponse("Mode demo", DEMO_EMAIL));
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ouverture de session indisponible.");
@@ -43,28 +54,28 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <h1 className="max-w-2xl font-[family-name:var(--font-manrope)] text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl">
+          <h1 className={`max-w-2xl ${headingFontClass} text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl`}>
             Votre espace de pilotage des risques psychosociaux.
           </h1>
 
           <p className="max-w-2xl text-base leading-7 text-slate-600">
-            Pour acceder a l'application, utilisez simplement le mode demo.
-            Vous serez redirige vers le tableau de bord.
+            Pour accéder à l'application, utilisez simplement le mode démo.
+            Vous serez redirigé vers le tableau de bord.
           </p>
 
           <div className="flex flex-wrap gap-3">
             <button
               onClick={openDemoSession}
               disabled={isLoading}
-              className="rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.16)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
+              className={secondaryButtonClassName}
             >
-              {isLoading ? "Ouverture..." : "Acceder au mode demo"}
+              {isLoading ? "Ouverture..." : DEMO_BUTTON_LABEL}
             </button>
             <Link
               href="/survey-response"
               className="rounded-[12px] border border-[#d8ccba] bg-[#fffaf1] px-5 py-3 text-sm font-semibold text-slate-700 no-underline transition hover:bg-[#f8eedf]"
             >
-              Voir le parcours salarie
+              Voir le parcours salarié
             </Link>
           </div>
         </section>
@@ -73,17 +84,42 @@ export default function LoginPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
             Bienvenue
           </p>
-          <h2 className="mt-2 font-[family-name:var(--font-manrope)] text-2xl font-extrabold tracking-tight text-slate-900">
-            Acces a votre espace
+          <h2 className={`mt-2 ${headingFontClass} text-2xl font-extrabold tracking-tight text-slate-900`}>
+            Accès à votre espace
           </h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            L'acces est simplifie en mode demo. Aucun email ni identifiant sensible n'est affiche
-            a l'ecran.
-          </p>
 
           <div className="mt-6 space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="login-email" className="text-sm font-semibold text-slate-700">
+                Email
+              </label>
+              <input
+                id="login-email"
+                type="email"
+                value={DEMO_EMAIL}
+                disabled
+                readOnly
+                className={disabledInputClassName}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="login-password" className="text-sm font-semibold text-slate-700">
+                Mot de passe
+              </label>
+              <input
+                id="login-password"
+                type="password"
+                value={DEMO_PASSWORD_MASK}
+                disabled
+                readOnly
+                className={disabledInputClassName}
+              />
+            </div>
+
             <div className="rounded-[14px] border border-[#e7dccb] bg-[#f8f3ea] px-4 py-4 text-sm leading-6 text-slate-700">
-              Cliquez sur <span className="font-semibold">Acceder au mode demo</span> pour ouvrir
+              <br />
+              Cliquez sur <span className="font-semibold">Accéder au mode démo</span> pour ouvrir
               directement le tableau de bord.
             </div>
 
@@ -97,9 +133,9 @@ export default function LoginPage() {
               type="button"
               onClick={openDemoSession}
               disabled={isLoading}
-              className="w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.14)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:cursor-not-allowed disabled:opacity-60"
+              className={primaryButtonClassName}
             >
-              {isLoading ? "Ouverture..." : "Acceder au mode demo"}
+              {isLoading ? "Ouverture..." : DEMO_BUTTON_LABEL}
             </button>
           </div>
         </Card>
