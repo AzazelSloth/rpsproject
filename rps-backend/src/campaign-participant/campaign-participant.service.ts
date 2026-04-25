@@ -5,8 +5,9 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { In, IsNull, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { Campaign } from '../campaign/campaign.entity';
+import { parseCsvDocument } from '../common/csv.util';
 import { throwPersistenceError } from '../common/database-error.util';
 import { Employee } from '../employee/employee.entity';
 import { Question } from '../question/question.entity';
@@ -38,6 +39,7 @@ export class CampaignParticipantService {
     private readonly employeeRepository: Repository<Employee>,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
+    private readonly dataSource: DataSource,
     private readonly campaignService: CampaignService,
   ) {}
 
@@ -51,12 +53,13 @@ export class CampaignParticipantService {
 
     this.ensureSameCompany(employee, campaign);
 
-    const existingParticipant = await this.campaignParticipantRepository.findOne({
-      where: {
-        campaign: { id: campaign.id },
-        employee: { id: employee.id },
-      },
-    });
+    const existingParticipant =
+      await this.campaignParticipantRepository.findOne({
+        where: {
+          campaign: { id: campaign.id },
+          employee: { id: employee.id },
+        },
+      });
 
     if (existingParticipant) {
       throw new BadRequestException(
@@ -68,7 +71,8 @@ export class CampaignParticipantService {
       campaign,
       employee,
       participation_token: randomUUID(),
-      invitation_sent_at: createCampaignParticipantDto.invitation_sent_at ?? null,
+      invitation_sent_at:
+        createCampaignParticipantDto.invitation_sent_at ?? null,
       reminder_sent_at: null,
       completed_at: null,
       status: CampaignParticipantStatus.PENDING,
@@ -199,7 +203,8 @@ export class CampaignParticipantService {
     }
 
     if (updateCampaignParticipantDto.reminder_sent_at !== undefined) {
-      participant.reminder_sent_at = updateCampaignParticipantDto.reminder_sent_at;
+      participant.reminder_sent_at =
+        updateCampaignParticipantDto.reminder_sent_at;
       if (
         participant.reminder_sent_at &&
         participant.status !== CampaignParticipantStatus.COMPLETED
@@ -225,14 +230,6 @@ export class CampaignParticipantService {
   }
 
   async submitByToken(token: string, payload: SubmitCampaignResponsesDto) {
-    const participant = await this.findByToken(token);
-
-    if (participant.completed_at) {
-      throw new BadRequestException(
-        'This participation link has already been used',
-      );
-    }
-
     if (!payload.responses?.length) {
       throw new BadRequestException('At least one response is required');
     }
@@ -244,82 +241,109 @@ export class CampaignParticipantService {
       throw new BadRequestException('Each question can only be answered once');
     }
 
-    const questions = await this.questionRepository.find({
-      where: { id: In(questionIds) },
-      relations: { campaign: true },
-    });
-
-    if (questions.length !== questionIds.length) {
-      throw new BadRequestException('One or more questions do not exist');
-    }
-
-    const invalidQuestion = questions.find(
-      (question) => question.campaign.id !== participant.campaign.id,
-    );
-
-    if (invalidQuestion) {
-      throw new BadRequestException(
-        'Submitted questions must belong to the participant campaign',
-      );
-    }
-
-    const existingResponses = await this.responseRepository.find({
-      where: {
-        employee: { id: participant.employee.id },
-        question: { id: In(questionIds) },
-        deleted_at: IsNull(),
-      },
-    });
-
-    if (existingResponses.length > 0) {
-      throw new BadRequestException(
-        'One or more questions have already been answered by this employee',
-      );
-    }
-
-    const questionById = new Map(questions.map((question) => [question.id, question]));
-
-    const responses = payload.responses.map((item) =>
-      this.responseRepository.create({
-        employee: participant.employee,
-        question: questionById.get(item.question_id),
-        answer: item.answer,
-      }),
-    );
-
-    try {
-      await this.responseRepository.save(responses);
-    } catch (error) {
-      throwPersistenceError(error, {
-        defaultMessage: 'Failed to save responses',
-        duplicateMessage:
-          'One or more questions have already been answered by this employee',
-        constraintMessages: {
-          IDX_responses_employee_question_active:
-            'One or more questions have already been answered by this employee',
-          UQ_responses_employee_question:
-            'One or more questions have already been answered by this employee',
+    return this.dataSource.transaction(async (manager) => {
+      const participantRepository = manager.getRepository(CampaignParticipant);
+      const questionRepository = manager.getRepository(Question);
+      const responseRepository = manager.getRepository(SurveyResponse);
+      const participant = await participantRepository.findOne({
+        where: {
+          participation_token: token,
+          employee: { deleted_at: IsNull() },
+        },
+        relations: {
+          campaign: true,
+          employee: true,
         },
       });
-    }
 
-    participant.completed_at = new Date();
-    participant.status = CampaignParticipantStatus.COMPLETED;
+      if (!participant) {
+        throw new NotFoundException('Participation link not found');
+      }
 
-    try {
-      await this.campaignParticipantRepository.save(participant);
-    } catch (error) {
-      throwPersistenceError(error, {
-        defaultMessage: 'Failed to finalize campaign participant submission',
+      if (participant.completed_at) {
+        throw new BadRequestException(
+          'This participation link has already been used',
+        );
+      }
+
+      const questions = await questionRepository.find({
+        where: { id: In(questionIds) },
+        relations: { campaign: true },
       });
-    }
 
-    return {
-      submitted: true,
-      participant_id: participant.id,
-      completed_at: participant.completed_at,
-      response_count: responses.length,
-    };
+      if (questions.length !== questionIds.length) {
+        throw new BadRequestException('One or more questions do not exist');
+      }
+
+      const invalidQuestion = questions.find(
+        (question) => question.campaign.id !== participant.campaign.id,
+      );
+
+      if (invalidQuestion) {
+        throw new BadRequestException(
+          'Submitted questions must belong to the participant campaign',
+        );
+      }
+
+      const existingResponses = await responseRepository.find({
+        where: {
+          employee: { id: participant.employee.id },
+          question: { id: In(questionIds) },
+          deleted_at: IsNull(),
+        },
+      });
+
+      if (existingResponses.length > 0) {
+        throw new BadRequestException(
+          'One or more questions have already been answered by this employee',
+        );
+      }
+
+      const questionById = new Map(
+        questions.map((question) => [question.id, question]),
+      );
+      const responses = payload.responses.map((item) =>
+        responseRepository.create({
+          employee: participant.employee,
+          question: questionById.get(item.question_id),
+          answer: item.answer,
+        }),
+      );
+
+      try {
+        await responseRepository.save(responses);
+      } catch (error) {
+        throwPersistenceError(error, {
+          defaultMessage: 'Failed to save responses',
+          duplicateMessage:
+            'One or more questions have already been answered by this employee',
+          constraintMessages: {
+            IDX_responses_employee_question_active:
+              'One or more questions have already been answered by this employee',
+            UQ_responses_employee_question:
+              'One or more questions have already been answered by this employee',
+          },
+        });
+      }
+
+      participant.completed_at = new Date();
+      participant.status = CampaignParticipantStatus.COMPLETED;
+
+      try {
+        await participantRepository.save(participant);
+      } catch (error) {
+        throwPersistenceError(error, {
+          defaultMessage: 'Failed to finalize campaign participant submission',
+        });
+      }
+
+      return {
+        submitted: true,
+        participant_id: participant.id,
+        completed_at: participant.completed_at,
+        response_count: responses.length,
+      };
+    });
   }
 
   async getCampaignProgress(campaignId: number) {
@@ -454,7 +478,10 @@ export class CampaignParticipantService {
               continue;
             }
 
-            if (existingEmployee && existingEmployee.company.id !== payload.company_id) {
+            if (
+              existingEmployee &&
+              existingEmployee.company.id !== payload.company_id
+            ) {
               console.warn(
                 `[Import] Employee ${email} already exists for different company. Skipping.`,
               );
@@ -482,7 +509,8 @@ export class CampaignParticipantService {
           }
 
           if (employeesToSave.length > 0) {
-            const savedBatch = await this.employeeRepository.save(employeesToSave);
+            const savedBatch =
+              await this.employeeRepository.save(employeesToSave);
             for (const employee of savedBatch) {
               if (employee.email) {
                 employeesByEmail.set(employee.email.toLowerCase(), employee);
@@ -514,19 +542,22 @@ export class CampaignParticipantService {
 
       const employees = Array.from(employeesByEmail.values());
 
-      console.log(`[Import] Successfully imported ${employees.length} unique employees`);
+      console.log(
+        `[Import] Successfully imported ${employees.length} unique employees`,
+      );
 
       const participantsToCreate: CampaignParticipant[] = [];
       const employeeIds = employees.map((employee) => employee.id);
 
       if (employeeIds.length > 0) {
-        const existingParticipants = await this.campaignParticipantRepository.find({
-          where: {
-            campaign: { id: campaignId },
-            employee: { id: In(employeeIds) },
-          },
-          relations: { employee: true },
-        });
+        const existingParticipants =
+          await this.campaignParticipantRepository.find({
+            where: {
+              campaign: { id: campaignId },
+              employee: { id: In(employeeIds) },
+            },
+            relations: { employee: true },
+          });
 
         const existingSet = new Set(
           existingParticipants.map((participant) => participant.employee.id),
@@ -552,10 +583,11 @@ export class CampaignParticipantService {
       let participants: CampaignParticipant[] = [];
       if (participantsToCreate.length > 0) {
         try {
-          participants = await this.campaignParticipantRepository.save(
-            participantsToCreate,
+          participants =
+            await this.campaignParticipantRepository.save(participantsToCreate);
+          console.log(
+            `[Import] Created ${participants.length} new participants`,
           );
-          console.log(`[Import] Created ${participants.length} new participants`);
 
           try {
             if (participants.length > 0) {
@@ -611,13 +643,15 @@ export class CampaignParticipantService {
         imported_employees: employees.length,
         participants: participants.map((p) => {
           let emp: Employee | undefined;
-          
+
           if (p.employee) {
             emp = p.employee;
           }
 
           if (!emp) {
-            console.warn(`[Import] No employee data found for participant ${p.participation_token}`);
+            console.warn(
+              `[Import] No employee data found for participant ${p.participation_token}`,
+            );
             return {
               participation_token: p.participation_token,
               employee: {
@@ -628,7 +662,7 @@ export class CampaignParticipantService {
               },
             };
           }
-          
+
           return {
             participation_token: p.participation_token,
             employee: {
@@ -659,8 +693,7 @@ export class CampaignParticipantService {
       }
       throwPersistenceError(error, {
         defaultMessage: 'Employee import failed',
-        duplicateMessage:
-          'One or more employees or participants already exist',
+        duplicateMessage: 'One or more employees or participants already exist',
         constraintMessages: {
           UQ_employees_email:
             'One or more employees already exist with the same email',
@@ -679,9 +712,12 @@ export class CampaignParticipantService {
    * Automatically triggers analysis if campaign responses are ready
    * This runs in background after import completes
    */
-  private async triggerAnalysisIfReady(campaignId: number, companyName?: string): Promise<void> {
+  private async triggerAnalysisIfReady(
+    campaignId: number,
+    companyName?: string,
+  ): Promise<void> {
     try {
-      const campaign = await this.findCampaignOrThrow(campaignId);
+      await this.findCampaignOrThrow(campaignId);
 
       const participants = await this.campaignParticipantRepository.find({
         where: {
@@ -703,7 +739,7 @@ export class CampaignParticipantService {
       if (completedCount >= 5 || completionRate >= 0.5) {
         console.log(
           `[Auto-Analysis] Triggering analysis for campaign ${campaignId} ` +
-          `(${completedCount}/${participantCount} completed, ${companyName})`,
+            `(${completedCount}/${participantCount} completed, ${companyName})`,
         );
 
         const userEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
@@ -718,7 +754,7 @@ export class CampaignParticipantService {
       } else {
         console.log(
           `[Auto-Analysis] Skipping analysis for campaign ${campaignId} ` +
-          `(${completedCount}/${participantCount} completed - not enough data)`,
+            `(${completedCount}/${participantCount} completed - not enough data)`,
         );
       }
     } catch (error) {
@@ -814,41 +850,30 @@ export class CampaignParticipantService {
   }
 
   private parseCsv(csv: string): ImportCampaignEmployeeRowDto[] {
-    const lines = csv
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
+    const { headers, rows: parsedRows, dataLineCount } = parseCsvDocument(csv);
 
-    if (!lines.length) {
+    if (!headers.length) {
       return [];
     }
-
-    const [headerLine, ...dataLines] = lines;
-    const headers = headerLine
-      .split(',')
-      .map((header) => this.normalizeCsvHeader(header));
 
     console.log('[CSV] Headers detected:', headers);
 
     const rows: ImportCampaignEmployeeRowDto[] = [];
 
-    for (let i = 0; i < dataLines.length; i++) {
+    for (let i = 0; i < parsedRows.length; i++) {
       try {
-        const line = dataLines[i];
-        
-        // Handle quoted fields properly
-        const values = this.parseCsvLine(line);
-        const row: Record<string, string> = {};
+        const row = parsedRows[i];
+        const email = (
+          row.email ??
+          row.adresse_courriel ??
+          row.courriel ??
+          ''
+        ).trim();
 
-        headers.forEach((header, idx) => {
-          row[header] = values[idx] ?? '';
-        });
-
-        const email = (row.email ?? row.adresse_courriel ?? row.courriel ?? '').trim();
-
-        // Skip rows without valid email
         if (!email || !email.includes('@')) {
-          console.warn(`[CSV] Row ${i + 2}: Missing or invalid email '${email}', skipping`);
+          console.warn(
+            `[CSV] Row ${i + 2}: Missing or invalid email '${email}', skipping`,
+          );
           continue;
         }
 
@@ -857,53 +882,25 @@ export class CampaignParticipantService {
           first_name: (row.first_name ?? row.prenom ?? '').trim() || undefined,
           last_name: (row.last_name ?? row.nom ?? '').trim() || undefined,
           phone: (row.phone ?? '').trim() || undefined,
-          department: (row.department ?? row.fonction ?? row.titre_professionnel ?? '').trim() || undefined,
-          company_name: (row.company_name ?? row.entreprise ?? row.company ?? '').trim() || undefined,
+          department:
+            (
+              row.department ??
+              row.fonction ??
+              row.titre_professionnel ??
+              ''
+            ).trim() || undefined,
+          company_name:
+            (row.company_name ?? row.entreprise ?? row.company ?? '').trim() ||
+            undefined,
         });
       } catch (error) {
         console.error(`[CSV] Error parsing row ${i + 2}:`, error);
       }
     }
 
-    console.log(`[CSV] Successfully parsed ${rows.length} valid rows from ${dataLines.length} total rows`);
+    console.log(
+      `[CSV] Successfully parsed ${rows.length} valid rows from ${dataLineCount} total rows`,
+    );
     return rows;
-  }
-
-  private parseCsvLine(line: string): string[] {
-    const values: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          // Escaped quote
-          current += '"';
-          i++; // Skip next quote
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === ',' && !inQuotes) {
-        values.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    
-    values.push(current.trim());
-    return values;
-  }
-
-  private normalizeCsvHeader(header: string) {
-    return header
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '');
   }
 }

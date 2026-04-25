@@ -36,7 +36,7 @@ const persistenceImports = shouldEnableDatabase
       ResponseModule,
       ReportModule,
     ]
-  : [AuthModule];
+  : [];
 
 @Module({
   imports: persistenceImports,

@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { IsNull, Repository } from 'typeorm';
+import { parseCsvDocument } from '../common/csv.util';
 import { throwPersistenceError } from '../common/database-error.util';
 import { Company } from '../company/company.entity';
 import {
@@ -36,7 +37,10 @@ export class EmployeeService {
       );
     }
 
-    if (existingEmployee?.deleted_at && existingEmployee.company.id !== company.id) {
+    if (
+      existingEmployee?.deleted_at &&
+      existingEmployee.company.id !== company.id
+    ) {
       throw new ConflictException(
         `Employee with email ${email} already exists in another company`,
       );
@@ -65,7 +69,8 @@ export class EmployeeService {
       throwPersistenceError(error, {
         defaultMessage: 'Failed to create employee',
         foreignKeyMessage: 'Company not found',
-        duplicateMessage: 'An employee with the same email or survey token already exists',
+        duplicateMessage:
+          'An employee with the same email or survey token already exists',
         constraintMessages: {
           UQ_employees_email: `Employee with email ${email} already exists`,
           UQ_employees_survey_token:
@@ -145,7 +150,8 @@ export class EmployeeService {
       throwPersistenceError(error, {
         defaultMessage: 'Failed to update employee',
         foreignKeyMessage: 'Company not found',
-        duplicateMessage: 'An employee with the same email or survey token already exists',
+        duplicateMessage:
+          'An employee with the same email or survey token already exists',
         constraintMessages: {
           UQ_employees_email: `Employee with email ${employee.email} already exists`,
           UQ_employees_survey_token:
@@ -187,7 +193,10 @@ export class EmployeeService {
       : [];
 
     const existingByEmail = new Map(
-      existingEmployees.map((employee) => [employee.email?.toLowerCase(), employee]),
+      existingEmployees.map((employee) => [
+        employee.email?.toLowerCase(),
+        employee,
+      ]),
     );
 
     const employees = normalizedRows.map((row) => {
@@ -207,7 +216,8 @@ export class EmployeeService {
         existingEmployee.department = row.department?.trim() || null;
         existingEmployee.deleted_at = null;
         existingEmployee.company = company;
-        existingEmployee.survey_token = existingEmployee.survey_token ?? randomUUID();
+        existingEmployee.survey_token =
+          existingEmployee.survey_token ?? randomUUID();
         return existingEmployee;
       }
 
@@ -229,9 +239,11 @@ export class EmployeeService {
       throwPersistenceError(error, {
         defaultMessage: 'Failed to import employees',
         foreignKeyMessage: 'Company not found',
-        duplicateMessage: 'One or more employees already exist with the same email or survey token',
+        duplicateMessage:
+          'One or more employees already exist with the same email or survey token',
         constraintMessages: {
-          UQ_employees_email: 'One or more employees already exist with the same email',
+          UQ_employees_email:
+            'One or more employees already exist with the same email',
           UQ_employees_survey_token:
             'One or more employees already exist with the same survey token',
         },
@@ -245,36 +257,37 @@ export class EmployeeService {
   }
 
   private parseCsv(csv: string): ImportEmployeeRowDto[] {
-    const lines = csv
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
+    const { rows } = parseCsvDocument(csv);
+    const employees: ImportEmployeeRowDto[] = [];
 
-    if (!lines.length) {
-      return [];
+    for (const row of rows) {
+      const email = (
+        row.email ??
+        row.adresse_courriel ??
+        row.courriel ??
+        ''
+      ).trim();
+
+      if (!email || !email.includes('@')) {
+        continue;
+      }
+
+      employees.push({
+        email,
+        first_name: (row.first_name ?? row.prenom ?? '').trim() || undefined,
+        last_name: (row.last_name ?? row.nom ?? '').trim() || undefined,
+        phone: (row.phone ?? '').trim() || undefined,
+        department:
+          (
+            row.department ??
+            row.fonction ??
+            row.titre_professionnel ??
+            ''
+          ).trim() || undefined,
+      });
     }
 
-    const [headerLine, ...dataLines] = lines;
-    const headers = headerLine
-      .split(',')
-      .map((header) => header.trim().toLowerCase());
-
-    return dataLines.map((line) => {
-      const values = line.split(',').map((value) => value.trim());
-      const row: Record<string, string> = {};
-
-      headers.forEach((header, index) => {
-        row[header] = values[index] ?? '';
-      });
-
-      return {
-        email: row.email,
-        first_name: row.first_name,
-        last_name: row.last_name,
-        phone: row.phone,
-        department: row.department,
-      };
-    });
+    return employees;
   }
 
   private async findCompanyOrThrow(companyId: number) {
