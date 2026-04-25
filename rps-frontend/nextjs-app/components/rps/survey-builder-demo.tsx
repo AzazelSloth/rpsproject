@@ -168,7 +168,7 @@ export function SurveyBuilderDemo({
   const selectedCompanyName =
     companies.find((company) => company.id === companyId)?.name?.trim() ?? "";
   const trimmedTitle = title.trim();
-  const effectiveCampaignTitle = trimmedTitle || selectedCompanyName;
+  const effectiveCampaignTitle = trimmedTitle;
   const isDateRangeInvalid = isEndDateBeforeStartDate(startDate, endDate);
   const canSaveCampaign =
     Boolean(companyId) && effectiveCampaignTitle.length >= 3 && !isDateRangeInvalid;
@@ -276,7 +276,6 @@ export function SurveyBuilderDemo({
       (result) => {
         setCompanies((current) => [...current, result]);
         setCompanyId(result.id);
-        setTitle(result.name);
         setNewCompanyName("");
       },
     );
@@ -289,7 +288,7 @@ export function SurveyBuilderDemo({
     }
 
     if (effectiveCampaignTitle.length < 3) {
-      setError("Le nom de l'entreprise doit contenir au moins 3 caracteres.");
+      setError("Le nom du sondage doit contenir au moins 3 caracteres.");
       return false;
     }
 
@@ -317,12 +316,7 @@ export function SurveyBuilderDemo({
       setCampaignId(companyCampaigns[0]?.id ?? null);
     }
 
-    const nextCompanyName =
-      companies.find((company) => company.id === nextCompanyId)?.name?.trim() ?? "";
-
-    if (!campaignId || !trimmedTitle || trimmedTitle === selectedCompanyName) {
-      setTitle(nextCompanyName);
-    }
+    // Le titre ne doit pas etre auto-rempli; il est saisi manuellement.
   }
 
   function saveCampaign() {
@@ -1089,14 +1083,14 @@ export function SurveyBuilderDemo({
               className="mt-3 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="Nom..."
+              placeholder="Nom du sondage"
             />
             <textarea
               className="mt-2 w-full resize-none rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
               rows={3}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Description..."
+              placeholder="Description du sondage"
             />
           </div>
 
