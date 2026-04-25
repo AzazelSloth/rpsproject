@@ -4,6 +4,7 @@ import {
   IsArray,
   IsEmail,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
@@ -16,20 +17,24 @@ import {
 export class CreateEmployeeDto {
   @IsInt()
   @Min(1)
+  @IsNotEmpty()
   company_id: number;
 
   @IsString()
   @MinLength(1)
   @MaxLength(100)
+  @IsNotEmpty()
   first_name: string;
 
   @IsString()
   @MinLength(1)
   @MaxLength(100)
+  @IsNotEmpty()
   last_name: string;
 
   @IsEmail()
   @MaxLength(255)
+  @IsNotEmpty()
   email: string;
 
   @IsOptional()
@@ -114,6 +119,7 @@ export class ImportEmployeeRowDto {
 export class ImportEmployeesDto {
   @IsInt()
   @Min(1)
+  @IsNotEmpty()
   company_id: number;
 
   @IsOptional()

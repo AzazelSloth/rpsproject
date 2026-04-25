@@ -1,12 +1,13 @@
 import {
   BadRequestException,
   Injectable,
-  NotFoundException,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { throwPersistenceError } from '../common/database-error.util';
 import { Company } from '../company/company.entity';
 import { getN8nWebhookUrl } from '../n8n/n8n.config';
 import {
@@ -25,13 +26,21 @@ export class CampaignService {
   constructor(
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
+    @InjectRepository(Company)
+    private readonly companyRepository: Repository<Company>,
   ) {
     this.n8nWebhookUrl = getN8nWebhookUrl();
   }
 
-  create(createCampaignDto: CreateCampaignDto) {
+  async create(createCampaignDto: CreateCampaignDto) {
     const status = createCampaignDto.status ?? 'preparation';
     this.ensureValidStatus(status);
+    this.ensureValidDateRange(
+      createCampaignDto.start_date,
+      createCampaignDto.end_date,
+    );
+
+    const company = await this.findCompanyOrThrow(createCampaignDto.company_id);
 
     const campaign = this.campaignRepository.create({
       name: createCampaignDto.name,
@@ -39,10 +48,23 @@ export class CampaignService {
       start_date: createCampaignDto.start_date,
       end_date: createCampaignDto.end_date,
       status,
-      company: { id: createCampaignDto.company_id } as Company,
+      company,
     });
 
-    return this.campaignRepository.save(campaign);
+    try {
+      return await this.campaignRepository.save(campaign);
+    } catch (error) {
+      throwPersistenceError(error, {
+        defaultMessage: 'Failed to create campaign',
+        foreignKeyMessage: 'Company not found',
+        checkMessage:
+          'Campaign end date must be greater than or equal to start date',
+        constraintMessages: {
+          CHK_campaign_dates:
+            'Campaign end date must be greater than or equal to start date',
+        },
+      });
+    }
   }
 
   findAll() {
@@ -67,9 +89,10 @@ export class CampaignService {
 
   async update(id: number, updateCampaignDto: UpdateCampaignDto) {
     const campaign = await this.findOne(id);
+    let company = campaign.company;
 
     if (updateCampaignDto.company_id !== undefined) {
-      campaign.company = { id: updateCampaignDto.company_id } as Company;
+      company = await this.findCompanyOrThrow(updateCampaignDto.company_id);
     }
 
     if (updateCampaignDto.name !== undefined) {
@@ -93,7 +116,23 @@ export class CampaignService {
       campaign.status = updateCampaignDto.status;
     }
 
-    return this.campaignRepository.save(campaign);
+    this.ensureValidDateRange(campaign.start_date, campaign.end_date);
+    campaign.company = company;
+
+    try {
+      return await this.campaignRepository.save(campaign);
+    } catch (error) {
+      throwPersistenceError(error, {
+        defaultMessage: 'Failed to update campaign',
+        foreignKeyMessage: 'Company not found',
+        checkMessage:
+          'Campaign end date must be greater than or equal to start date',
+        constraintMessages: {
+          CHK_campaign_dates:
+            'Campaign end date must be greater than or equal to start date',
+        },
+      });
+    }
   }
 
   async remove(id: number) {
@@ -220,6 +259,26 @@ export class CampaignService {
   private ensureValidStatus(status: CampaignStatus) {
     if (!campaignStatuses.includes(status)) {
       throw new BadRequestException(`Invalid campaign status: ${status}`);
+    }
+  }
+
+  private async findCompanyOrThrow(companyId: number) {
+    const company = await this.companyRepository.findOne({
+      where: { id: companyId },
+    });
+
+    if (!company) {
+      throw new NotFoundException(`Company ${companyId} not found`);
+    }
+
+    return company;
+  }
+
+  private ensureValidDateRange(startDate?: Date | null, endDate?: Date | null) {
+    if (startDate && endDate && endDate < startDate) {
+      throw new BadRequestException(
+        'Campaign end date must be greater than or equal to start date',
+      );
     }
   }
 }

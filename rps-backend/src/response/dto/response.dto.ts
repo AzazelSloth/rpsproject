@@ -1,5 +1,6 @@
 import {
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -10,15 +11,18 @@ import {
 export class CreateResponseDto {
   @IsInt()
   @Min(1)
+  @IsNotEmpty()
   employee_id: number;
 
   @IsInt()
   @Min(1)
+  @IsNotEmpty()
   question_id: number;
 
   @IsString()
   @MinLength(1)
   @MaxLength(4000)
+  @IsNotEmpty()
   answer: string;
 }
 

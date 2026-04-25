@@ -5,8 +5,9 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { Campaign } from '../campaign/campaign.entity';
+import { throwPersistenceError } from '../common/database-error.util';
 import { Employee } from '../employee/employee.entity';
 import { Question } from '../question/question.entity';
 import { SurveyResponse } from '../response/response.entity';
@@ -40,23 +41,61 @@ export class CampaignParticipantService {
     private readonly campaignService: CampaignService,
   ) {}
 
-  create(createCampaignParticipantDto: CreateCampaignParticipantDto) {
+  async create(createCampaignParticipantDto: CreateCampaignParticipantDto) {
+    const campaign = await this.findCampaignOrThrow(
+      createCampaignParticipantDto.campaign_id,
+    );
+    const employee = await this.findEmployeeOrThrow(
+      createCampaignParticipantDto.employee_id,
+    );
+
+    this.ensureSameCompany(employee, campaign);
+
+    const existingParticipant = await this.campaignParticipantRepository.findOne({
+      where: {
+        campaign: { id: campaign.id },
+        employee: { id: employee.id },
+      },
+    });
+
+    if (existingParticipant) {
+      throw new BadRequestException(
+        'This employee is already assigned to this campaign',
+      );
+    }
+
     const participant = this.campaignParticipantRepository.create({
-      campaign: { id: createCampaignParticipantDto.campaign_id } as Campaign,
-      employee: { id: createCampaignParticipantDto.employee_id } as Employee,
+      campaign,
+      employee,
       participation_token: randomUUID(),
-      invitation_sent_at:
-        createCampaignParticipantDto.invitation_sent_at ?? null,
+      invitation_sent_at: createCampaignParticipantDto.invitation_sent_at ?? null,
       reminder_sent_at: null,
       completed_at: null,
       status: CampaignParticipantStatus.PENDING,
     });
 
-    return this.campaignParticipantRepository.save(participant);
+    try {
+      return await this.campaignParticipantRepository.save(participant);
+    } catch (error) {
+      throwPersistenceError(error, {
+        defaultMessage: 'Failed to create campaign participant',
+        foreignKeyMessage: 'Campaign or employee not found',
+        duplicateMessage: 'This employee is already assigned to this campaign',
+        constraintMessages: {
+          UQ_campaign_participants_campaign_employee:
+            'This employee is already assigned to this campaign',
+          UQ_campaign_participants_token:
+            'Generated participation token already exists',
+        },
+      });
+    }
   }
 
   findAll() {
     return this.campaignParticipantRepository.find({
+      where: {
+        employee: { deleted_at: IsNull() },
+      },
       order: { id: 'ASC' },
       relations: {
         campaign: true,
@@ -67,7 +106,7 @@ export class CampaignParticipantService {
 
   async findOne(id: number) {
     const participant = await this.campaignParticipantRepository.findOne({
-      where: { id },
+      where: { id, employee: { deleted_at: IsNull() } },
       relations: {
         campaign: true,
         employee: true,
@@ -83,7 +122,10 @@ export class CampaignParticipantService {
 
   async findByToken(token: string) {
     const participant = await this.campaignParticipantRepository.findOne({
-      where: { participation_token: token },
+      where: {
+        participation_token: token,
+        employee: { deleted_at: IsNull() },
+      },
       relations: {
         campaign: true,
         employee: true,
@@ -99,7 +141,10 @@ export class CampaignParticipantService {
 
   async getQuestionnaireByToken(token: string) {
     const participant = await this.campaignParticipantRepository.findOne({
-      where: { participation_token: token },
+      where: {
+        participation_token: token,
+        employee: { deleted_at: IsNull() },
+      },
       relations: {
         campaign: {
           company: true,
@@ -154,8 +199,7 @@ export class CampaignParticipantService {
     }
 
     if (updateCampaignParticipantDto.reminder_sent_at !== undefined) {
-      participant.reminder_sent_at =
-        updateCampaignParticipantDto.reminder_sent_at;
+      participant.reminder_sent_at = updateCampaignParticipantDto.reminder_sent_at;
       if (
         participant.reminder_sent_at &&
         participant.status !== CampaignParticipantStatus.COMPLETED
@@ -171,7 +215,13 @@ export class CampaignParticipantService {
       }
     }
 
-    return this.campaignParticipantRepository.save(participant);
+    try {
+      return await this.campaignParticipantRepository.save(participant);
+    } catch (error) {
+      throwPersistenceError(error, {
+        defaultMessage: 'Failed to update campaign participant',
+      });
+    }
   }
 
   async submitByToken(token: string, payload: SubmitCampaignResponsesDto) {
@@ -195,7 +245,7 @@ export class CampaignParticipantService {
     }
 
     const questions = await this.questionRepository.find({
-      where: questionIds.map((id) => ({ id })),
+      where: { id: In(questionIds) },
       relations: { campaign: true },
     });
 
@@ -213,20 +263,56 @@ export class CampaignParticipantService {
       );
     }
 
+    const existingResponses = await this.responseRepository.find({
+      where: {
+        employee: { id: participant.employee.id },
+        question: { id: In(questionIds) },
+        deleted_at: IsNull(),
+      },
+    });
+
+    if (existingResponses.length > 0) {
+      throw new BadRequestException(
+        'One or more questions have already been answered by this employee',
+      );
+    }
+
+    const questionById = new Map(questions.map((question) => [question.id, question]));
+
     const responses = payload.responses.map((item) =>
       this.responseRepository.create({
-        employee: { id: participant.employee.id } as Employee,
-        question: { id: item.question_id } as Question,
+        employee: participant.employee,
+        question: questionById.get(item.question_id),
         answer: item.answer,
       }),
     );
 
-    await this.responseRepository.save(responses);
+    try {
+      await this.responseRepository.save(responses);
+    } catch (error) {
+      throwPersistenceError(error, {
+        defaultMessage: 'Failed to save responses',
+        duplicateMessage:
+          'One or more questions have already been answered by this employee',
+        constraintMessages: {
+          IDX_responses_employee_question_active:
+            'One or more questions have already been answered by this employee',
+          UQ_responses_employee_question:
+            'One or more questions have already been answered by this employee',
+        },
+      });
+    }
 
     participant.completed_at = new Date();
     participant.status = CampaignParticipantStatus.COMPLETED;
 
-    await this.campaignParticipantRepository.save(participant);
+    try {
+      await this.campaignParticipantRepository.save(participant);
+    } catch (error) {
+      throwPersistenceError(error, {
+        defaultMessage: 'Failed to finalize campaign participant submission',
+      });
+    }
 
     return {
       submitted: true,
@@ -238,7 +324,10 @@ export class CampaignParticipantService {
 
   async getCampaignProgress(campaignId: number) {
     const participants = await this.campaignParticipantRepository.find({
-      where: { campaign: { id: campaignId } },
+      where: {
+        campaign: { id: campaignId },
+        employee: { deleted_at: IsNull() },
+      },
       relations: { employee: true },
       order: { id: 'ASC' },
     });
@@ -290,22 +379,14 @@ export class CampaignParticipantService {
     payload: ImportCampaignEmployeesDto,
   ) {
     try {
-      console.log(`[Import] Starting import for campaign ${campaignId}, company ${payload.company_id}`);
-      console.log(`[Import] CSV length: ${payload.csv?.length || 0}, Rows provided: ${payload.rows?.length || 0}`);
+      console.log(
+        `[Import] Starting import for campaign ${campaignId}, company ${payload.company_id}`,
+      );
+      console.log(
+        `[Import] CSV length: ${payload.csv?.length || 0}, Rows provided: ${payload.rows?.length || 0}`,
+      );
 
-      const campaign = await this.campaignRepository.findOne({
-        where: { id: campaignId },
-        relations: { company: true },
-      });
-
-      if (!campaign) {
-        throw new NotFoundException(`Campaign ${campaignId} not found`);
-      }
-
-      // Fix: Ensure company is loaded
-      if (!campaign.company) {
-        throw new BadRequestException('Campaign does not have an associated company');
-      }
+      const campaign = await this.findCampaignOrThrow(campaignId);
 
       if (campaign.company.id !== payload.company_id) {
         throw new BadRequestException(
@@ -319,103 +400,124 @@ export class CampaignParticipantService {
 
       console.log(`[Import] Parsed ${rows.length} rows from CSV`);
 
-      const normalizedRows = rows.filter((row) => row.email?.trim());
+      const normalizedRows = Array.from(
+        new Map(
+          rows
+            .filter((row) => row.email?.trim())
+            .map((row) => [row.email.trim().toLowerCase(), row]),
+        ).values(),
+      );
 
-      console.log(`[Import] Starting import of ${normalizedRows.length} employees for campaign ${campaignId}`);
+      console.log(
+        `[Import] Starting import of ${normalizedRows.length} employees for campaign ${campaignId}`,
+      );
 
       if (normalizedRows.length === 0) {
-        throw new BadRequestException('No valid employee rows found in CSV. Ensure you have email addresses.');
+        throw new BadRequestException(
+          'No valid employee rows found in CSV. Ensure you have email addresses.',
+        );
       }
 
-      const employees: Employee[] = [];
-      const BATCH_SIZE = 50; // Process in batches for stability
+      const employeesByEmail = new Map<string, Employee>();
+      const BATCH_SIZE = 50;
 
-      // Process rows in batches to avoid timeouts
       for (let i = 0; i < normalizedRows.length; i += BATCH_SIZE) {
         const batch = normalizedRows.slice(i, i + BATCH_SIZE);
-        console.log(`[Import] Processing batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} rows)`);
+        console.log(
+          `[Import] Processing batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} rows)`,
+        );
 
         const batchEmails = batch.map((row) => row.email.trim().toLowerCase());
 
         try {
-          // Fetch existing employees in batch
-          const existingEmployees = await this.employeeRepository.find({
-            where: { email: In(batchEmails) },
-            relations: { company: true },
-          });
+          const existingEmployees = await this.employeeRepository
+            .createQueryBuilder('employee')
+            .leftJoinAndSelect('employee.company', 'company')
+            .where('LOWER(employee.email) IN (:...emails)', {
+              emails: batchEmails,
+            })
+            .getMany();
 
           const existingMap = new Map(
-            existingEmployees.map((employee) => [employee.email?.toLowerCase(), employee]),
+            existingEmployees.map((employee) => [
+              employee.email?.toLowerCase(),
+              employee,
+            ]),
           );
-          const newEmployeesData: Employee[] = [];
+          const employeesToSave: Employee[] = [];
 
           for (const row of batch) {
             const email = row.email.trim().toLowerCase();
-            let employee = existingMap.get(email);
+            const existingEmployee = existingMap.get(email);
 
-            if (!employee) {
-              newEmployeesData.push(
-                this.employeeRepository.create({
-                  first_name: row.first_name?.trim() || 'N/A',
-                  last_name: row.last_name?.trim() || 'N/A',
-                  email,
-                  phone: row.phone?.trim() || undefined,
-                  department: row.department?.trim() || undefined,
-                  company_name: row.company_name?.trim() || undefined,
-                  survey_token: randomUUID(),
-                  company: { id: payload.company_id } as any,
-                }),
-              );
-            } else if (employee.company.id === payload.company_id) {
-              employees.push(employee);
-            } else {
+            if (employeesByEmail.has(email)) {
+              continue;
+            }
+
+            if (existingEmployee && existingEmployee.company.id !== payload.company_id) {
               console.warn(
                 `[Import] Employee ${email} already exists for different company. Skipping.`,
               );
+              continue;
             }
+
+            const employee =
+              existingEmployee ??
+              this.employeeRepository.create({
+                email,
+                survey_token: randomUUID(),
+                company: campaign.company,
+              });
+
+            employee.first_name = row.first_name?.trim() || 'N/A';
+            employee.last_name = row.last_name?.trim() || 'N/A';
+            employee.phone = row.phone?.trim() || null;
+            employee.department = row.department?.trim() || null;
+            employee.company_name = row.company_name?.trim() || null;
+            employee.company = campaign.company;
+            employee.deleted_at = null;
+            employee.survey_token = employee.survey_token ?? randomUUID();
+
+            employeesToSave.push(employee);
           }
 
-          // Bulk insert new employees
-          if (newEmployeesData.length > 0) {
-            try {
-              const created = await this.employeeRepository.save(newEmployeesData);
-              employees.push(...created);
-              console.log(`[Import] Created ${created.length} new employees in batch`);
-            } catch (error) {
-              const dbError = error as any;
-              if (dbError?.code === '23505') {
-                console.warn('[Import] Some employees have duplicate emails, continuing...');
-                // Try inserting individually with duplicate handling
-                for (const empData of newEmployeesData) {
-                  try {
-                    const saved = await this.employeeRepository.save(empData);
-                    employees.push(saved);
-                  } catch (e) {
-                    if ((e as any)?.code === '23505') {
-                      console.warn(`[Import] Duplicate for ${empData.email}, skipping`);
-                      continue;
-                    }
-                    throw e;
-                  }
-                }
-              } else {
-                throw error;
+          if (employeesToSave.length > 0) {
+            const savedBatch = await this.employeeRepository.save(employeesToSave);
+            for (const employee of savedBatch) {
+              if (employee.email) {
+                employeesByEmail.set(employee.email.toLowerCase(), employee);
               }
             }
+            console.log(
+              `[Import] Saved ${savedBatch.length} employees in batch`,
+            );
           }
         } catch (error) {
-          console.error(`[Import] Error processing batch starting at index ${i}:`, error);
-          throw new Error(
-            `Failed to import employees (batch ${Math.floor(i / BATCH_SIZE) + 1}): ${error instanceof Error ? error.message : 'Unknown error'}`,
+          console.error(
+            `[Import] Error processing batch starting at index ${i}:`,
+            error,
           );
+          throwPersistenceError(error, {
+            defaultMessage: `Failed to import employees for batch ${Math.floor(i / BATCH_SIZE) + 1}`,
+            foreignKeyMessage: 'Company not found',
+            duplicateMessage:
+              'One or more employees already exist with the same email or survey token',
+            constraintMessages: {
+              UQ_employees_email:
+                'One or more employees already exist with the same email',
+              UQ_employees_survey_token:
+                'One or more employees already exist with the same survey token',
+            },
+          });
         }
       }
 
+      const employees = Array.from(employeesByEmail.values());
+
       console.log(`[Import] Successfully imported ${employees.length} unique employees`);
 
-      // Create participants in batch
       const participantsToCreate: CampaignParticipant[] = [];
-      const employeeIds = employees.map(e => e.id);
+      const employeeIds = employees.map((employee) => employee.id);
 
       if (employeeIds.length > 0) {
         const existingParticipants = await this.campaignParticipantRepository.find({
@@ -426,14 +528,16 @@ export class CampaignParticipantService {
           relations: { employee: true },
         });
 
-        const existingSet = new Set(existingParticipants.map(p => p.employee.id));
+        const existingSet = new Set(
+          existingParticipants.map((participant) => participant.employee.id),
+        );
 
         for (const employee of employees) {
           if (!existingSet.has(employee.id)) {
             participantsToCreate.push(
               this.campaignParticipantRepository.create({
-                campaign: { id: campaignId } as Campaign,
-                employee: { id: employee.id } as Employee,
+                campaign,
+                employee,
                 participation_token: randomUUID(),
                 invitation_sent_at: payload.invitation_sent_at ?? new Date(),
                 reminder_sent_at: null,
@@ -448,49 +552,59 @@ export class CampaignParticipantService {
       let participants: CampaignParticipant[] = [];
       if (participantsToCreate.length > 0) {
         try {
-          participants = await this.campaignParticipantRepository.save(participantsToCreate);
+          participants = await this.campaignParticipantRepository.save(
+            participantsToCreate,
+          );
           console.log(`[Import] Created ${participants.length} new participants`);
-          
-          // Reload participants with employee relation to ensure we have complete data
+
           try {
             if (participants.length > 0) {
               const participantIds = participants
-                .map(p => p.id)
+                .map((participant) => participant.id)
                 .filter((id): id is number => id !== undefined && id !== null);
-              
-              console.log(`[Import] Reloading ${participantIds.length} participants with employee relations`);
-              
+
+              console.log(
+                `[Import] Reloading ${participantIds.length} participants with employee relations`,
+              );
+
               if (participantIds.length > 0) {
                 participants = await this.campaignParticipantRepository.find({
                   where: { id: In(participantIds) },
                   relations: { employee: true },
                 });
-                console.log(`[Import] Reloaded ${participants.length} participants with employee relations`);
+                console.log(
+                  `[Import] Reloaded ${participants.length} participants with employee relations`,
+                );
               }
             }
           } catch (reloadError) {
-            console.warn('[Import] Could not reload participants with relations, continuing with direct mapping:', reloadError);
+            console.warn(
+              '[Import] Could not reload participants with relations, continuing with direct mapping:',
+              reloadError,
+            );
           }
         } catch (error) {
           console.error('[Import] Error saving participants:', error);
-          throw new Error(
-            `Failed to create participants: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          );
+          throwPersistenceError(error, {
+            defaultMessage: 'Failed to create campaign participants',
+            duplicateMessage:
+              'One or more employees are already assigned to this campaign',
+            constraintMessages: {
+              UQ_campaign_participants_campaign_employee:
+                'One or more employees are already assigned to this campaign',
+              UQ_campaign_participants_token:
+                'A generated participation token already exists',
+            },
+          });
         }
       }
 
-      // Build employee map - key by email for reliable lookup
-      const employeeMap = new Map(
-        employees.map(e => [e.email?.toLowerCase() || '', e])
-      );
-
-      // Extract company names from imported employees for n8n filtering
       const companyNames = employees
-        .map(e => e.company_name)
+        .map((employee) => employee.company_name)
         .filter((name): name is string => Boolean(name));
-      
+
       const uniqueCompanyNames = [...new Set(companyNames)];
-      
+
       console.log('[Import] Company names extracted:', uniqueCompanyNames);
 
       const result = {
@@ -498,12 +612,10 @@ export class CampaignParticipantService {
         participants: participants.map((p) => {
           let emp: Employee | undefined;
           
-          // If relation was loaded, use it directly
           if (p.employee) {
             emp = p.employee;
           }
-          
-          // Final safety: use N/A if no employee found
+
           if (!emp) {
             console.warn(`[Import] No employee data found for participant ${p.participation_token}`);
             return {
@@ -530,21 +642,36 @@ export class CampaignParticipantService {
         company_names: uniqueCompanyNames,
       };
 
-      // Auto-trigger analysis if all responses are completed
-      // Check if campaign has responses before triggering
-      this.triggerAnalysisIfReady(campaignId, uniqueCompanyNames[0]).catch((error) => {
-        console.error('[Import] Error in auto-trigger analysis:', error);
-      });
+      this.triggerAnalysisIfReady(campaignId, uniqueCompanyNames[0]).catch(
+        (error) => {
+          console.error('[Import] Error in auto-trigger analysis:', error);
+        },
+      );
 
       return result;
     } catch (error) {
       console.error('[Import] Fatal error during import:', error);
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
-      throw new Error(
-        `Employee import failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
+      throwPersistenceError(error, {
+        defaultMessage: 'Employee import failed',
+        duplicateMessage:
+          'One or more employees or participants already exist',
+        constraintMessages: {
+          UQ_employees_email:
+            'One or more employees already exist with the same email',
+          UQ_employees_survey_token:
+            'One or more employees already exist with the same survey token',
+          UQ_campaign_participants_campaign_employee:
+            'One or more employees are already assigned to this campaign',
+          UQ_campaign_participants_token:
+            'A generated participation token already exists',
+        },
+      });
     }
   }
 
@@ -554,41 +681,31 @@ export class CampaignParticipantService {
    */
   private async triggerAnalysisIfReady(campaignId: number, companyName?: string): Promise<void> {
     try {
-      // Get campaign with company info
-      const campaign = await this.campaignRepository.findOne({
-        where: { id: campaignId },
-        relations: { company: true },
-      });
+      const campaign = await this.findCampaignOrThrow(campaignId);
 
-      if (!campaign) {
-        console.warn(`[Auto-Analysis] Campaign ${campaignId} not found`);
-        return;
-      }
-
-      // Get all participants for this campaign
       const participants = await this.campaignParticipantRepository.find({
-        where: { campaign: { id: campaignId } as any },
+        where: {
+          campaign: { id: campaignId },
+          employee: { deleted_at: IsNull() },
+        },
         relations: { employee: true },
       });
 
-      // Count how many participants have completed the survey
       const completedCount = participants.filter(
         (p) => p.status === CampaignParticipantStatus.COMPLETED,
       ).length;
 
       const participantCount = participants.length;
 
-      // Trigger analysis if at least 50% of participants have responded
-      // or if there are at least 5 responses (adjust threshold as needed)
-      const completionRate = participantCount > 0 ? completedCount / participantCount : 0;
-      
+      const completionRate =
+        participantCount > 0 ? completedCount / participantCount : 0;
+
       if (completedCount >= 5 || completionRate >= 0.5) {
         console.log(
           `[Auto-Analysis] Triggering analysis for campaign ${campaignId} ` +
           `(${completedCount}/${participantCount} completed, ${companyName})`,
         );
 
-        // Use a generic admin email - this should be configured based on your needs
         const userEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
 
         await this.campaignService.analyzeWithCompanyName(
@@ -605,8 +722,11 @@ export class CampaignParticipantService {
         );
       }
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        console.warn(`[Auto-Analysis] Campaign ${campaignId} not found`);
+        return;
+      }
       console.error('[Auto-Analysis] Error:', error);
-      // Don't throw - this is a background task
     }
   }
 
@@ -615,7 +735,10 @@ export class CampaignParticipantService {
     options: SendCampaignRemindersDto = {},
   ) {
     const participants = await this.campaignParticipantRepository.find({
-      where: { campaign: { id: campaignId } },
+      where: {
+        campaign: { id: campaignId },
+        employee: { deleted_at: IsNull() },
+      },
       relations: { employee: true },
     });
 
@@ -654,6 +777,40 @@ export class CampaignParticipantService {
       reminded_count: pendingParticipants.length,
       reminded_participants: pendingParticipants,
     };
+  }
+
+  private async findCampaignOrThrow(campaignId: number) {
+    const campaign = await this.campaignRepository.findOne({
+      where: { id: campaignId },
+      relations: { company: true },
+    });
+
+    if (!campaign) {
+      throw new NotFoundException(`Campaign ${campaignId} not found`);
+    }
+
+    return campaign;
+  }
+
+  private async findEmployeeOrThrow(employeeId: number) {
+    const employee = await this.employeeRepository.findOne({
+      where: { id: employeeId, deleted_at: IsNull() },
+      relations: { company: true },
+    });
+
+    if (!employee) {
+      throw new NotFoundException(`Employee ${employeeId} not found`);
+    }
+
+    return employee;
+  }
+
+  private ensureSameCompany(employee: Employee, campaign: Campaign) {
+    if (employee.company.id !== campaign.company.id) {
+      throw new BadRequestException(
+        'Employee must belong to the same company as the campaign',
+      );
+    }
   }
 
   private parseCsv(csv: string): ImportCampaignEmployeeRowDto[] {

@@ -21,7 +21,10 @@ CREATE TABLE campaigns (
     start_date DATE,
     end_date DATE,
     status VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_campaign_dates CHECK (
+        start_date IS NULL OR end_date IS NULL OR end_date >= start_date
+    )
 );
 
 CREATE TABLE questions (
@@ -43,8 +46,9 @@ CREATE TABLE employees (
     email VARCHAR(150) UNIQUE NOT NULL,
     phone VARCHAR(30),
     department VARCHAR(100),
-    survey_token VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    survey_token VARCHAR(255) UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL
 );
 
 CREATE TABLE responses (
@@ -52,7 +56,8 @@ CREATE TABLE responses (
     employee_id INTEGER REFERENCES employees(id) ON DELETE CASCADE,
     question_id INTEGER REFERENCES questions(id) ON DELETE CASCADE,
     answer TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL
 );
 
 CREATE TABLE campaign_participants (
@@ -74,3 +79,10 @@ CREATE TABLE reports (
     report_path TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_employees_deleted_at ON employees(deleted_at);
+CREATE INDEX idx_responses_deleted_at ON responses(deleted_at);
+CREATE INDEX idx_campaign_participants_token ON campaign_participants(participation_token);
+CREATE UNIQUE INDEX idx_responses_employee_question_active
+    ON responses(employee_id, question_id)
+    WHERE deleted_at IS NULL;

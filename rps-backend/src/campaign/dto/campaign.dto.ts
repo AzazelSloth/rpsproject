@@ -3,6 +3,7 @@ import {
   IsDate,
   IsIn,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -22,11 +23,13 @@ export type CampaignStatus = (typeof campaignStatuses)[number];
 export class CreateCampaignDto {
   @IsInt()
   @Min(1)
+  @IsNotEmpty()
   company_id: number;
 
   @IsString()
   @MinLength(2)
   @MaxLength(150)
+  @IsNotEmpty()
   name: string;
 
   @IsOptional()

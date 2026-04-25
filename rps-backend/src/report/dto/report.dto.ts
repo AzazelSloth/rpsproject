@@ -1,5 +1,6 @@
 import {
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -10,11 +11,13 @@ import {
 export class CreateReportDto {
   @IsInt()
   @Min(1)
+  @IsNotEmpty()
   campaign_id: number;
 
   @IsString()
   @MinLength(1)
   @MaxLength(2000)
+  @IsNotEmpty()
   report_path: string;
 }
 

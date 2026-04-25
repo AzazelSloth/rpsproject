@@ -47,6 +47,9 @@ export class Employee {
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
+  @Column('timestamp', { nullable: true })
+  deleted_at: Date | null;
+
   @OneToMany(() => SurveyResponse, (response) => response.employee)
   responses: SurveyResponse[];
 

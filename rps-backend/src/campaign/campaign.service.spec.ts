@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { Company } from '../company/company.entity';
 import { CampaignService } from './campaign.service';
 import { Campaign } from './campaign.entity';
 
@@ -18,6 +19,12 @@ describe('ServiceCampagne', () => {
             find: jest.fn(),
             findOne: jest.fn(),
             remove: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(Company),
+          useValue: {
+            findOne: jest.fn(),
           },
         },
       ],

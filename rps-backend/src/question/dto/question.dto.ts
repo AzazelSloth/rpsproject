@@ -2,6 +2,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -12,11 +13,13 @@ import {
 export class CreateQuestionDto {
   @IsInt()
   @Min(1)
+  @IsNotEmpty()
   campaign_id: number;
 
   @IsString()
   @MinLength(3)
   @MaxLength(2000)
+  @IsNotEmpty()
   question_text: string;
 
   @IsOptional()

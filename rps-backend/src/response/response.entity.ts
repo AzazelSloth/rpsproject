@@ -33,4 +33,7 @@ export class SurveyResponse {
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
+
+  @Column('timestamp', { nullable: true })
+  deleted_at: Date | null;
 }

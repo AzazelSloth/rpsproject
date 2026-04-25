@@ -16,10 +16,16 @@ export class CompanyService {
     return this.companyRepository.save(company);
   }
 
-  findAll() {
-    return this.companyRepository.find({
+  async findAll() {
+    const companies = await this.companyRepository.find({
       order: { id: 'ASC' },
       relations: { campaigns: true, employees: true },
+    });
+
+    return companies.map((company) => {
+      company.employees =
+        company.employees?.filter((employee) => !employee.deleted_at) ?? [];
+      return company;
     });
   }
 
@@ -32,6 +38,9 @@ export class CompanyService {
     if (!company) {
       throw new NotFoundException(`Company ${id} not found`);
     }
+
+    company.employees =
+      company.employees?.filter((employee) => !employee.deleted_at) ?? [];
 
     return company;
   }

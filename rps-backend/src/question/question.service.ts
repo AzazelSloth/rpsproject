@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { throwPersistenceError } from '../common/database-error.util';
 import { Campaign } from '../campaign/campaign.entity';
 import {
   CreateQuestionDto,
@@ -18,10 +19,12 @@ export class QuestionService {
   constructor(
     @InjectRepository(Question)
     private readonly questionRepository: Repository<Question>,
+    @InjectRepository(Campaign)
+    private readonly campaignRepository: Repository<Campaign>,
   ) {}
 
   async create(createQuestionDto: CreateQuestionDto) {
-    await this.assertCampaignEditable(createQuestionDto.campaign_id);
+    const campaign = await this.findEditableCampaign(createQuestionDto.campaign_id);
 
     const question = this.questionRepository.create({
       question_text: createQuestionDto.question_text,
@@ -32,10 +35,17 @@ export class QuestionService {
         createQuestionDto.question_type === 'choice'
           ? (createQuestionDto.choice_options?.filter(Boolean) ?? [])
           : null,
-      campaign: { id: createQuestionDto.campaign_id } as Campaign,
+      campaign,
     });
 
-    return this.questionRepository.save(question);
+    try {
+      return await this.questionRepository.save(question);
+    } catch (error) {
+      throwPersistenceError(error, {
+        defaultMessage: 'Failed to create question',
+        foreignKeyMessage: 'Campaign not found',
+      });
+    }
   }
 
   findAll() {
@@ -61,6 +71,7 @@ export class QuestionService {
   async update(id: number, updateQuestionDto: UpdateQuestionDto) {
     const question = await this.findOne(id);
     await this.assertCampaignEditable(question.campaign.id);
+    let campaign = question.campaign;
 
     if (updateQuestionDto.question_text !== undefined) {
       question.question_text = updateQuestionDto.question_text;
@@ -86,14 +97,23 @@ export class QuestionService {
     }
 
     if (updateQuestionDto.campaign_id !== undefined) {
-      question.campaign = { id: updateQuestionDto.campaign_id } as Campaign;
+      campaign = await this.findEditableCampaign(updateQuestionDto.campaign_id);
     }
 
     if (question.question_type !== 'choice') {
       question.choice_options = null;
     }
 
-    return this.questionRepository.save(question);
+    question.campaign = campaign;
+
+    try {
+      return await this.questionRepository.save(question);
+    } catch (error) {
+      throwPersistenceError(error, {
+        defaultMessage: 'Failed to update question',
+        foreignKeyMessage: 'Campaign not found',
+      });
+    }
   }
 
   async remove(id: number) {
@@ -131,7 +151,11 @@ export class QuestionService {
   }
 
   private async assertCampaignEditable(campaignId: number) {
-    const campaign = await this.questionRepository.manager.findOne(Campaign, {
+    await this.findEditableCampaign(campaignId);
+  }
+
+  private async findEditableCampaign(campaignId: number) {
+    const campaign = await this.campaignRepository.findOne({
       where: { id: campaignId },
     });
 
@@ -144,5 +168,7 @@ export class QuestionService {
         'Questions cannot be modified when the campaign is active',
       );
     }
+
+    return campaign;
   }
 }

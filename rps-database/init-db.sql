@@ -21,7 +21,10 @@ CREATE TABLE IF NOT EXISTS campaigns (
     start_date DATE,
     end_date DATE,
     status VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_campaign_dates CHECK (
+        start_date IS NULL OR end_date IS NULL OR end_date >= start_date
+    )
 );
 
 CREATE TABLE IF NOT EXISTS questions (
@@ -43,8 +46,9 @@ CREATE TABLE IF NOT EXISTS employees (
     email VARCHAR(150) UNIQUE NOT NULL,
     phone VARCHAR(30),
     department VARCHAR(100),
-    survey_token VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    survey_token VARCHAR(255) UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL
 );
 
 CREATE TABLE IF NOT EXISTS responses (
@@ -52,7 +56,8 @@ CREATE TABLE IF NOT EXISTS responses (
     employee_id INTEGER REFERENCES employees(id) ON DELETE CASCADE,
     question_id INTEGER REFERENCES questions(id) ON DELETE CASCADE,
     answer TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL
 );
 
 CREATE TABLE IF NOT EXISTS campaign_participants (
@@ -87,8 +92,13 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_campaigns_company ON campaigns(company_id);
 CREATE INDEX IF NOT EXISTS idx_questions_campaign ON questions(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_employees_company ON employees(company_id);
+CREATE INDEX IF NOT EXISTS idx_employees_deleted_at ON employees(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_responses_employee ON responses(employee_id);
 CREATE INDEX IF NOT EXISTS idx_responses_question ON responses(question_id);
+CREATE INDEX IF NOT EXISTS idx_responses_deleted_at ON responses(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_campaign_participants_campaign ON campaign_participants(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_participants_employee ON campaign_participants(employee_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_participants_token ON campaign_participants(participation_token);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_responses_employee_question_active
+    ON responses(employee_id, question_id)
+    WHERE deleted_at IS NULL;

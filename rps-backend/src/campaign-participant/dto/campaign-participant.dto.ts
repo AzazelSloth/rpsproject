@@ -6,6 +6,7 @@ import {
   IsDate,
   IsEmail,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -17,10 +18,12 @@ import {
 export class CreateCampaignParticipantDto {
   @IsInt()
   @Min(1)
+  @IsNotEmpty()
   campaign_id: number;
 
   @IsInt()
   @Min(1)
+  @IsNotEmpty()
   employee_id: number;
 
   @IsOptional()
@@ -49,11 +52,13 @@ export class UpdateCampaignParticipantDto {
 export class SubmitCampaignResponseItemDto {
   @IsInt()
   @Min(1)
+  @IsNotEmpty()
   question_id: number;
 
   @IsString()
   @MinLength(1)
   @MaxLength(4000)
+  @IsNotEmpty()
   answer: string;
 }
 
@@ -99,6 +104,7 @@ export class ImportCampaignEmployeeRowDto {
 export class ImportCampaignEmployeesDto {
   @IsInt()
   @Min(1)
+  @IsNotEmpty()
   company_id: number;
 
   @IsOptional()
