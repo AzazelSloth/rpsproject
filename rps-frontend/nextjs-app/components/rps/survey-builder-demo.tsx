@@ -136,8 +136,10 @@ export function SurveyBuilderDemo({
   const [companyId, setCompanyId] = useState(initialData.companyId);
   const [newCompanyName, setNewCompanyName] = useState("");
   const [status, setStatus] = useState(initialData.status);
-  const [title, setTitle] = useState(initialData.title);
-  const [description, setDescription] = useState(initialData.description);
+  const [title, setTitle] = useState(() => (mode === "create" ? "" : initialData.title));
+  const [description, setDescription] = useState(() =>
+    mode === "create" ? "" : initialData.description,
+  );
   const [startDate, setStartDate] = useState(toDateInputValue(initialData.startDate));
   const [endDate, setEndDate] = useState(toDateInputValue(initialData.endDate));
   const [questions, setQuestions] = useState(
@@ -185,8 +187,8 @@ export function SurveyBuilderDemo({
     setCompanyId(initialData.companyId);
     setNewCompanyName("");
     setStatus(initialData.status);
-    setTitle(initialData.title);
-    setDescription(initialData.description);
+    setTitle(mode === "create" ? "" : initialData.title);
+    setDescription(mode === "create" ? "" : initialData.description);
     setStartDate(toDateInputValue(initialData.startDate));
     setEndDate(toDateInputValue(initialData.endDate));
     setQuestions(
@@ -204,7 +206,7 @@ export function SurveyBuilderDemo({
     setImportSuccess(null);
     setHasDownloadedLinks(false);
     setSelectedFileName(null);
-  }, [initialData]);
+  }, [initialData, mode]);
   function runMutation<TResponse>(
     mutation: () => Promise<TResponse>,
     successMessage: string,
