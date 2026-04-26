@@ -38,9 +38,6 @@ export class Employee {
   @Column({ type: 'varchar', nullable: true })
   department: string | null;
 
-  @Column({ type: 'varchar', nullable: true })
-  company_name: string | null;
-
   @Column({ unique: true, nullable: true })
   survey_token: string;
 

@@ -43,6 +43,11 @@ export class CampaignParticipantService {
     private readonly campaignService: CampaignService,
   ) {}
 
+  private static normalizeCompanyName(value?: string | null) {
+    const normalized = value?.trim();
+    return normalized ? normalized : null;
+  }
+
   async create(createCampaignParticipantDto: CreateCampaignParticipantDto) {
     const campaign = await this.findCampaignOrThrow(
       createCampaignParticipantDto.campaign_id,
@@ -431,6 +436,19 @@ export class CampaignParticipantService {
             .map((row) => [row.email.trim().toLowerCase(), row]),
         ).values(),
       );
+      const companyNameByEmail = new Map(
+        normalizedRows.map((row) => [
+          row.email.trim().toLowerCase(),
+          CampaignParticipantService.normalizeCompanyName(row.company_name),
+        ]),
+      );
+      const uniqueCompanyNames = [
+        ...new Set(
+          Array.from(companyNameByEmail.values()).filter(
+            (name): name is string => Boolean(name),
+          ),
+        ),
+      ];
 
       console.log(
         `[Import] Starting import of ${normalizedRows.length} employees for campaign ${campaignId}`,
@@ -500,7 +518,6 @@ export class CampaignParticipantService {
             employee.last_name = row.last_name?.trim() || 'N/A';
             employee.phone = row.phone?.trim() || null;
             employee.department = row.department?.trim() || null;
-            employee.company_name = row.company_name?.trim() || null;
             employee.company = campaign.company;
             employee.deleted_at = null;
             employee.survey_token = employee.survey_token ?? randomUUID();
@@ -631,12 +648,6 @@ export class CampaignParticipantService {
         }
       }
 
-      const companyNames = employees
-        .map((employee) => employee.company_name)
-        .filter((name): name is string => Boolean(name));
-
-      const uniqueCompanyNames = [...new Set(companyNames)];
-
       console.log('[Import] Company names extracted:', uniqueCompanyNames);
 
       const result = {
@@ -669,7 +680,9 @@ export class CampaignParticipantService {
               first_name: emp.first_name || 'N/A',
               last_name: emp.last_name || 'N/A',
               email: emp.email || '',
-              company_name: emp.company_name || '',
+              company_name:
+                (emp.email && companyNameByEmail.get(emp.email.toLowerCase())) ||
+                '',
             },
           };
         }),
