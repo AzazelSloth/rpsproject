@@ -129,10 +129,14 @@ export function SurveyBuilderDemo({
   const canSaveCampaign =
     Boolean(companyId) && effectiveCampaignTitle.length >= 3 && !isDateRangeInvalid;
   const isSurveyReadyForImport = Boolean(
-    campaignId && companyId && status === "active" && questions.length > 0,
+    campaignId && companyId && status === "active",
   );
   const hasImportedEmployees = Boolean(
     importSuccess && (importSuccess.count > 0 || importSuccess.participants.length > 0),
+  );
+  const canActivateCampaign = Boolean(campaignId && questions.length > 0);
+  const isAllStepsComplete = Boolean(
+    campaignId && status === "active" && questions.length > 0 && hasImportedEmployees,
   );
   const builderTitle = mode === "edit" ? "Modifier un sondage" : "Créer un sondage";
 
@@ -901,12 +905,11 @@ export function SurveyBuilderDemo({
   }
 
   function handleDeploymentStep() {
+    // À ce stade, l'import est complété, télécharger la liste des liens
     if (importSuccess && importSuccess.count > 0) {
       downloadLinksList();
       return;
     }
-
-    saveCampaign();
   }
 
   return (
@@ -923,7 +926,7 @@ export function SurveyBuilderDemo({
             <button
               type="button"
               onClick={handleDeploymentStep}
-              disabled={isPending || (!hasImportedEmployees && !canSaveCampaign)}
+              disabled={isPending || !isAllStepsComplete}
               className="inline-flex items-center justify-center rounded-[10px] bg-[#111827] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60 whitespace-nowrap"
             >
               Envoyer
@@ -932,9 +935,9 @@ export function SurveyBuilderDemo({
               <p className="text-[11px] font-medium text-emerald-700">
                 Liens téléchargés
               </p>
-            ) : hasImportedEmployees ? (
+            ) : isAllStepsComplete ? (
               <p className="text-[11px] font-medium text-slate-500">
-                Prêt à diffuser
+                Prêt à envoyer
               </p>
             ) : null}
           </div>
@@ -1106,7 +1109,7 @@ export function SurveyBuilderDemo({
               <button
                 type="button"
                 onClick={handleActivateStep}
-                disabled={!canSaveCampaign || isPending}
+                disabled={!canActivateCampaign || isPending}
                 className="mt-3 inline-flex w-full items-center justify-center rounded-[10px] bg-[#111827] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Activer
@@ -1192,7 +1195,12 @@ export function SurveyBuilderDemo({
             </p>
           </div>
         )}
-        {!canEditQuestions && (
+        {questions.length === 0 && status === "active" && (
+          <p className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+            Attention : Au moins une question est requise avant d&apos;importer les employés. Ajoutez au moins une question maintenant.
+          </p>
+        )}
+        {!canEditQuestions && questions.length > 0 && (
           <p className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
             Le sondage est actif. Les questions ne peuvent plus être modifiées tant qu&apos;il reste actif.
           </p>
