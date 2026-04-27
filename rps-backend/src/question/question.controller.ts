@@ -9,6 +9,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBody, ApiResponse } from '@nestjs/swagger';
 import {
   CreateQuestionDto,
   ReorderQuestionDto,
@@ -23,6 +24,9 @@ export class QuestionController {
   constructor(private readonly questionService: QuestionService) {}
 
   @Post()
+  @ApiBody({ type: CreateQuestionDto })
+  @ApiResponse({ status: 201, description: 'Question créée avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   create(@Body() createQuestionDto: CreateQuestionDto) {
     return this.questionService.create(createQuestionDto);
   }
@@ -38,6 +42,9 @@ export class QuestionController {
   }
 
   @Patch(':id')
+  @ApiBody({ type: UpdateQuestionDto })
+  @ApiResponse({ status: 200, description: 'Question mise à jour avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateQuestionDto: UpdateQuestionDto,
@@ -46,6 +53,8 @@ export class QuestionController {
   }
 
   @Patch('campaign/:campaignId/reorder')
+  @ApiBody({ type: [ReorderQuestionDto] })
+  @ApiResponse({ status: 200, description: 'Questions réordonnées avec succès' })
   reorder(
     @Param('campaignId', ParseIntPipe) campaignId: number,
     @Body() items: ReorderQuestionDto[],

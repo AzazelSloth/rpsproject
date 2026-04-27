@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBody, ApiResponse } from '@nestjs/swagger';
 import { CampaignParticipantService } from './campaign-participant.service';
 import {
   CreateCampaignParticipantDto,
@@ -36,6 +37,9 @@ export class CampaignParticipantController {
   }
 
   @Post('token/:token/submit')
+  @ApiBody({ type: SubmitCampaignResponsesDto })
+  @ApiResponse({ status: 201, description: 'Réponses enregistrées avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   submitByToken(
     @Param('token') token: string,
     @Body() payload: SubmitCampaignResponsesDto,
@@ -46,6 +50,9 @@ export class CampaignParticipantController {
   // Protected routes (admin only)
   @UseGuards(AuthGuard)
   @Post()
+  @ApiBody({ type: CreateCampaignParticipantDto })
+  @ApiResponse({ status: 201, description: 'Participant ajouté avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   create(@Body() createCampaignParticipantDto: CreateCampaignParticipantDto) {
     return this.campaignParticipantService.create(createCampaignParticipantDto);
   }
@@ -64,6 +71,9 @@ export class CampaignParticipantController {
 
   @UseGuards(AuthGuard)
   @Post('campaign/:campaignId/import-employees')
+  @ApiBody({ type: ImportCampaignEmployeesDto })
+  @ApiResponse({ status: 201, description: 'Employés importés avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   importEmployeesForCampaign(
     @Param('campaignId', ParseIntPipe) campaignId: number,
     @Body() payload: ImportCampaignEmployeesDto,
@@ -76,6 +86,9 @@ export class CampaignParticipantController {
 
   @UseGuards(AuthGuard)
   @Post('campaign/:campaignId/remind')
+  @ApiBody({ type: SendCampaignRemindersDto })
+  @ApiResponse({ status: 200, description: 'Rappels envoyés avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   sendReminders(
     @Param('campaignId', ParseIntPipe) campaignId: number,
     @Body() payload: SendCampaignRemindersDto,
@@ -91,6 +104,9 @@ export class CampaignParticipantController {
 
   @UseGuards(AuthGuard)
   @Patch(':id')
+  @ApiBody({ type: UpdateCampaignParticipantDto })
+  @ApiResponse({ status: 200, description: 'Participant mis à jour avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCampaignParticipantDto: UpdateCampaignParticipantDto,

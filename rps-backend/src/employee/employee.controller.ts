@@ -9,6 +9,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBody, ApiResponse } from '@nestjs/swagger';
 import {
   CreateEmployeeDto,
   ImportEmployeesDto,
@@ -23,11 +24,17 @@ export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService) {}
 
   @Post()
+  @ApiBody({ type: CreateEmployeeDto })
+  @ApiResponse({ status: 201, description: 'Employé créé avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   create(@Body() createEmployeeDto: CreateEmployeeDto) {
     return this.employeeService.create(createEmployeeDto);
   }
 
   @Post('import')
+  @ApiBody({ type: ImportEmployeesDto })
+  @ApiResponse({ status: 201, description: 'Employés importés avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   import(@Body() importEmployeesDto: ImportEmployeesDto) {
     return this.employeeService.importEmployees(importEmployeesDto);
   }
@@ -43,6 +50,9 @@ export class EmployeeController {
   }
 
   @Patch(':id')
+  @ApiBody({ type: UpdateEmployeeDto })
+  @ApiResponse({ status: 200, description: 'Employé mis à jour avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateEmployeeDto: UpdateEmployeeDto,

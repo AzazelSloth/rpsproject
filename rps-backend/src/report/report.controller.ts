@@ -9,6 +9,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBody, ApiResponse } from '@nestjs/swagger';
 import { CreateReportDto, UpdateReportDto } from './dto/report.dto';
 import { ReportService } from './report.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -19,6 +20,9 @@ export class ReportController {
 
   @Post()
   @UseGuards(AuthGuard)
+  @ApiBody({ type: CreateReportDto })
+  @ApiResponse({ status: 201, description: 'Rapport créé avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   create(@Body() createReportDto: CreateReportDto) {
     return this.reportService.create(createReportDto);
   }
@@ -37,6 +41,9 @@ export class ReportController {
 
   @Patch(':id')
   @UseGuards(AuthGuard)
+  @ApiBody({ type: UpdateReportDto })
+  @ApiResponse({ status: 200, description: 'Rapport mis à jour avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateReportDto: UpdateReportDto,

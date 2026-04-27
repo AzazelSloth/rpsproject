@@ -9,6 +9,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBody, ApiResponse } from '@nestjs/swagger';
 import { CreateResponseDto, UpdateResponseDto } from './dto/response.dto';
 import { ResponseService } from './response.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -19,6 +20,9 @@ export class ResponseController {
   constructor(private readonly responseService: ResponseService) {}
 
   @Post()
+  @ApiBody({ type: CreateResponseDto })
+  @ApiResponse({ status: 201, description: 'Réponse créée avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   create(@Body() createResponseDto: CreateResponseDto) {
     return this.responseService.create(createResponseDto);
   }
@@ -34,6 +38,9 @@ export class ResponseController {
   }
 
   @Patch(':id')
+  @ApiBody({ type: UpdateResponseDto })
+  @ApiResponse({ status: 200, description: 'Réponse mise à jour avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateResponseDto: UpdateResponseDto,

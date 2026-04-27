@@ -11,6 +11,7 @@ import {
   Logger,
   Req,
 } from '@nestjs/common';
+import { ApiBody, ApiResponse } from '@nestjs/swagger';
 import { CreateCampaignDto, UpdateCampaignDto } from './dto/campaign.dto';
 import { CampaignService } from './campaign.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -24,6 +25,9 @@ export class CampaignController {
 
   @Post()
   @UseGuards(AuthGuard)
+  @ApiBody({ type: CreateCampaignDto })
+  @ApiResponse({ status: 201, description: 'Campagne créée avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   create(@Body() createCampaignDto: CreateCampaignDto) {
     return this.campaignService.create(createCampaignDto);
   }
@@ -42,6 +46,9 @@ export class CampaignController {
 
   @Patch(':id')
   @UseGuards(AuthGuard)
+  @ApiBody({ type: UpdateCampaignDto })
+  @ApiResponse({ status: 200, description: 'Campagne mise à jour avec succès' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCampaignDto: UpdateCampaignDto,
@@ -51,24 +58,28 @@ export class CampaignController {
 
   @Post(':id/activate')
   @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Campagne activée avec succès' })
   activate(@Param('id', ParseIntPipe) id: number) {
     return this.campaignService.activate(id);
   }
 
   @Post(':id/terminate')
   @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Campagne terminée avec succès' })
   terminate(@Param('id', ParseIntPipe) id: number) {
     return this.campaignService.terminate(id);
   }
 
   @Post(':id/archive')
   @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Campagne archivée avec succès' })
   archive(@Param('id', ParseIntPipe) id: number) {
     return this.campaignService.archive(id);
   }
 
   @Post(':id/analyze')
   @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Analyse générée avec succès' })
   async analyze(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: AuthenticatedRequest,
@@ -78,6 +89,8 @@ export class CampaignController {
 
   @Post(':id/analyze-with-company')
   @UseGuards(AuthGuard)
+  @ApiBody({ schema: { type: 'object', properties: { company_name: { type: 'string' } } } })
+  @ApiResponse({ status: 200, description: 'Analyse générée avec succès' })
   async analyzeWithCompany(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { company_name?: string },
