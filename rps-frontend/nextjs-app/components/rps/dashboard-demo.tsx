@@ -101,9 +101,9 @@ export function DashboardDemo({
 
         <div className="space-y-5">
           <Card className="p-6">
-            <p className="text-sm text-slate-500">Repartition par departement</p>
+            <p className="text-sm text-slate-500">Répartition par département</p>
             <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
-              Repartition par departement
+              Répartition par département
             </h3>
             <div className="mx-auto mt-6 h-56 w-56 rounded-full" style={{ background: conic }} />
             <div className="mt-6 space-y-3">
@@ -122,7 +122,7 @@ export function DashboardDemo({
           <Card className="p-6">
             <p className="text-sm text-slate-500">Analyse automatique</p>
             <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
-              Synthese automatique
+              Synthèse automatique
             </h3>
             <div className="mt-5 space-y-3">
               {insights.map((item) => (

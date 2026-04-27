@@ -55,10 +55,10 @@ function GripHorizontal({ className }: { className?: string }) {
 const defaultChoiceOptions = ["Oui", "Partiellement", "Non"];
 const scaleAnswerGuide = [
   { value: 1, label: "Pas du tout d'accord" },
-  { value: 2, label: "Plutot pas d'accord" },
+  { value: 2, label: "Plutôt pas d'accord" },
   { value: 3, label: "Neutre" },
-  { value: 4, label: "Plutot d'accord" },
-  { value: 5, label: "Tout a fait d'accord" },
+  { value: 4, label: "Plutôt d'accord" },
+  { value: 5, label: "Tout à fait d'accord" },
 ];
 
 type ImportedParticipantPayload = {
@@ -88,16 +88,16 @@ const templateByType: Record<SurveyQuestionType, SurveyQuestion> = {
     id: "new-scale",
     documentId: "question-template-scale",
     type: "scale",
-    title: "Comment jugez-vous votre niveau d'energie au travail ?",
-    helpText: "Question echelle 1 a 5",
+    title: "Comment jugez-vous votre niveau d'énergie au travail ?",
+    helpText: "Question échelle 1 à 5",
     orderIndex: 99,
   },
   choice: {
     id: "new-choice",
     documentId: "question-template-choice",
     type: "choice",
-    title: "Votre manager clarifie-t-il les priorites ?",
-    helpText: "Question choix multiple",
+    title: "Votre manager clarifie-t-il les priorités ?",
+    helpText: "Question à choix multiple",
     options: defaultChoiceOptions,
     orderIndex: 99,
   },
@@ -105,7 +105,7 @@ const templateByType: Record<SurveyQuestionType, SurveyQuestion> = {
     id: "new-text",
     documentId: "question-template-text",
     type: "text",
-    title: "Quel point devrait etre prioritaire sur le prochain trimestre ?",
+    title: "Quel point devrait être prioritaire sur le prochain trimestre ?",
     helpText: "Question texte libre",
     orderIndex: 99,
   },
@@ -178,7 +178,7 @@ export function SurveyBuilderDemo({
   const hasImportedEmployees = Boolean(
     importSuccess && (importSuccess.count > 0 || importSuccess.participants.length > 0),
   );
-  const builderTitle = mode === "edit" ? "Modifier un sondage" : "Creer un sondage";
+  const builderTitle = mode === "edit" ? "Modifier un sondage" : "Créer un sondage";
 
   useEffect(() => {
     setCompanies(initialData.companies);
@@ -227,11 +227,11 @@ export function SurveyBuilderDemo({
         setFeedback(successMessage);
         router.refresh();
       } catch (caughtError) {
-        let errorMessage = "La mise a jour du sondage a echoue. Verifie le backend.";
+        let errorMessage = "La mise à jour du sondage a échoué. Vérifiez le backend.";
         
         if (caughtError instanceof Error) {
           if (caughtError.message.includes("fetch") || caughtError.message.includes("Backend")) {
-            errorMessage = "Impossible de joindre le serveur. Verifiez que le backend est demarre.";
+            errorMessage = "Impossible de joindre le serveur. Vérifiez que le backend est démarré.";
           } else if (caughtError.message.includes("Délai")) {
             errorMessage = caughtError.message;
           } else {
@@ -246,14 +246,14 @@ export function SurveyBuilderDemo({
 
   function createCompany() {
     if (!isCreateMode) {
-      setError("L'ajout d'entreprise est desactive en mode modification.");
+      setError("L'ajout d'entreprise est désactivé en mode modification.");
       return;
     }
 
     const trimmedName = newCompanyName.trim();
 
     if (trimmedName.length < 2 || trimmedName.length > 150) {
-      setError("Le nom de l'entreprise doit contenir entre 2 et 150 caracteres.");
+      setError("Le nom de l'entreprise doit contenir entre 2 et 150 caractères.");
       return;
     }
 
@@ -262,7 +262,7 @@ export function SurveyBuilderDemo({
     );
 
     if (alreadyExists) {
-      setError("Cette entreprise existe deja. Selectionne-la dans la liste.");
+      setError("Cette entreprise existe déjà. Selectionne-la dans la liste.");
       return;
     }
 
@@ -271,7 +271,7 @@ export function SurveyBuilderDemo({
         getTrpcClient().adminSurveys.createCompany.mutate({
           name: trimmedName,
         }),
-      "Entreprise creee et selectionnee.",
+      "Entreprise créée et sélectionnée.",
       undefined,
       (result) => {
         setCompanies((current) => [...current, result]);
@@ -288,17 +288,17 @@ export function SurveyBuilderDemo({
     }
 
     if (effectiveCampaignTitle.length < 3) {
-      setError("Le nom du sondage doit contenir au moins 3 caracteres.");
+      setError("Le nom du sondage doit contenir au moins 3 caractères.");
       return false;
     }
 
     if (isDateRangeInvalid) {
-      setError("La date de fin doit etre posterieure ou egale a la date de debut.");
+      setError("La date de fin doit être postérieure ou égale à la date de début.");
       return false;
     }
 
     if (mode === "edit" && !campaignId) {
-      setError("Aucun sondage existant a modifier.");
+      setError("Aucun sondage existant à modifier.");
       return false;
     }
 
@@ -341,7 +341,7 @@ export function SurveyBuilderDemo({
             startDate,
             endDate,
           }),
-        "Sondage mis a jour.",
+        "Sondage mis à jour.",
         undefined,
         (result) => {
           if (result?.status) {
@@ -361,7 +361,7 @@ export function SurveyBuilderDemo({
             startDate,
             endDate,
           }),
-      "Sondage cree.",
+      "Sondage créé.",
       undefined,
       (result) => {
         setCampaignId(result.id);
@@ -711,7 +711,7 @@ export function SurveyBuilderDemo({
           options: template.options,
           orderIndex: questions.length,
         }),
-      type === "section" ? "Section ajoutee." : "Question ajoutee.",
+      type === "section" ? "Section ajoutée." : "Question ajoutée.",
       () =>
         setQuestions((current) => [
           ...current,
@@ -810,13 +810,13 @@ export function SurveyBuilderDemo({
 
   function persistQuestion(question: SurveyQuestion, index: number) {
     if (!Number.isFinite(Number(question.id))) {
-      setError("La question doit d'abord etre creee avant edition detaillee.");
+      setError("La question doit d'abord être créee avant édition détaillée.");
       return;
     }
 
     const trimmedQuestionTitle = question.title.trim();
     if (trimmedQuestionTitle.length < 5) {
-      setError("Le texte de la question doit contenir au moins 5 caracteres.");
+      setError("Le texte de la question doit contenir au moins 5 caractères.");
       return;
     }
 
@@ -836,7 +836,7 @@ export function SurveyBuilderDemo({
           options: question.type === "choice" ? sanitizedOptions : undefined,
           orderIndex: index,
         }),
-      question.type === "section" ? "Section mise a jour." : "Question mise a jour.",
+      question.type === "section" ? "Section mise à jour." : "Question mise à jour.",
     );
   }
 
@@ -851,7 +851,7 @@ export function SurveyBuilderDemo({
         getTrpcClient().adminSurveys.deleteQuestion.mutate({
           questionId: Number(question.id),
         }),
-      "Question supprimee.",
+      "Question supprimée.",
       () => setQuestions((current) => current.filter((item) => item.id !== question.id)),
     );
   }
@@ -881,7 +881,7 @@ export function SurveyBuilderDemo({
             orderIndex: question.orderIndex,
           })),
         }),
-      "Ordre des questions mis a jour.",
+      "Ordre des questions mis à jour.",
     );
   }
 
@@ -893,11 +893,11 @@ export function SurveyBuilderDemo({
 
     if (action === "activateCampaign") {
       if (!canSaveCampaign) {
-        setError("Corrige les informations du sondage avant activation.");
+        setError("Corriger les informations du sondage avant activation.");
         return;
       }
       if (questions.length === 0) {
-        setError("Ajoute au moins une question avant d'activer le sondage.");
+        setError("Ajouter au moins une question avant d'activer le sondage.");
         return;
       }
     }
@@ -933,11 +933,11 @@ export function SurveyBuilderDemo({
 
   function handleActivateStep() {
     if (questions.length === 0) {
-      setError("Ajoute d'abord des questions avant d'activer le sondage.");
+      setError("Ajouter d'abord des questions avant d'activer le sondage.");
       return;
     }
 
-    if (!confirm("Es-tu sur que toutes les questions du sondage sont correctes avant activation ?")) {
+    if (!confirm("Es-tu sûr que toutes les questions du sondage sont correctes avant activation ?")) {
       return;
     }
 
@@ -956,14 +956,35 @@ export function SurveyBuilderDemo({
   return (
     <div className="space-y-4 sm:space-y-6">
       <Card className="overflow-hidden border border-slate-200 bg-white p-4 sm:p-6">
-        <div>
-          <h2 className="font-[family-name:var(--font-manrope)] text-3xl font-extrabold tracking-tight text-slate-900">
-            {builderTitle}
-          </h2>
-          <p className="mt-2 text-sm text-slate-500">Configuration en 6 etapes simples</p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="font-[family-name:var(--font-manrope)] text-3xl font-extrabold tracking-tight text-slate-900">
+              {builderTitle}
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">Configuration en 6 étapes simples</p>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <button
+              type="button"
+              onClick={handleDeploymentStep}
+              disabled={isPending || (!hasImportedEmployees && !canSaveCampaign)}
+              className="inline-flex items-center justify-center rounded-[10px] bg-[#111827] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60 whitespace-nowrap"
+            >
+              Envoyer
+            </button>
+            {hasDownloadedLinks ? (
+              <p className="text-[11px] font-medium text-emerald-700">
+                Liens téléchargés
+              </p>
+            ) : hasImportedEmployees ? (
+              <p className="text-[11px] font-medium text-slate-500">
+                Prêt à diffuser
+              </p>
+            ) : null}
+          </div>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="mt-6 grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {/* Card 1: Entreprise */}
           <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
@@ -1041,11 +1062,11 @@ export function SurveyBuilderDemo({
               2
             </span>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
-              Periode
+              Période
             </p>
             <div className="mt-3 space-y-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-600">Debut</label>
+                <label className="text-xs font-medium text-slate-600">Début</label>
                 <input
                   type="date"
                   value={startDate}
@@ -1066,7 +1087,7 @@ export function SurveyBuilderDemo({
             {isDateRangeInvalid ? (
               <p className="mt-2 flex items-center gap-1 text-[11px] font-medium text-rose-700">
                 <TriangleAlert className="h-3.5 w-3.5" />
-                <span>La date de fin doit etre superieure ou egale au debut.</span>
+                <span>La date de fin doit être supérieure ou égale au début.</span>
               </p>
             ) : null}
           </div>
@@ -1112,7 +1133,7 @@ export function SurveyBuilderDemo({
             </button>
             {importSuccess ? (
               <p className="mt-2 text-center text-[11px] font-medium text-emerald-700">
-                {importSuccess.count} employe(s) importe(s)
+                {importSuccess.count} employé(s) importé(s)
               </p>
             ) : null}
           </div>
@@ -1146,37 +1167,10 @@ export function SurveyBuilderDemo({
                   disabled={isPending}
                   className="inline-flex w-full items-center justify-center rounded-[10px] border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Desactiver
+                  Désactiver
                 </button>
               </div>
             )}
-          </div>
-
-          {/* Card 6: Deploiement */}
-          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
-            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-              6
-            </span>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
-              Deploiement
-            </p>
-            <button
-              type="button"
-              onClick={handleDeploymentStep}
-              disabled={isPending || (!hasImportedEmployees && !canSaveCampaign)}
-              className="mt-3 inline-flex w-full items-center justify-center rounded-[10px] bg-[#111827] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Envoyer
-            </button>
-            {hasDownloadedLinks ? (
-              <p className="mt-2 text-center text-[11px] font-medium text-emerald-700">
-                Liens telecharges
-              </p>
-            ) : hasImportedEmployees ? (
-              <p className="mt-2 text-center text-[11px] font-medium text-slate-500">
-                Pret a diffuser
-              </p>
-            ) : null}
           </div>
         </div>
       </Card>
@@ -1244,7 +1238,7 @@ export function SurveyBuilderDemo({
         )}
         {!canEditQuestions && (
           <p className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-            Le sondage est actif. Les questions ne peuvent plus etre modifiees tant qu&apos;il reste actif.
+            Le sondage est actif. Les questions ne peuvent plus être modifiées tant qu&apos;il reste actif.
           </p>
         )}
 
@@ -1354,7 +1348,7 @@ export function SurveyBuilderDemo({
                           Lecture de l&apos;echelle
                         </p>
                         <p className="mt-2 text-sm text-slate-600">
-                          Le repondant choisit une note de 1 a 5 pour indiquer son niveau d&apos;accord.
+                          Le répondant choisit une note de 1 à 5 pour indiquer son niveau d&apos;accord.
                         </p>
                         <div className="mt-3 grid gap-2 grid-cols-2 sm:grid-cols-5">
                           {scaleAnswerGuide.map((item) => (
@@ -1427,7 +1421,7 @@ export function SurveyBuilderDemo({
         <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_100%)] px-4 sm:px-6 py-3 sm:py-4 text-white">
           <p className="text-xs sm:text-sm text-slate-300">Aperçu du sondage</p>
           <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold">
-            Apercu du questionnaire
+            Aperçu du questionnaire
           </h3>
         </div>
         <div className="space-y-3 sm:space-y-4 p-3 sm:p-6">
@@ -1493,14 +1487,15 @@ export function SurveyBuilderDemo({
             <div className="sticky top-0 z-10 flex items-start justify-between gap-3 sm:gap-4 border-b border-slate-200 bg-white px-4 sm:px-6 py-4 sm:py-5">
               <div className="flex-1 pr-8 sm:pr-12">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                  Import des employes
+                  Import des employés
                 </p>
                 <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl sm:text-2xl font-bold text-slate-900">
                   {effectiveCampaignTitle || "Sondage"} - {selectedCompanyName || "Entreprise"}
                 </h3>
                 <p className="mt-2 text-sm text-slate-600">
-                  Chargez ici le fichier des employés. Une fois l&apos;import terminé, vous pourrez
-                  télécharger la liste des liens individuels.
+                  Chargez ici le fichier des employés. 
+                  Une fois l&apos;import terminé, 
+                  vous pourrez télécharger la liste des liens individuels.
                 </p>
               </div>
               <button
