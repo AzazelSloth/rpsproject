@@ -2,55 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AlertTriangle, CheckCircle2, GripHorizontal } from "lucide-react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { SurveyBuilderData } from "@/lib/repositories/rps-repository";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
 import { getTrpcClient } from "@/lib/trpc/client";
-
-// SVG Icon Components (replacing lucide-react)
-function AlertTriangle({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-      <path d="M12 9v4" />
-      <path d="M12 17h.01" />
-    </svg>
-  );
-}
-
-function TriangleAlert({ className }: { className?: string }) {
-  return <AlertTriangle className={className} />;
-}
-
-function Check({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
-
-function CheckCircle2({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="12" cy="12" r="10" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
-function GripHorizontal({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="12" cy="9" r="1" />
-      <circle cx="19" cy="9" r="1" />
-      <circle cx="5" cy="9" r="1" />
-      <circle cx="12" cy="15" r="1" />
-      <circle cx="19" cy="15" r="1" />
-      <circle cx="5" cy="15" r="1" />
-    </svg>
-  );
-}
 
 const defaultChoiceOptions = ["Oui", "Partiellement", "Non"];
 const scaleAnswerGuide = [
@@ -1086,7 +1042,7 @@ export function SurveyBuilderDemo({
             </div>
             {isDateRangeInvalid ? (
               <p className="mt-2 flex items-center gap-1 text-[11px] font-medium text-rose-700">
-                <TriangleAlert className="h-3.5 w-3.5" />
+                <AlertTriangle className="h-3.5 w-3.5" />
                 <span>La date de fin doit être supérieure ou égale au début.</span>
               </p>
             ) : null}

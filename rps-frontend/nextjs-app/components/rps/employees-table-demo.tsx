@@ -3,6 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import {
+  AlertCircle,
+  BarChart3,
+  Building2,
+  CheckCircle2,
+  ChevronDown,
+  Info,
+} from "lucide-react";
 import { Card, Pill } from "@/components/rps/ui";
 import { appFetch } from "@/lib/api";
 import type {
@@ -10,78 +18,6 @@ import type {
   SurveyOption,
 } from "@/lib/repositories/rps-repository";
 import { getTrpcClient } from "@/lib/trpc/client";
-
-// SVG Icon Components
-function BarChart3({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M3 3v18h18" />
-      <path d="M18 17V9" />
-      <path d="M13 17V5" />
-      <path d="M8 17v-3" />
-    </svg>
-  );
-}
-
-function Building2({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
-      <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
-      <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
-      <path d="M10 6h4" />
-      <path d="M10 10h4" />
-      <path d="M10 14h4" />
-      <path d="M10 18h4" />
-    </svg>
-  );
-}
-
-function CheckCircle2({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="12" cy="12" r="10" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
-function ChevronDown({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-
-function CircleAlert({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" x2="12" y1="8" y2="12" />
-      <line x1="12" x2="12.01" y1="16" y2="16" />
-    </svg>
-  );
-}
-
-function CircleCheck({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="12" cy="12" r="10" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
-function Info({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 16v-4" />
-      <path d="M12 8h.01" />
-    </svg>
-  );
-}
 
 type RemindResponse =
   | {
@@ -383,7 +319,7 @@ export function EmployeesTableDemo({
               </div>
               {lockedCompanyId && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2">
-                  <CircleCheck className="h-4 w-4 text-amber-700" />
+                  <CheckCircle2 className="h-4 w-4 text-amber-700" />
                   <p className="text-xs text-amber-800">
                     Entreprise sélectionnée : <span className="font-semibold">{companies.find(c => String(c.id) === lockedCompanyId)?.name}</span>
                   </p>
@@ -450,7 +386,7 @@ export function EmployeesTableDemo({
           {error ? (
             <div className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3">
               <p className="flex items-center gap-2 text-sm font-medium text-rose-700">
-                <CircleAlert className="h-4 w-4" />
+                <AlertCircle className="h-4 w-4" />
                 <span>{error}</span>
               </p>
             </div>
