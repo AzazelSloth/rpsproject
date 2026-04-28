@@ -133,7 +133,8 @@ async function runMigrations() {
 }
 
 void runMigrations().catch((error: unknown) => {
-  const message = error instanceof Error ? error.stack ?? error.message : error;
+  const message =
+    error instanceof Error ? (error.stack ?? error.message) : error;
   console.error('[db] Migration failed:', message);
   process.exit(1);
 });

@@ -23,7 +23,9 @@ describe('CampaignController', () => {
 
   const mockJwtService = {
     sign: jest.fn().mockReturnValue('fake-jwt-token'),
-    verifyAsync: jest.fn().mockResolvedValue({ sub: 1, email: 'test@test.com' }),
+    verifyAsync: jest
+      .fn()
+      .mockResolvedValue({ sub: 1, email: 'test@test.com' }),
   };
 
   beforeEach(async () => {

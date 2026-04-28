@@ -12,17 +12,34 @@ export default async function SurveysPage({
 }) {
   const { scenario, tab, campaignId } = await searchParams;
   const activeTab = tab ?? "create";
-  const requestedCampaignId = campaignId ? Number(campaignId) : null;
+  const selectedCampaignId =
+    activeTab === "edit" && campaignId
+      ? Number.parseInt(campaignId, 10) || null
+      : null;
   const surveyBuilderData = await getServerTrpcCaller().data.surveyBuilder({
     scenario: scenario ?? null,
-    campaignId: requestedCampaignId,
+    campaignId: selectedCampaignId,
   });
-  const surveysList =
+  const managementData =
     activeTab === "list"
-      ? await getServerTrpcCaller().data.listSurveys({
+      ? await getServerTrpcCaller().data.employeeManagement({
           scenario: scenario ?? null,
         })
       : null;
+  const resultsHref = scenario
+    ? `/results?scenario=${encodeURIComponent(scenario)}`
+    : "/results";
+  const companyName =
+    surveyBuilderData.companies.find((company) => company.id === surveyBuilderData.companyId)?.name ??
+    "Entreprise a definir";
+  const completionRate = managementData?.participationRate ?? 0;
+  const statusLabel = formatStatusLabel(surveyBuilderData.status);
+  const statusTone =
+    surveyBuilderData.status === "active"
+      ? "success"
+      : surveyBuilderData.status === "draft"
+        ? "warning"
+        : "neutral";
 
   if (activeTab === "list") {
     return (
@@ -49,7 +66,9 @@ export default async function SurveysPage({
                 className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
               />
               <select className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none">
-                <option value="active">actif</option>
+                <option value="active">active</option>
+                <option value="draft">brouillon</option>
+                <option value="archived">archive</option>
               </select>
             </div>
           </div>
@@ -67,60 +86,38 @@ export default async function SurveysPage({
                 </tr>
               </thead>
               <tbody>
-                {surveysList && surveysList.length > 0 ? (
-                  surveysList.map((survey) => {
-                    const resultsHref = buildResultsHref(survey.id, scenario ?? null);
-                    const statusTone =
-                      survey.status === "active"
-                        ? "success"
-                        : survey.status === "draft"
-                          ? "warning"
-                          : "neutral";
-
-                    return (
-                      <tr key={survey.id} className="border-t border-slate-100 align-top">
-                        <td className="px-6 py-4">
-                          <p className="font-semibold">{survey.companyName}</p>
-                          <p className="mt-1 text-slate-600">{survey.title}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Pill tone={statusTone}>{formatStatusLabel(survey.status)}</Pill>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-2">
-                            <Pill tone={survey.participationRate >= 70 ? "success" : "warning"}>
-                              {survey.participationRate}%
-                            </Pill>
-                            <span className="text-xs text-slate-500">
-                              {survey.completedParticipants}/{survey.totalParticipants} participants
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-slate-600">
-                          {formatShortDate(survey.startDate)}
-                        </td>
-                        <td className="px-6 py-4 text-slate-600">
-                          {formatShortDate(survey.endDate)}
-                        </td>
-                        <td className="px-6 py-4">
-                          <Link
-                            href={resultsHref}
-                            className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
-                            style={{ color: "#ffffff" }}
-                          >
-                            Voir les resultats
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr className="border-t border-slate-100">
-                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                      Aucun sondage disponible.
-                    </td>
-                  </tr>
-                )}
+                <tr className="border-t border-slate-100 align-top">
+                  <td className="px-6 py-4">
+                    <p className="font-semibold">{companyName}</p>
+                    <p className="mt-1 text-slate-600">{surveyBuilderData.title}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Pill tone={statusTone}>{statusLabel}</Pill>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-2">
+                      <Pill tone={completionRate >= 70 ? "success" : "warning"}>
+                        {completionRate}%
+                      </Pill>
+                      <span className="text-xs text-slate-500">completion globale</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-slate-600">
+                    {formatShortDate(surveyBuilderData.startDate)}
+                  </td>
+                  <td className="px-6 py-4 text-slate-600">
+                    {formatShortDate(surveyBuilderData.endDate)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <Link
+                      href={resultsHref}
+                      className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
+                      style={{ color: '#ffffff' }}
+                    >
+                      Voir les resultats
+                    </Link>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -131,24 +128,23 @@ export default async function SurveysPage({
 
   return (
     <section className="space-y-6">
+      <SectionHeader
+        eyebrow="Gestion des sondages"
+        title={
+          activeTab === "edit" ? "Modifier un sondage" : "Creer un sondage"
+        }
+        description={
+          activeTab === "edit"
+            ? "Ajuste le sondage existant, mets a jour les questions et valide la nouvelle version. L'ajout d'entreprise est bloque en mode modification."
+            : "Un builder minimal oriente RH, avec structure, typologie de questions et apercu du futur questionnaire salarie."
+        }
+      />
       <SurveyBuilderDemo
         initialData={surveyBuilderData}
         mode={activeTab === "edit" ? "edit" : "create"}
       />
     </section>
   );
-}
-
-function buildResultsHref(campaignId: number, scenario?: string | null) {
-  const params = new URLSearchParams();
-  params.set("view", "detail");
-  params.set("campaignId", String(campaignId));
-
-  if (scenario) {
-    params.set("scenario", scenario);
-  }
-
-  return `/results?${params.toString()}`;
 }
 
 function formatShortDate(value: string | null) {
@@ -165,13 +161,10 @@ function formatShortDate(value: string | null) {
 
 function formatStatusLabel(value: string) {
   if (value === "active") {
-    return "actif";
+    return "active";
   }
-  if (value === "draft" || value === "preparation") {
+  if (value === "draft") {
     return "brouillon";
-  }
-  if (value === "terminated") {
-    return "termine";
   }
   if (value === "archived") {
     return "archive";

@@ -421,7 +421,7 @@ jobs:
                     DB_NAME: "${{ secrets.DB_NAME }}",
                     DB_SYNCHRONIZE: "false",
                     DB_LOGGING: "false",
-                    AUTH_DISABLED: "true",
+                    AUTH_DISABLED: "false",
                     CORS_ORIGIN: "http://localhost:3001,http://127.0.0.1:3001,http://${{ secrets.VPS_HOST }}:3001",
                     SWAGGER_ENABLED: "true",
                     SWAGGER_PATH: "api-docs"

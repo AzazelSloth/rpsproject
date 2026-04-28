@@ -352,39 +352,47 @@ export class CampaignParticipantService {
   }
 
   async getCampaignProgress(campaignId: number) {
-    const participants = await this.campaignParticipantRepository.find({
-      where: {
-        campaign: { id: campaignId },
-        employee: { deleted_at: IsNull() },
-      },
-      relations: { employee: true },
-      order: { id: 'ASC' },
-    });
-    await this.ensureParticipationTokens(participants);
+    try {
+      const participants = await this.campaignParticipantRepository.find({
+        where: {
+          campaign: { id: campaignId },
+          employee: { deleted_at: IsNull() },
+        },
+        relations: { employee: true },
+        order: { id: 'ASC' },
+      });
+      await this.ensureParticipationTokens(participants);
 
-    const total = participants.length;
-    const completed = participants.filter(
-      (participant) =>
-        participant.status === CampaignParticipantStatus.COMPLETED,
-    ).length;
-    const reminded = participants.filter(
-      (participant) =>
-        participant.status === CampaignParticipantStatus.REMINDED,
-    ).length;
-    const pending = participants.filter(
-      (participant) => participant.status === CampaignParticipantStatus.PENDING,
-    ).length;
+      const total = participants.length;
+      const completed = participants.filter(
+        (participant) =>
+          participant.status === CampaignParticipantStatus.COMPLETED,
+      ).length;
+      const reminded = participants.filter(
+        (participant) =>
+          participant.status === CampaignParticipantStatus.REMINDED,
+      ).length;
+      const pending = participants.filter(
+        (participant) =>
+          participant.status === CampaignParticipantStatus.PENDING,
+      ).length;
 
-    return {
-      campaign_id: campaignId,
-      total_participants: total,
-      completed_participants: completed,
-      pending_participants: pending,
-      reminded_participants: reminded,
-      participation_rate:
-        total === 0 ? 0 : Number(((completed / total) * 100).toFixed(2)),
-      participants,
-    };
+      return {
+        campaign_id: campaignId,
+        total_participants: total,
+        completed_participants: completed,
+        pending_participants: pending,
+        reminded_participants: reminded,
+        participation_rate:
+          total === 0 ? 0 : Number(((completed / total) * 100).toFixed(2)),
+        participants,
+      };
+    } catch (error) {
+      throwPersistenceError(error, {
+        defaultMessage: 'Failed to get campaign progress',
+        foreignKeyMessage: 'Campaign not found',
+      });
+    }
   }
 
   private async ensureParticipationTokens(participants: CampaignParticipant[]) {
@@ -517,7 +525,9 @@ export class CampaignParticipantService {
             employee.first_name = row.first_name?.trim() || 'N/A';
             employee.last_name = row.last_name?.trim() || 'N/A';
             employee.phone = row.phone?.trim() || null;
+            employee.status = row.status?.trim() || null;
             employee.department = row.department?.trim() || null;
+            employee.company_name = row.company_name?.trim() || null;
             employee.company = campaign.company;
             employee.deleted_at = null;
             employee.survey_token = employee.survey_token ?? randomUUID();
@@ -681,7 +691,8 @@ export class CampaignParticipantService {
               last_name: emp.last_name || 'N/A',
               email: emp.email || '',
               company_name:
-                (emp.email && companyNameByEmail.get(emp.email.toLowerCase())) ||
+                (emp.email &&
+                  companyNameByEmail.get(emp.email.toLowerCase())) ||
                 '',
             },
           };
@@ -895,6 +906,11 @@ export class CampaignParticipantService {
           first_name: (row.first_name ?? row.prenom ?? '').trim() || undefined,
           last_name: (row.last_name ?? row.nom ?? '').trim() || undefined,
           phone: (row.phone ?? '').trim() || undefined,
+          status:
+            ((row as Record<string, string>).status ??
+              (row as Record<string, string>).statut ??
+              '')
+              .trim() || undefined,
           department:
             (
               row.department ??
@@ -903,8 +919,12 @@ export class CampaignParticipantService {
               ''
             ).trim() || undefined,
           company_name:
-            (row.company_name ?? row.entreprise ?? row.company ?? '').trim() ||
-            undefined,
+            (
+              (row.company_name ??
+                (row as any).entreprise ??
+                (row as any).company) ||
+              ''
+            ).trim() || undefined,
         });
       } catch (error) {
         console.error(`[CSV] Error parsing row ${i + 2}:`, error);

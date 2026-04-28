@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { SurveyResponse } from '../response/response.entity';
+import { Employee } from '../employee/employee.entity';
 import { throwPersistenceError } from '../common/database-error.util';
 import { Company } from '../company/company.entity';
 import { getN8nWebhookUrl } from '../n8n/n8n.config';
@@ -28,6 +30,8 @@ export class CampaignService {
     private readonly campaignRepository: Repository<Campaign>,
     @InjectRepository(Company)
     private readonly companyRepository: Repository<Company>,
+    @InjectRepository(SurveyResponse)
+    private readonly responseRepository: Repository<SurveyResponse>,
   ) {
     this.n8nWebhookUrl = getN8nWebhookUrl();
   }
@@ -184,7 +188,8 @@ export class CampaignService {
     companyName?: string,
   ) {
     const campaign = await this.findOne(campaignId);
-    const finalCompanyName = companyName || campaign.company?.name || 'Entreprise';
+    const finalCompanyName =
+      companyName || campaign.company?.name || 'Entreprise';
 
     return this.triggerAnalysis(
       campaignId,
@@ -212,14 +217,78 @@ export class CampaignService {
     return company;
   }
 
+  private ensureValidDateRange(startDate?: Date | null, endDate?: Date | null) {
+    if (startDate && endDate && endDate < startDate) {
+      throw new BadRequestException(
+        'Campaign end date must be greater than or equal to start date',
+      );
+    }
+  }
+
+  /**
+   * Récupère et formate toutes les réponses d'une campagne pour l'envoi à n8n.
+   * Retourne un tableau d'employés avec leurs réponses Q1..Q28.
+   */
+  private async getCampaignResponsesFormatted(
+    campaignId: number,
+    defaultCompanyName: string,
+  ): Promise<Array<Record<string, string>>> {
+    // Récupérer toutes les réponses de la campagne avec relations employé et question
+    const responses = await this.responseRepository.find({
+      where: {
+        employee: {
+          campaign_participations: {
+            campaign: { id: campaignId }
+          }
+        }
+      },
+      relations: ['employee', 'question'],
+      order: { employee: { id: 'ASC' }, question: { order_index: 'ASC' } },
+    });
+
+    const employeeMap = new Map<number, Record<string, string>>();
+
+    for (const response of responses) {
+      const employee = response.employee;
+      if (!employee) continue;
+
+      let row = employeeMap.get(employee.id);
+      if (!row) {
+        row = {
+          Employeur: employee.company_name || defaultCompanyName,
+          Email: employee.email || '',
+          "Nom et Prenom": `${employee.first_name || ''} ${employee.last_name || ''}`.trim(),
+          Fonction: employee.department || '',
+        };
+        employeeMap.set(employee.id, row);
+      }
+
+      // Ajouter la réponse pour cette question (ex: Q1, Q2, ...)
+      if (response.question && response.question.order_index != null) {
+        const qKey = `Q${response.question.order_index}`;
+        row[qKey] = response.answer ?? '';
+      }
+    }
+
+    return Array.from(employeeMap.values());
+  }
+
   private async triggerAnalysis(
     campaignId: number,
     campaignName: string | null,
     companyName: string,
     userEmail: string,
   ) {
+    // Récupérer les données des employés avec leurs réponses
+    const employeesData = await this.getCampaignResponsesFormatted(campaignId, companyName);
+
+    // Construire le payload au format attendu par n8n (identique au frontend)
     const payload = {
-      campaign_id: campaignId,
+      body: {
+        body: employeesData,
+        campaign_id: campaignId,
+        client_email: userEmail,
+      },
       campaign_name: campaignName,
       company_name: companyName,
       user_email: userEmail,
@@ -242,7 +311,7 @@ export class CampaignService {
       }
 
       this.logger.log(
-        `Analysis triggered for campaign ${campaignId} (${companyName}) by ${userEmail}`,
+        `Analysis triggered for campaign ${campaignId} (${companyName}) by ${userEmail} with ${employeesData.length} employee responses`,
       );
       return {
         success: true,

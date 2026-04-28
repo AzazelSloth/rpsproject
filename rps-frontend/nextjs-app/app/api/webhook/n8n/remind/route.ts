@@ -1,21 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getN8nWebhookUrl } from "@/lib/n8n/config";
-
-function getRemindedCount(result: unknown) {
-  if (!result || typeof result !== "object") {
-    return 0;
-  }
-
-  const record = result as Record<string, unknown>;
-
-  return Number(
-    record.reminded ??
-      record.reminded_count ??
-      record.remindedParticipants ??
-      record.count ??
-      0,
-  );
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,48 +12,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const n8nWebhookUrl = getN8nWebhookUrl();
+    // Forward l'appel vers le backend (sendReminders endpoint)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:3000';
+    const backendUrl = `${apiUrl}/campaign-participants/campaign/${campaignId}/remind`;
 
-    console.log("Calling n8n webhook:", n8nWebhookUrl);
+    // Récupérer le token JWT depuis la requête entrante pour le forward
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json(
+        { error: "Non autorisé – token JWT manquant" },
+        { status: 401 },
+      );
+    }
 
-    const response = await fetch(n8nWebhookUrl, {
+    console.log("Forwarding remind request to backend:", backendUrl);
+
+    const backendResponse = await fetch(backendUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": authHeader,
       },
       body: JSON.stringify({
-        campaign_id: campaignId,
-        company_id: companyId,
-        action: "remind_pending",
-        remindPending: true,
-        message: message || "Rappel : Votre participation au sondage RPS est attendue.",
-        timestamp: new Date().toISOString(),
+        minimum_days_since_invitation: 0,
+        force: true,
       }),
     });
 
-    if (!response.ok) {
-      throw new Error(`n8n responded with status ${response.status}`);
+    if (!backendResponse.ok) {
+      const errorText = await backendResponse.text();
+      throw new Error(`Backend error ${backendResponse.status}: ${errorText}`);
     }
 
-    const contentType = response.headers.get("content-type") || "";
-    const result = contentType.includes("application/json")
-      ? await response.json()
-      : await response.text();
+    const result = await backendResponse.json();
 
     return NextResponse.json({
       success: true,
-      reminded: getRemindedCount(result),
-      message: "Relance envoyee avec succes",
+      reminded: result.reminded_count || 0,
+      message: "Relances envoyees avec succes",
       data: result,
     });
   } catch (error) {
-    console.error("n8n webhook error:", error);
+    console.error("Remind forwarding error:", error);
 
     return NextResponse.json({
-      success: true,
+      success: false,
       reminded: 0,
-      message: "Relance simulee (n8n non configure ou inaccessible)",
-      note: "Configurez N8N_WEBHOOK_URL dans .env.local pour activer les vraies relances via votre workflow existant",
-    });
+      error: "Echec de l'envoi des relances",
+      details: error instanceof Error ? error.message : "Erreur inconnue",
+    }, { status: 500 });
   }
 }

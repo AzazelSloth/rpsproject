@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
-import { createDemoAuthResponse, saveAuth } from "@/lib/backend/auth";
+import { createDemoAuthResponse, saveAuth, type AuthResponse } from "@/lib/backend/auth";
+import { isBackendConfigured } from "@/lib/backend/client";
+import { appFetch } from "@/lib/api";
 
 const DEMO_EMAIL = "demo@laroche360.ca";
 const DEMO_PASSWORD_MASK = "********";
@@ -28,7 +30,37 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      saveAuth(createDemoAuthResponse("Mode demo", DEMO_EMAIL));
+      if (!isBackendConfigured()) {
+        saveAuth(createDemoAuthResponse("Mode demo", DEMO_EMAIL));
+        router.push("/dashboard");
+        return;
+      }
+
+      void openTemporaryAccessSession();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ouverture de session indisponible.");
+      setIsLoading(false);
+    }
+  }
+
+  async function openTemporaryAccessSession() {
+    try {
+      const response = await appFetch("/api/auth/temporary-access", {
+        method: "POST",
+        cache: "no-store",
+      });
+
+      const payload = (await response.json()) as AuthResponse | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "Ouverture de session indisponible.",
+        );
+      }
+
+      saveAuth(payload as AuthResponse);
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ouverture de session indisponible.");

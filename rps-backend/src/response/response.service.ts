@@ -23,8 +23,12 @@ export class ResponseService {
   ) {}
 
   async create(createResponseDto: CreateResponseDto) {
-    const employee = await this.findEmployeeOrThrow(createResponseDto.employee_id);
-    const question = await this.findQuestionOrThrow(createResponseDto.question_id);
+    const employee = await this.findEmployeeOrThrow(
+      createResponseDto.employee_id,
+    );
+    const question = await this.findQuestionOrThrow(
+      createResponseDto.question_id,
+    );
 
     await this.assertNoActiveDuplicateResponse(employee.id, question.id);
 
@@ -96,7 +100,11 @@ export class ResponseService {
       question = await this.findQuestionOrThrow(updateResponseDto.question_id);
     }
 
-    await this.assertNoActiveDuplicateResponse(employee.id, question.id, response.id);
+    await this.assertNoActiveDuplicateResponse(
+      employee.id,
+      question.id,
+      response.id,
+    );
     response.employee = employee;
     response.question = question;
 

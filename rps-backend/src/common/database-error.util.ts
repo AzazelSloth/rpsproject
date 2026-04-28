@@ -51,7 +51,9 @@ export function throwPersistenceError(
   switch (driverError?.code) {
     case '23505':
       throw new ConflictException(
-        constraintMessage ?? options.duplicateMessage ?? 'Resource already exists',
+        constraintMessage ??
+          options.duplicateMessage ??
+          'Resource already exists',
       );
     case '23503':
       throw new BadRequestException(
@@ -61,7 +63,9 @@ export function throwPersistenceError(
       );
     case '23502':
       throw new BadRequestException(
-        constraintMessage ?? options.notNullMessage ?? 'A required field is missing',
+        constraintMessage ??
+          options.notNullMessage ??
+          'A required field is missing',
       );
     case '23514':
       throw new BadRequestException(

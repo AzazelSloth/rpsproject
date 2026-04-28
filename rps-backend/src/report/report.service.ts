@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { throwPersistenceError } from '../common/database-error.util';
@@ -19,7 +16,9 @@ export class ReportService {
   ) {}
 
   async create(createReportDto: CreateReportDto) {
-    const campaign = await this.findCampaignOrThrow(createReportDto.campaign_id);
+    const campaign = await this.findCampaignOrThrow(
+      createReportDto.campaign_id,
+    );
 
     const report = this.reportRepository.create({
       report_path: createReportDto.report_path,

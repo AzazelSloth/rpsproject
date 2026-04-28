@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "Laroche 360",
   description: "Plateforme de gestion des risques psychosociaux",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/logoIcone.png",
   },
 };
 

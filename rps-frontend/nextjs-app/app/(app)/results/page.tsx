@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, Pill, PrimaryButton } from "@/components/rps/ui";
+import { Card, Pill, PrimaryButton, SectionHeader } from "@/components/rps/ui";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
 
 export const dynamic = "force-dynamic";
@@ -7,37 +7,47 @@ export const dynamic = "force-dynamic";
 export default async function ResultsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scenario?: string; view?: string; campaignId?: string }>;
+  searchParams: Promise<{ scenario?: string; view?: string }>;
 }) {
-  const { scenario, view, campaignId } = await searchParams;
-  const requestedCampaignId = campaignId ? Number(campaignId) : null;
-  const [resultsData, surveyBuilderData, managementData, surveysList] = await Promise.all([
+  const { scenario, view } = await searchParams;
+  const [resultsData, surveyBuilderData, managementData] = await Promise.all([
     getServerTrpcCaller().data.results({
-      scenario: scenario ?? null,
-      campaignId: requestedCampaignId,
+    scenario: scenario ?? null,
     }),
     getServerTrpcCaller().data.surveyBuilder({
       scenario: scenario ?? null,
-      campaignId: requestedCampaignId,
     }),
     getServerTrpcCaller().data.employeeManagement({
       scenario: scenario ?? null,
-      campaignId: requestedCampaignId,
-    }),
-    getServerTrpcCaller().data.listSurveys({
-      scenario: scenario ?? null,
     }),
   ]);
-
   const { metrics, bars, analysis } = resultsData;
-  const selectedCampaignId = requestedCampaignId ?? surveyBuilderData.campaignId ?? null;
-  const reportHref = buildReportHref(selectedCampaignId, scenario ?? null);
+  const resultsHref = scenario
+    ? `/results?view=detail&scenario=${encodeURIComponent(scenario)}`
+    : "/results?view=detail";
+  const reportHref = scenario
+    ? `/report?scenario=${encodeURIComponent(scenario)}`
+    : "/report";
   const companyName =
     surveyBuilderData.companies.find((company) => company.id === surveyBuilderData.companyId)?.name ??
     "Entreprise a definir";
+  const completionRate = managementData.participationRate ?? 0;
+  const statusLabel = formatStatusLabel(surveyBuilderData.status);
+  const statusTone =
+    surveyBuilderData.status === "active"
+      ? "success"
+      : surveyBuilderData.status === "draft"
+        ? "warning"
+        : "neutral";
 
   return (
     <section className="space-y-6">
+      <SectionHeader
+        eyebrow="Resultats"
+        title="Resultats par sondage"
+        description="Selectionne un sondage pour consulter les indicateurs et les analyses detaillees."
+      />
+
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -54,7 +64,7 @@ export default async function ResultsPage({
               className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
             />
             <select className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none">
-              <option value="active">actif</option>
+              <option value="active">active</option>
               <option value="draft">brouillon</option>
               <option value="archived">archive</option>
             </select>
@@ -74,65 +84,44 @@ export default async function ResultsPage({
               </tr>
             </thead>
             <tbody>
-              {surveysList.length > 0 ? (
-                surveysList.map((survey) => {
-                  const statusTone =
-                    survey.status === "active"
-                      ? "success"
-                      : survey.status === "draft"
-                        ? "warning"
-                        : "neutral";
-
-                  return (
-                    <tr key={survey.id} className="border-t border-slate-100 align-top">
-                      <td className="px-6 py-4">
-                        <p className="font-semibold">{survey.companyName}</p>
-                        <p className="mt-1 text-slate-600">{survey.title}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Pill tone={statusTone}>{formatStatusLabel(survey.status)}</Pill>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-2">
-                          <Pill tone={survey.participationRate >= 70 ? "success" : "warning"}>
-                            {survey.participationRate}%
-                          </Pill>
-                          <span className="text-xs text-slate-500">
-                            {survey.completedParticipants}/{survey.totalParticipants} participants
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {formatShortDate(survey.startDate)}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {formatShortDate(survey.endDate)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Link
-                          href={buildResultsHref(survey.id, scenario ?? null)}
-                          className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
-                          style={{ color: "#ffffff" }}
-                        >
-                          Voir les resultats
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr className="border-t border-slate-100">
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                    Aucun sondage disponible.
-                  </td>
-                </tr>
-              )}
+              <tr className="border-t border-slate-100 align-top">
+                <td className="px-6 py-4">
+                  <p className="font-semibold">{companyName}</p>
+                  <p className="mt-1 text-slate-600">{surveyBuilderData.title}</p>
+                </td>
+                <td className="px-6 py-4">
+                  <Pill tone={statusTone}>{statusLabel}</Pill>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-col gap-2">
+                    <Pill tone={completionRate >= 70 ? "success" : "warning"}>
+                      {completionRate}%
+                    </Pill>
+                    <span className="text-xs text-slate-500">completion globale</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-slate-600">
+                  {formatShortDate(surveyBuilderData.startDate)}
+                </td>
+                <td className="px-6 py-4 text-slate-600">
+                  {formatShortDate(surveyBuilderData.endDate)}
+                </td>
+                <td className="px-6 py-4">
+                  <Link
+                    href={resultsHref}
+                    className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
+                    style={{ color: '#ffffff' }}
+                  >
+                    Voir les resultats
+                  </Link>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
       </Card>
 
-      {view === "detail" && selectedCampaignId ? (
+      {view === "detail" ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-[family-name:var(--font-manrope)] text-2xl font-extrabold">
@@ -148,7 +137,7 @@ export default async function ResultsPage({
               {
                 label: "Taux de participation",
                 value: `${metrics.participationRate}%`,
-                tone: `${managementData.completedParticipants} reponse(s) sur ${managementData.totalParticipants}.`,
+                tone: "Le niveau de reponse permet une lecture exploitable.",
               },
               {
                 label: "Stress moyen",
@@ -158,12 +147,12 @@ export default async function ResultsPage({
               {
                 label: "Departements analyses",
                 value: `${bars.length}`,
-                tone: "Comparaison inter-equipes sur la campagne selectionnee.",
+                tone: "Comparaison inter-equipes en temps reel.",
               },
               {
                 label: "Alertes prioritaires",
                 value: `${analysis.length}`,
-                tone: `${companyName} - ${surveyBuilderData.title}`,
+                tone: "Points de vigilance a partager aux managers.",
               },
             ].map((item) => (
               <Card key={item.label} className="overflow-hidden p-5">
@@ -191,10 +180,7 @@ export default async function ResultsPage({
 
               <div className="mt-8 space-y-5">
                 {bars.map((bar, index) => (
-                  <div
-                    key={bar.department}
-                    className="rounded-[14px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#ffffff_100%)] p-4"
-                  >
+                  <div key={bar.department} className="rounded-[14px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#ffffff_100%)] p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">{bar.department}</p>
@@ -246,8 +232,7 @@ export default async function ResultsPage({
                       Recommandation de lecture
                     </p>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Commencer par les equipes les plus exposees, puis relier les ecarts a la
-                      participation et au contexte managerial.
+                      Commencer par les equipes les plus exposees, puis relier les ecarts a la participation et au contexte managerial.
                     </p>
                   </div>
                 </div>
@@ -260,15 +245,10 @@ export default async function ResultsPage({
                 </h3>
                 <div className="mt-5 space-y-3">
                   {analysis.map((item, index) => (
-                    <div
-                      key={item}
-                      className="rounded-[14px] border border-amber-100 bg-amber-50 px-4 py-4"
-                    >
+                    <div key={item} className="rounded-[14px] border border-amber-100 bg-amber-50 px-4 py-4">
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-sm font-medium leading-6 text-slate-700">{item}</p>
-                        <Pill tone={index === 0 ? "warning" : "neutral"}>
-                          {index === 0 ? "Priorite" : "Lecture"}
-                        </Pill>
+                        <Pill tone={index === 0 ? "warning" : "neutral"}>{index === 0 ? "Priorite" : "Lecture"}</Pill>
                       </div>
                     </div>
                   ))}
@@ -296,43 +276,13 @@ function formatShortDate(value: string | null) {
 
 function formatStatusLabel(value: string) {
   if (value === "active") {
-    return "actif";
+    return "active";
   }
-  if (value === "draft" || value === "preparation") {
+  if (value === "draft") {
     return "brouillon";
-  }
-  if (value === "terminated") {
-    return "termine";
   }
   if (value === "archived") {
     return "archive";
   }
   return value || "inconnu";
-}
-
-function buildResultsHref(campaignId: number, scenario?: string | null) {
-  const params = new URLSearchParams();
-  params.set("view", "detail");
-  params.set("campaignId", String(campaignId));
-
-  if (scenario) {
-    params.set("scenario", scenario);
-  }
-
-  return `/results?${params.toString()}`;
-}
-
-function buildReportHref(campaignId: number | null, scenario?: string | null) {
-  const params = new URLSearchParams();
-
-  if (campaignId) {
-    params.set("campaignId", String(campaignId));
-  }
-
-  if (scenario) {
-    params.set("scenario", scenario);
-  }
-
-  const queryString = params.toString();
-  return queryString ? `/report?${queryString}` : "/report";
 }

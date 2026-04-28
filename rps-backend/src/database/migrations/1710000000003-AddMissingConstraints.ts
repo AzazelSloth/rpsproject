@@ -1,9 +1,7 @@
 import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddMissingConstraints1710000000003
-  implements MigrationInterface
-{
+export class AddMissingConstraints1710000000003 implements MigrationInterface {
   name = 'AddMissingConstraints1710000000003';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

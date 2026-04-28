@@ -25,17 +25,17 @@ INSERT INTO questions (campaign_id, question_text, question_type, rps_dimension,
 (1, 'Avez-vous des relations positives avec vos collègues ?', 'scale', 'Relations sociales', 8);
 
 -- Employés démo
-INSERT INTO employees (company_id, first_name, last_name, email, department) VALUES
-(1, 'Jean', 'Dupont', 'jean.dupont@laroche.fr', 'RH'),
-(1, 'Marie', 'Martin', 'marie.martin@laroche.fr', 'IT'),
-(1, 'Pierre', 'Bernard', 'pierre.bernard@laroche.fr', 'Finance'),
-(1, 'Sophie', 'Petit', 'sophie.petit@laroche.fr', 'Marketing'),
-(1, 'Lucas', 'Robert', 'lucas.robert@laroche.fr', 'Production'),
-(1, 'Emma', 'Richard', 'emma.richard@laroche.fr', 'RH'),
-(1, 'Thomas', 'Durand', 'thomas.durand@laroche.fr', 'IT'),
-(1, 'Camille', 'Dubois', 'camille.dubois@laroche.fr', 'Finance'),
-(1, 'Nicolas', 'Moreau', 'nicolas.moreau@laroche.fr', 'Marketing'),
-(1, 'Julie', 'Laurent', 'julie.laurent@laroche.fr', 'Production');
+INSERT INTO employees (company_id, first_name, last_name, email, phone, status, department) VALUES
+(1, 'Jean', 'Dupont', 'jean.dupont@laroche.fr', NULL, 'active', 'RH'),
+(1, 'Marie', 'Martin', 'marie.martin@laroche.fr', NULL, 'active', 'IT'),
+(1, 'Pierre', 'Bernard', 'pierre.bernard@laroche.fr', NULL, 'active', 'Finance'),
+(1, 'Sophie', 'Petit', 'sophie.petit@laroche.fr', NULL, 'active', 'Marketing'),
+(1, 'Lucas', 'Robert', 'lucas.robert@laroche.fr', NULL, 'active', 'Production'),
+(1, 'Emma', 'Richard', 'emma.richard@laroche.fr', NULL, 'active', 'RH'),
+(1, 'Thomas', 'Durand', 'thomas.durand@laroche.fr', NULL, 'active', 'IT'),
+(1, 'Camille', 'Dubois', 'camille.dubois@laroche.fr', NULL, 'active', 'Finance'),
+(1, 'Nicolas', 'Moreau', 'nicolas.moreau@laroche.fr', NULL, 'active', 'Marketing'),
+(1, 'Julie', 'Laurent', 'julie.laurent@laroche.fr', NULL, 'active', 'Production');
 
 -- Participants à la campagne
 INSERT INTO campaign_participants (campaign_id, employee_id, participation_token, status, invitation_sent_at, completed_at) VALUES

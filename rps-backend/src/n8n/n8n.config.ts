@@ -25,6 +25,7 @@ export function getN8nWebhookUrl() {
     return configuredUrl;
   }
 
-  const webhookPath = process.env.N8N_WEBHOOK_PATH?.trim() || DEFAULT_N8N_WEBHOOK_PATH;
+  const webhookPath =
+    process.env.N8N_WEBHOOK_PATH?.trim() || DEFAULT_N8N_WEBHOOK_PATH;
   return `${configuredUrl}${ensureLeadingSlash(webhookPath)}`;
 }

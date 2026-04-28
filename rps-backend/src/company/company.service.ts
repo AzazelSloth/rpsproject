@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { throwPersistenceError } from '../common/database-error.util';
 import { CreateCompanyDto, UpdateCompanyDto } from './dto/company.dto';
 import { Company } from './company.entity';
 
@@ -17,32 +18,48 @@ export class CompanyService {
   }
 
   async findAll() {
-    const companies = await this.companyRepository.find({
-      order: { id: 'ASC' },
-      relations: { campaigns: true, employees: true },
-    });
+    try {
+      const companies = await this.companyRepository.find({
+        order: { id: 'ASC' },
+        relations: { campaigns: true, employees: true },
+      });
 
-    return companies.map((company) => {
-      company.employees =
-        company.employees?.filter((employee) => !employee.deleted_at) ?? [];
-      return company;
-    });
+      return companies.map((company) => {
+        company.employees =
+          company.employees?.filter((employee) => !employee.deleted_at) ?? [];
+        return company;
+      });
+    } catch (error) {
+      throwPersistenceError(error, {
+        defaultMessage: 'Failed to fetch companies',
+      });
+    }
   }
 
   async findOne(id: number) {
-    const company = await this.companyRepository.findOne({
-      where: { id },
-      relations: { campaigns: true, employees: true },
-    });
+    try {
+      const company = await this.companyRepository.findOne({
+        where: { id },
+        relations: { campaigns: true, employees: true },
+      });
 
-    if (!company) {
-      throw new NotFoundException(`Company ${id} not found`);
+      if (!company) {
+        throw new NotFoundException(`Company ${id} not found`);
+      }
+
+      company.employees =
+        company.employees?.filter((employee) => !employee.deleted_at) ?? [];
+
+      return company;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throwPersistenceError(error, {
+        defaultMessage: `Failed to fetch company ${id}`,
+        foreignKeyMessage: `Company ${id} not found`,
+      });
     }
-
-    company.employees =
-      company.employees?.filter((employee) => !employee.deleted_at) ?? [];
-
-    return company;
   }
 
   async update(id: number, updateCompanyDto: UpdateCompanyDto) {

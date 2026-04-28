@@ -311,7 +311,7 @@ export const insightsResponse: { data: StrapiInsight[] } = {
 export const reportResponse: { data: StrapiReport } = {
   data: {
     ...meta(40, "report-march-2026"),
-    title: `${monthLabel(referenceDate)} ${referenceDate.getUTCFullYear()}`,
+    title: `Rapport RPS - ${monthLabel(referenceDate)} ${referenceDate.getUTCFullYear()}`,
     companyName: companyEntry.name,
     participationRate,
     averageStress,
@@ -496,7 +496,7 @@ export function getDemoDataset(input?: string | null) {
     "Les verbatims suggerent de clarifier les priorites et le pilotage manageriale.",
   ];
   const report = {
-    title: `${config.label}`,
+    title: `Rapport RPS - ${config.label}`,
     companyName: companyEntry.name,
     participationRate,
     averageStress,

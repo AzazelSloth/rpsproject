@@ -54,7 +54,9 @@ export class EmployeeService {
     employee.first_name = createEmployeeDto.first_name;
     employee.last_name = createEmployeeDto.last_name;
     employee.email = email;
+    employee.company_name = createEmployeeDto.company_name?.trim() || null;
     employee.phone = createEmployeeDto.phone ?? null;
+    employee.status = createEmployeeDto.status?.trim() || null;
     employee.department = createEmployeeDto.department ?? null;
     employee.survey_token =
       createEmployeeDto.survey_token ??
@@ -81,33 +83,49 @@ export class EmployeeService {
   }
 
   async findAll() {
-    const employees = await this.employeeRepository.find({
-      where: { deleted_at: IsNull() },
-      order: { id: 'ASC' },
-      relations: { company: true, responses: true },
-    });
+    try {
+      const employees = await this.employeeRepository.find({
+        where: { deleted_at: IsNull() },
+        order: { id: 'ASC' },
+        relations: { company: true, responses: true },
+      });
 
-    return employees.map((employee) => {
-      employee.responses =
-        employee.responses?.filter((response) => !response.deleted_at) ?? [];
-      return employee;
-    });
+      return employees.map((employee) => {
+        employee.responses =
+          employee.responses?.filter((response) => !response.deleted_at) ?? [];
+        return employee;
+      });
+    } catch (error) {
+      throwPersistenceError(error, {
+        defaultMessage: 'Failed to fetch employees',
+      });
+    }
   }
 
   async findOne(id: number) {
-    const employee = await this.employeeRepository.findOne({
-      where: { id, deleted_at: IsNull() },
-      relations: { company: true, responses: true },
-    });
+    try {
+      const employee = await this.employeeRepository.findOne({
+        where: { id, deleted_at: IsNull() },
+        relations: { company: true, responses: true },
+      });
 
-    if (!employee) {
-      throw new NotFoundException(`Employee ${id} not found`);
+      if (!employee) {
+        throw new NotFoundException(`Employee ${id} not found`);
+      }
+
+      employee.responses =
+        employee.responses?.filter((response) => !response.deleted_at) ?? [];
+
+      return employee;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throwPersistenceError(error, {
+        defaultMessage: `Failed to fetch employee ${id}`,
+        foreignKeyMessage: `Employee ${id} not found`,
+      });
     }
-
-    employee.responses =
-      employee.responses?.filter((response) => !response.deleted_at) ?? [];
-
-    return employee;
   }
 
   async update(id: number, updateEmployeeDto: UpdateEmployeeDto) {
@@ -130,8 +148,16 @@ export class EmployeeService {
       employee.email = updateEmployeeDto.email.trim().toLowerCase();
     }
 
+    if (updateEmployeeDto.company_name !== undefined) {
+      employee.company_name = updateEmployeeDto.company_name?.trim() || null;
+    }
+
     if (updateEmployeeDto.phone !== undefined) {
       employee.phone = updateEmployeeDto.phone;
+    }
+
+    if (updateEmployeeDto.status !== undefined) {
+      employee.status = updateEmployeeDto.status?.trim() || null;
     }
 
     if (updateEmployeeDto.department !== undefined) {
@@ -213,6 +239,7 @@ export class EmployeeService {
         existingEmployee.first_name = row.first_name?.trim() || 'N/A';
         existingEmployee.last_name = row.last_name?.trim() || 'N/A';
         existingEmployee.phone = row.phone?.trim() || null;
+        existingEmployee.status = row.status?.trim() || null;
         existingEmployee.department = row.department?.trim() || null;
         existingEmployee.deleted_at = null;
         existingEmployee.company = company;
@@ -221,15 +248,17 @@ export class EmployeeService {
         return existingEmployee;
       }
 
-      return this.employeeRepository.create({
-        first_name: row.first_name?.trim() || 'N/A',
-        last_name: row.last_name?.trim() || 'N/A',
-        email,
-        phone: row.phone?.trim() || undefined,
-        department: row.department?.trim() || undefined,
-        survey_token: randomUUID(),
-        company,
-      });
+      const newEmployee = this.employeeRepository.create();
+      newEmployee.first_name = row.first_name?.trim() || 'N/A';
+      newEmployee.last_name = row.last_name?.trim() || 'N/A';
+      newEmployee.email = email;
+      newEmployee.phone = row.phone?.trim() || null;
+      newEmployee.status = row.status?.trim() || null;
+      newEmployee.company_name = row.company_name?.trim() || null;
+      newEmployee.department = row.department?.trim() || null;
+      newEmployee.survey_token = randomUUID();
+      newEmployee.company = company;
+      return newEmployee;
     });
 
     let saved: Employee[];
@@ -277,11 +306,23 @@ export class EmployeeService {
         first_name: (row.first_name ?? row.prenom ?? '').trim() || undefined,
         last_name: (row.last_name ?? row.nom ?? '').trim() || undefined,
         phone: (row.phone ?? '').trim() || undefined,
+        status:
+          ((row as Record<string, string>).status ??
+            (row as Record<string, string>).statut ??
+            '')
+            .trim() || undefined,
         department:
           (
             row.department ??
             row.fonction ??
             row.titre_professionnel ??
+            ''
+          ).trim() || undefined,
+        company_name:
+          (
+            (row.company_name ??
+              (row as any).entreprise ??
+              (row as any).company) ||
             ''
           ).trim() || undefined,
       });

@@ -22,42 +22,42 @@ export enum CampaignParticipantStatus {
 @Unique(['campaign', 'employee'])
 export class CampaignParticipant {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => Campaign, (campaign) => campaign.participants, {
     nullable: false,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'campaign_id' })
-  campaign: Campaign;
+  campaign!: Campaign;
 
   @ManyToOne(() => Employee, (employee) => employee.campaign_participations, {
     nullable: false,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'employee_id' })
-  employee: Employee;
+  employee!: Employee;
 
   @Column({ type: 'varchar', unique: true, nullable: true })
-  participation_token: string;
+  participation_token!: string;
 
   @Column({
     type: 'varchar',
     default: CampaignParticipantStatus.PENDING,
   })
-  status: CampaignParticipantStatus;
+  status!: CampaignParticipantStatus;
 
   @Column({ type: 'timestamp', nullable: true })
-  invitation_sent_at: Date | null;
+  invitation_sent_at!: Date | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  reminder_sent_at: Date | null;
+  reminder_sent_at!: Date | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  completed_at: Date | null;
+  completed_at!: Date | null;
 
   @CreateDateColumn({ type: 'timestamp' })
-  created_at: Date;
+  created_at!: Date;
 
   @BeforeInsert()
   ensureParticipationToken() {

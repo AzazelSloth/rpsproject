@@ -24,7 +24,9 @@ export class QuestionService {
   ) {}
 
   async create(createQuestionDto: CreateQuestionDto) {
-    const campaign = await this.findEditableCampaign(createQuestionDto.campaign_id);
+    const campaign = await this.findEditableCampaign(
+      createQuestionDto.campaign_id,
+    );
 
     const question = this.questionRepository.create({
       question_text: createQuestionDto.question_text,
