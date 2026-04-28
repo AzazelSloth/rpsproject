@@ -217,14 +217,6 @@ export class CampaignService {
     return company;
   }
 
-  private ensureValidDateRange(startDate?: Date | null, endDate?: Date | null) {
-    if (startDate && endDate && endDate < startDate) {
-      throw new BadRequestException(
-        'Campaign end date must be greater than or equal to start date',
-      );
-    }
-  }
-
   /**
    * Récupère et formate toutes les réponses d'une campagne pour l'envoi à n8n.
    * Retourne un tableau d'employés avec leurs réponses Q1..Q28.
