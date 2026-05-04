@@ -8,6 +8,13 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: 3000
+        ,
+        TEMPORARY_ACCESS_ENABLED: "true",
+        TEMPORARY_ACCESS_DELAY_MS: "500",
+        DEFAULT_TEMPORARY_ACCESS_EMAIL: "admin@localhost.local",
+        ADMIN_ALLOWED_EMAILS: "",
+        ADMIN_BOOTSTRAP_EMAILS: "",
+        ALLOWED_REGISTRATION_DOMAINS: ""
       },
       instances: 1,
       exec_mode: "fork",
