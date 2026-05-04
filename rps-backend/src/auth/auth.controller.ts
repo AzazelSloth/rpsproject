@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ApiBody, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto, TemporaryAccessDto } from './dto/auth.dto';
+import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { AuthGuard } from './auth.guard';
 import type { AuthenticatedRequest } from './auth.guard';
 
@@ -33,25 +33,6 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Identifiants invalides' })
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
-  }
-
-  @Post('temporary-access')
-  @ApiBody({ type: TemporaryAccessDto })
-  @ApiResponse({
-    status: 201,
-    description: 'Accès temporaire créé avec succès',
-  })
-  @ApiResponse({ status: 400, description: 'Données invalides' })
-  async temporaryAccess(@Body() temporaryAccessDto: TemporaryAccessDto) {
-    return this.authService.temporaryAccess(temporaryAccessDto);
-  }
-
-  @Get('temporary-access-config')
-  temporaryAccessConfig() {
-    return {
-      delayMs: Number(process.env.TEMPORARY_ACCESS_DELAY_MS || 2000),
-      environment: process.env.NODE_ENV,
-    };
   }
 
   @Get('me')

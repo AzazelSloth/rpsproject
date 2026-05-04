@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsNotEmpty,
-  IsOptional,
   IsString,
   MinLength,
 } from 'class-validator';
@@ -47,23 +46,4 @@ export class RegisterDto {
   @IsNotEmpty()
   @MinLength(6)
   password: string;
-}
-
-export class TemporaryAccessDto {
-  @ApiProperty({
-    description: "Adresse email pour l'accès temporaire",
-    example: 'user@example.com',
-  })
-  @IsEmail()
-  @IsNotEmpty()
-  email: string;
-
-  @ApiProperty({
-    description: "Nom optionnel de l'utilisateur",
-    example: 'Jean Dupont',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  name?: string;
 }

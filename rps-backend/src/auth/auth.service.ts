@@ -10,7 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import bcryptModule from 'bcrypt';
 import { Repository } from 'typeorm';
 import { getAllowedAdminEmails, isRegistrationAllowed } from './admin-access.config';
-import { LoginDto, RegisterDto, TemporaryAccessDto } from './dto/auth.dto';
+import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { User } from './user.entity';
 
 const bcrypt = bcryptModule as unknown as {
@@ -20,23 +20,6 @@ const bcrypt = bcryptModule as unknown as {
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
-}
-
-function buildDefaultNameFromEmail(email: string) {
-  const localPart = normalizeEmail(email).split('@')[0] ?? 'admin';
-  return localPart
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function isTemporaryAccessEnabled() {
-  return process.env.TEMPORARY_ACCESS_ENABLED === 'true';
-}
-
-function isAllowedAdminEmail(email: string) {
-  return new Set(getAllowedAdminEmails()).has(normalizeEmail(email));
 }
 
 @Injectable()
@@ -111,53 +94,6 @@ export class AuthService {
 
     return {
       user: { id: user.id, email: user.email, name: user.name },
-      token,
-    };
-  }
-
-  async temporaryAccess(temporaryAccessDto: TemporaryAccessDto) {
-    if (!isTemporaryAccessEnabled()) {
-      throw new ForbiddenException(
-        'Temporary access is disabled. Use the admin login flow.',
-      );
-    }
-
-    const normalizedEmail = normalizeEmail(temporaryAccessDto.email);
-
-    if (!isAllowedAdminEmail(normalizedEmail)) {
-      throw new ForbiddenException('Access not allowed for this email');
-    }
-
-    // Add a small delay for security/debugging purposes
-    const delayMs = Number(process.env.TEMPORARY_ACCESS_DELAY_MS || 2000);
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-
-    const requestedName = temporaryAccessDto.name?.trim();
-    let user = await this.userRepository?.findOne({
-      where: { email: normalizedEmail },
-    });
-
-    if (!user) {
-      user = this.userRepository?.create({
-        email: normalizedEmail,
-        name: requestedName || buildDefaultNameFromEmail(normalizedEmail),
-        password: null,
-      });
-    } else if (requestedName && requestedName !== user.name) {
-      user.name = requestedName;
-    } else if (!user.name) {
-      user.name = buildDefaultNameFromEmail(normalizedEmail);
-    }
-
-    const savedUser = await this.userRepository?.save(user!);
-    const token = this.generateToken(savedUser!);
-
-    return {
-      user: {
-        id: savedUser!.id,
-        email: savedUser!.email,
-        name: savedUser!.name,
-      },
       token,
     };
   }

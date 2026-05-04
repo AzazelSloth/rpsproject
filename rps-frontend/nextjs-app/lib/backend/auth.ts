@@ -23,11 +23,6 @@ export type RegisterCredentials = {
   password: string;
 };
 
-export type TemporaryAccessCredentials = {
-  email: string;
-  name?: string;
-};
-
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
@@ -70,22 +65,6 @@ export async function register(credentials: RegisterCredentials): Promise<AuthRe
     body: JSON.stringify({
       ...credentials,
       email: normalizeEmail(credentials.email),
-    }),
-  });
-
-  return readJsonOrThrow<AuthResponse>(response);
-}
-
-export async function temporaryAccess(
-  credentials: TemporaryAccessCredentials,
-): Promise<AuthResponse> {
-  const response = await appFetch("/api/auth/temporary-access", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...credentials,
-      email: normalizeEmail(credentials.email),
-      name: credentials.name?.trim() || undefined,
     }),
   });
 

@@ -21,12 +21,6 @@ export function getBootstrapAdminEmails() {
   return bootstrapEmails.length ? bootstrapEmails : getAllowedAdminEmails();
 }
 
-export function getDefaultTemporaryAccessEmail() {
-  return (
-    process.env.DEFAULT_TEMPORARY_ACCESS_EMAIL?.trim().toLowerCase() ?? null
-  );
-}
-
 export function getAllowedRegistrationDomains(): string[] {
   return parseDomainList(process.env.ALLOWED_REGISTRATION_DOMAINS);
 }
