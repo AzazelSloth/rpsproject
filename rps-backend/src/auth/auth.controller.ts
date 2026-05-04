@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { ApiBody, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { isAuthDisabled } from './auth.guard';
 import { LoginDto, RegisterDto, TemporaryAccessDto } from './dto/auth.dto';
 import { AuthGuard } from './auth.guard';
 import type { AuthenticatedRequest } from './auth.guard';
@@ -52,7 +51,6 @@ export class AuthController {
     return {
       delayMs: Number(process.env.TEMPORARY_ACCESS_DELAY_MS || 2000),
       environment: process.env.NODE_ENV,
-      authDisabled: isAuthDisabled(),
     };
   }
 

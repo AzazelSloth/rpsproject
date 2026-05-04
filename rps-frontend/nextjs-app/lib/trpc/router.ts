@@ -2,7 +2,6 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
 	isBackendConfigured,
-	isMockBackendEnabled,
 } from "@/lib/backend/client";
 import {
 	deleteServerBackend as deleteBackend,
@@ -25,13 +24,6 @@ const t = initTRPC.create();
 const scenarioSchema = z.string().optional().nullable();
 
 function ensureBackendConfigured() {
-	if (isMockBackendEnabled()) {
-		throw new TRPCError({
-			code: "PRECONDITION_FAILED",
-			message: "Le backend reel est desactive. Definis NEXT_PUBLIC_BACKEND_MODE=real pour executer cette action.",
-		});
-	}
-
 	if (!isBackendConfigured()) {
 		throw new TRPCError({
 			code: "PRECONDITION_FAILED",

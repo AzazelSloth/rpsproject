@@ -1,6 +1,6 @@
 import { PageErrorState } from "@/components/rps/page-error-state";
 import { Card, SectionHeader } from "@/components/rps/ui";
-import { isBackendConfigured, isMockBackendEnabled } from "@/lib/backend/client";
+import { isBackendConfigured } from "@/lib/backend/client";
 import { getServerBackendCollection as getBackendCollection } from "@/lib/backend/server";
 import type { BackendCampaign, BackendCompany, BackendReport } from "@/lib/backend/types";
 import { CampaignReportsTable } from "./CampaignReportsTable";
@@ -15,7 +15,7 @@ export default async function ReportPage({
   const { scenario, campaignId } = await searchParams;
   const requestedCampaignId = campaignId ? Number(campaignId) : null;
 
-  if (!isBackendConfigured() && !isMockBackendEnabled()) {
+  if (!isBackendConfigured()) {
     return (
       <section className="space-y-6">
         <SectionHeader

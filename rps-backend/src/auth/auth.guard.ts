@@ -19,30 +19,12 @@ export type AuthenticatedRequest = Request & {
   user: AuthTokenPayload;
 };
 
-export const DEMO_AUTH_USER: AuthTokenPayload = {
-  sub: 0,
-  email: 'demo@laroche360.ca',
-};
-
-export function isAuthDisabled() {
-  return (
-    process.env.AUTH_DISABLED === 'true' &&
-    process.env.ALLOW_LOCAL_AUTH_BYPASS === 'true' &&
-    process.env.NODE_ENV !== 'production'
-  );
-}
-
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(@Optional() private readonly jwtService?: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-
-    if (isAuthDisabled()) {
-      request.user = DEMO_AUTH_USER;
-      return true;
-    }
 
     const token = this.extractTokenFromHeader(request);
 

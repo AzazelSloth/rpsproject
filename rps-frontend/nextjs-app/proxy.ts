@@ -2,17 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 const publicRoutes = ["/login", "/signup", "/forgot-password", "/survey-response"];
 
-function isLocalBypassAllowed(request: NextRequest) {
-  const hostname = request.nextUrl.hostname;
-  const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1";
-
-  return (
-    process.env.NODE_ENV !== "production" &&
-    process.env.NEXT_PUBLIC_BACKEND_MODE === "mock" &&
-    isLocalHost
-  );
-}
-
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -38,10 +27,6 @@ export function proxy(request: NextRequest) {
 
   const authToken = request.cookies.get("auth_token")?.value;
   if (authToken) {
-    return NextResponse.next();
-  }
-
-  if (isLocalBypassAllowed(request)) {
     return NextResponse.next();
   }
 

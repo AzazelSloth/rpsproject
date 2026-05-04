@@ -11,7 +11,6 @@ import bcryptModule from 'bcrypt';
 import { Repository } from 'typeorm';
 import { getAllowedAdminEmails, isRegistrationAllowed } from './admin-access.config';
 import { LoginDto, RegisterDto, TemporaryAccessDto } from './dto/auth.dto';
-import { DEMO_AUTH_USER, isAuthDisabled } from './auth.guard';
 import { User } from './user.entity';
 
 const bcrypt = bcryptModule as unknown as {
@@ -32,17 +31,6 @@ function buildDefaultNameFromEmail(email: string) {
     .join(' ');
 }
 
-function buildDemoAuthResponse(name?: string, email?: string) {
-  return {
-    user: {
-      id: DEMO_AUTH_USER.sub,
-      email: normalizeEmail(email || DEMO_AUTH_USER.email),
-      name: name?.trim() || 'Admin demo',
-    },
-    token: 'auth-disabled',
-  };
-}
-
 function isTemporaryAccessEnabled() {
   return process.env.TEMPORARY_ACCESS_ENABLED === 'true';
 }
@@ -61,10 +49,6 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    if (isAuthDisabled()) {
-      return buildDemoAuthResponse(registerDto.name, registerDto.email);
-    }
-
     const normalizedEmail = normalizeEmail(registerDto.email);
     
     // Check if registration is allowed for this email
@@ -105,10 +89,6 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    if (isAuthDisabled()) {
-      return buildDemoAuthResponse(undefined, loginDto.email);
-    }
-
     const normalizedEmail = normalizeEmail(loginDto.email);
 
     const user = await this.userRepository?.findOne({
@@ -152,10 +132,6 @@ export class AuthService {
     const delayMs = Number(process.env.TEMPORARY_ACCESS_DELAY_MS || 2000);
     await new Promise((resolve) => setTimeout(resolve, delayMs));
 
-    if (isAuthDisabled()) {
-      return buildDemoAuthResponse(temporaryAccessDto.name, normalizedEmail);
-    }
-
     const requestedName = temporaryAccessDto.name?.trim();
     let user = await this.userRepository?.findOne({
       where: { email: normalizedEmail },
@@ -194,15 +170,6 @@ export class AuthService {
   }
 
   async validateUser(id: number) {
-    if (isAuthDisabled()) {
-      const demoResponse = buildDemoAuthResponse();
-      return {
-        ...demoResponse.user,
-        id: id || demoResponse.user.id,
-        created_at: new Date(),
-      };
-    }
-
     const user = await this.userRepository?.findOne({
       where: { id },
       select: ['id', 'email', 'name', 'created_at'],

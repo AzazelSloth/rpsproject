@@ -1,7 +1,5 @@
 import { appFetch } from "@/lib/api";
 
-export const DEMO_AUTH_TOKEN = "auth-disabled";
-
 export type User = {
   id: number;
   email: string;
@@ -50,17 +48,6 @@ async function readJsonOrThrow<T>(response: Response): Promise<T> {
   }
 
   return payload as T;
-}
-
-export function createDemoAuthResponse(name?: string, email?: string): AuthResponse {
-  return {
-    user: {
-      id: 0,
-      email: normalizeEmail(email || "demo@laroche360.ca"),
-      name: name?.trim() || "Admin demo",
-    },
-    token: DEMO_AUTH_TOKEN,
-  };
 }
 
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {

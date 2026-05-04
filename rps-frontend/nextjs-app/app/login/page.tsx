@@ -7,10 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
-import { createDemoAuthResponse, login, saveAuth } from "@/lib/backend/auth";
-import { isMockBackendEnabled } from "@/lib/backend/client";
-
-const DEMO_EMAIL = "demo@laroche360.ca";
+import { login, saveAuth } from "@/lib/backend/auth";
 const headingFontClass = "font-[family-name:var(--font-manrope)]";
 const inputClassName =
   "w-full rounded-[12px] border border-[#ddd2c0] bg-[#f8f3ea] px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#c9a86c] focus:ring-2 focus:ring-[#c9a86c]/30 disabled:cursor-not-allowed disabled:text-slate-500";
@@ -25,7 +22,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const isDemoMode = isMockBackendEnabled();
 
   async function handleLogin(event?: FormEvent) {
     event?.preventDefault();
@@ -33,12 +29,6 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      if (isDemoMode) {
-        saveAuth(createDemoAuthResponse("Mode demo", DEMO_EMAIL));
-        router.push("/dashboard");
-        return;
-      }
-
       const response = await login({ email, password });
       saveAuth(response);
       router.push("/dashboard");
@@ -71,9 +61,7 @@ export default function LoginPage() {
           </h1>
 
           <p className="max-w-2xl text-base leading-7 text-slate-600">
-            {isDemoMode
-              ? "Le mode demo est actif parce que le projet est configure explicitement en mock."
-              : "Accédez à votre espace avec un compte autorisé."}
+            Accédez à votre espace avec un compte autorisé.
           </p>
 
           <p className="text-sm text-slate-600">
@@ -84,15 +72,6 @@ export default function LoginPage() {
           </p>
 
           <div className="flex flex-wrap gap-3">
-            {isDemoMode ? (
-              <button
-                onClick={() => void handleLogin()}
-                disabled={isLoading}
-                className={secondaryButtonClassName}
-              >
-                {isLoading ? "Ouverture..." : "Acceder au mode demo"}
-              </button>
-            ) : null}
             <Link
               href="/survey-response"
               className="rounded-[12px] border border-[#d8ccba] bg-[#fffaf1] px-5 py-3 text-sm font-semibold text-slate-700 no-underline transition hover:bg-[#f8eedf]"
@@ -104,10 +83,10 @@ export default function LoginPage() {
 
         <Card className="mx-auto w-full max-w-md rounded-[22px] border border-[#dfd1b9] bg-[rgba(255,252,246,0.95)] p-6 shadow-[0_24px_60px_rgba(40,33,24,0.16)] sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
-            {isDemoMode ? "Mode demo" : "Acces administrateur"}
+            Acces administrateur
           </p>
           <h2 className={`mt-2 ${headingFontClass} text-2xl font-extrabold tracking-tight text-slate-900`}>
-            {isDemoMode ? "Acces a votre espace" : "Connexion administrateur"}
+            Connexion administrateur
           </h2>
 
           <form onSubmit={(event) => void handleLogin(event)} className="mt-6 space-y-4">
@@ -118,10 +97,9 @@ export default function LoginPage() {
               <input
                 id="login-email"
                 type="email"
-                value={isDemoMode ? DEMO_EMAIL : email}
+                value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                disabled={isDemoMode || isLoading}
-                readOnly={isDemoMode}
+                disabled={isLoading}
                 className={inputClassName}
                 placeholder="admin@entreprise.com"
               />
@@ -134,10 +112,9 @@ export default function LoginPage() {
               <input
                 id="login-password"
                 type="password"
-                value={isDemoMode ? "********" : password}
+                value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                disabled={isDemoMode || isLoading}
-                readOnly={isDemoMode}
+                disabled={isLoading}
                 className={inputClassName}
                 placeholder="Votre mot de passe"
               />
@@ -150,11 +127,7 @@ export default function LoginPage() {
             ) : null}
 
             <button type="submit" disabled={isLoading} className={primaryButtonClassName}>
-              {isLoading
-                ? "Connexion..."
-                : isDemoMode
-                  ? "Acceder au mode demo"
-                  : "Se connecter"}
+              {isLoading ? "Connexion..." : "Se connecter"}
             </button>
           </form>
         </Card>

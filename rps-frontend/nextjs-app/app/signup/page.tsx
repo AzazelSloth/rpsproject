@@ -6,9 +6,6 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
 import { register, saveAuth } from "@/lib/backend/auth";
-import { isMockBackendEnabled } from "@/lib/backend/client";
-
-const DEMO_EMAIL = "demo@laroche360.ca";
 const headingFontClass = "font-[family-name:var(--font-manrope)]";
 const inputClassName =
   "w-full rounded-[12px] border border-[#ddd2c0] bg-[#f8f3ea] px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#c9a86c] focus:ring-2 focus:ring-[#c9a86c]/30 disabled:cursor-not-allowed disabled:text-slate-500";
@@ -17,7 +14,6 @@ const primaryButtonClassName =
 
 export default function SignupPage() {
   const router = useRouter();
-  const isDemoMode = isMockBackendEnabled();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [name, setName] = useState("");
@@ -30,12 +26,7 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      let response;
-      if (isDemoMode) {
-        response = { user: { id: 0, email: DEMO_EMAIL, name: "Demo User" }, token: "auth-disabled" };
-      } else {
-        response = await register({ name, email, password });
-      }
+      const response = await register({ name, email, password });
       saveAuth(response);
       router.push("/dashboard");
     } catch (err) {
@@ -67,39 +58,25 @@ export default function SignupPage() {
           </h1>
 
           <p className="max-w-2xl text-base leading-7 text-slate-600">
-            {isDemoMode
-              ? "Le mode demo est actif. Vous pouvez créer un compte demo sans restriction."
-              : "Inscrivez-vous avec un email autorisé pour accéder à la plateforme."}
+            Inscrivez-vous avec un email autorisé pour accéder à la plateforme.
           </p>
 
           <div className="flex flex-wrap gap-3">
-            {isDemoMode ? (
-              <button
-                onClick={() => {
-                  const response = { user: { id: 0, email: DEMO_EMAIL, name: "Demo User" }, token: "auth-disabled" };
-                  saveAuth(response);
-                  router.push("/dashboard");
-                }}
-                className="rounded-[12px] border border-[#d8ccba] bg-[#fffaf1] px-5 py-3 text-sm font-semibold text-slate-700 no-underline transition hover:bg-[#f8eedf]"
-              >
-                Accéder au mode demo
-              </button>
-            ) : null}
             <Link
               href="/login"
               className="rounded-[12px] border border-[#d8ccba] bg-[#fffaf1] px-5 py-3 text-sm font-semibold text-slate-700 no-underline transition hover:bg-[#f8eedf]"
             >
-              Déjà un compte ? Connexion
+              J'ai deja un compte
             </Link>
           </div>
         </section>
 
         <Card className="mx-auto w-full max-w-md rounded-[22px] border border-[#dfd1b9] bg-[rgba(255,252,246,0.95)] p-6 shadow-[0_24px_60px_rgba(40,33,24,0.16)] sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
-            {isDemoMode ? "Mode demo" : "Inscription"}
+            Inscription
           </p>
           <h2 className={`mt-2 ${headingFontClass} text-2xl font-extrabold tracking-tight text-slate-900`}>
-            {isDemoMode ? "Acces demo" : "Créer un compte"}
+            Créer un compte
           </h2>
 
           <form onSubmit={handleSignup} className="mt-6 space-y-4">
@@ -110,10 +87,9 @@ export default function SignupPage() {
               <input
                 id="signup-name"
                 type="text"
-                value={isDemoMode ? "Demo User" : name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isDemoMode || isLoading}
-                readOnly={isDemoMode}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                disabled={isLoading}
                 className={inputClassName}
                 placeholder="Jean Dupont"
                 required
@@ -127,10 +103,9 @@ export default function SignupPage() {
               <input
                 id="signup-email"
                 type="email"
-                value={isDemoMode ? DEMO_EMAIL : email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isDemoMode || isLoading}
-                readOnly={isDemoMode}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={isLoading}
                 className={inputClassName}
                 placeholder="votre@email.com"
                 required
@@ -144,10 +119,9 @@ export default function SignupPage() {
               <input
                 id="signup-password"
                 type="password"
-                value={isDemoMode ? "********" : password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isDemoMode || isLoading}
-                readOnly={isDemoMode}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                disabled={isLoading}
                 className={inputClassName}
                 placeholder="Min. 6 caractères"
                 minLength={6}

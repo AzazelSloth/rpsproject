@@ -7,7 +7,6 @@ import {
 } from "@/lib/demo-data";
 import {
   BackendConfigurationError,
-  isMockBackendEnabled,
 } from "@/lib/backend/client";
 import {
   getServerBackendCollection as getBackendCollection,
@@ -170,12 +169,6 @@ export async function getSurveyCampaign(
   scenario?: string | null,
   campaignId?: number | null,
 ) {
-  const demoDataset = getDemoDataset(scenario);
-
-  if (isMockBackendEnabled()) {
-    return demoDataset.campaign;
-  }
-
   try {
     const campaigns = await getBackendCollection<BackendCampaign>("/campaigns");
     const activeCampaign = resolveSelectedCampaign(campaigns, campaignId);
@@ -209,12 +202,6 @@ export type SurveyOption = {
 };
 
 export async function getAllSurveys(scenario?: string | null): Promise<SurveyOption[]> {
-  const demoDataset = getDemoDataset(scenario);
-
-  if (isMockBackendEnabled()) {
-    return [buildDemoSurveyOption(demoDataset)];
-  }
-
   try {
     const campaigns = await getBackendCollection<BackendCampaign>("/campaigns");
 
@@ -340,12 +327,6 @@ export async function getSurveyBuilderData(
 }
 
 export async function getEmployees(scenario?: string | null) {
-  const demoDataset = getDemoDataset(scenario);
-
-  if (isMockBackendEnabled()) {
-    return demoDataset.employees;
-  }
-
   try {
     const entries = await getBackendCollection<BackendEmployee>("/employees");
     return entries.map(mapBackendEmployee);
@@ -358,16 +339,7 @@ export async function getEmployeeManagementData(
   scenario?: string | null,
   campaignId?: number | null,
 ): Promise<EmployeeManagementData> {
-  const demoDataset = getDemoDataset(scenario);
-
-  if (isMockBackendEnabled()) {
-    return {
-      campaignId: demoDataset.campaign.id,
-      companyId: 1,
-      campaignName: demoDataset.campaign.title,
-      campaignStatus: demoDataset.campaign.status,
-      participationRate: demoDataset.dashboardMetrics.participationRate,
-      totalParticipants: demoDataset.employees.length,
+  try {
       completedParticipants: demoDataset.employees.filter(
         (employee) => employee.responseStatus === "Responded",
       ).length,
@@ -446,17 +418,6 @@ export async function getDashboardData(
   scenario?: string | null,
   campaignId?: number | null,
 ): Promise<DashboardData> {
-  const demoDataset = getDemoDataset(scenario);
-
-  if (isMockBackendEnabled()) {
-    return {
-      metrics: demoDataset.dashboardMetrics,
-      trendByRange: demoDataset.trendByRange,
-      departmentDistribution: demoDataset.departmentDistribution,
-      insights: demoDataset.aiInsights,
-    };
-  }
-
   try {
     const [campaigns, responses] = await Promise.all([
       getBackendCollection<BackendCampaign>("/campaigns"),
@@ -482,19 +443,6 @@ export async function getResultsData(
   scenario?: string | null,
   campaignId?: number | null,
 ): Promise<ResultsData> {
-  const demoDataset = getDemoDataset(scenario);
-
-  if (isMockBackendEnabled()) {
-    return {
-      metrics: {
-        participationRate: demoDataset.dashboardMetrics.participationRate,
-        averageStress: demoDataset.dashboardMetrics.averageStress,
-      },
-      bars: demoDataset.stressByDepartment,
-      analysis: demoDataset.aiAnalysis,
-    };
-  }
-
   try {
     const [campaigns, responses] = await Promise.all([
       getBackendCollection<BackendCampaign>("/campaigns"),
@@ -520,16 +468,7 @@ export async function getReportData(
   scenario?: string | null,
   campaignId?: number | null,
 ) {
-  const demoDataset = getDemoDataset(scenario);
   const template = await getReportTemplateData();
-
-  if (isMockBackendEnabled()) {
-    return {
-      ...demoDataset.reportData,
-      archivedReportPath: null,
-      template,
-    };
-  }
 
   try {
     const [campaigns, responses, reports] = await Promise.all([
@@ -573,22 +512,6 @@ export async function getSurveyResponseData(
   token?: string,
   scenario?: string | null,
 ): Promise<SurveyResponseData> {
-  const demoDataset = getDemoDataset(scenario);
-
-  if (isMockBackendEnabled()) {
-    return {
-      participantToken: demoSurveyAccessToken,
-      employeeId: demoDataset.employees[0]?.id ?? 1,
-      employeeName: demoDataset.employees[0]?.name ?? "Salarie demo",
-      employeeTitle: demoDataset.employees[0]?.department ?? "Collaborateur",
-      companyName: demoDataset.campaign.companyName ?? "Entreprise demo",
-      campaignName: demoDataset.campaign.title,
-      status: "pending",
-      completedAt: null,
-      questions: demoDataset.surveyQuestions,
-    };
-  }
-
   if (token) {
     try {
       const questionnaire = await getBackendItem<BackendQuestionnaire>(
