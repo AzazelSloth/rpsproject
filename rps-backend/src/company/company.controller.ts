@@ -39,7 +39,10 @@ export class CompanyController {
 
   @Patch(':id')
   @ApiBody({ type: UpdateCompanyDto })
-  @ApiResponse({ status: 200, description: 'Entreprise mise à jour avec succès' })
+  @ApiResponse({
+    status: 200,
+    description: 'Entreprise mise à jour avec succès',
+  })
   @ApiResponse({ status: 400, description: 'Données invalides' })
   update(
     @Param('id', ParseIntPipe) id: number,

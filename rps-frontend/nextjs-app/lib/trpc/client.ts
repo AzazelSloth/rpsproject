@@ -9,7 +9,7 @@ export function getTrpcClient() {
     trpcClient = createTRPCProxyClient<AppRouter>({
       links: [
         httpLink({
-          url: getAppUrl("/trpc"),
+          url: getAppUrl("/api/trpc"),
           // Increase timeout for slow connections like Starlink (default is 10s)
           fetch: (url, options) => {
             return appFetch(String(url), {

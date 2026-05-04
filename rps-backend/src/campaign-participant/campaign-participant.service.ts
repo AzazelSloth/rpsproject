@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -24,10 +25,11 @@ import {
   SubmitCampaignResponsesDto,
   UpdateCampaignParticipantDto,
 } from './dto/campaign-participant.dto';
-import { CampaignService } from '../campaign/campaign.service';
 
 @Injectable()
 export class CampaignParticipantService {
+  private readonly logger = new Logger(CampaignParticipantService.name);
+
   constructor(
     @InjectRepository(CampaignParticipant)
     private readonly campaignParticipantRepository: Repository<CampaignParticipant>,
@@ -40,12 +42,18 @@ export class CampaignParticipantService {
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
     private readonly dataSource: DataSource,
-    private readonly campaignService: CampaignService,
   ) {}
 
   private static normalizeCompanyName(value?: string | null) {
     const normalized = value?.trim();
     return normalized ? normalized : null;
+  }
+
+  private static getCompanyNameFromCsvRow(
+    row: Record<string, string>,
+  ): string | undefined {
+    const companyName = row.company_name ?? row.entreprise ?? row.company ?? '';
+    return companyName.trim() || undefined;
   }
 
   async create(createCampaignParticipantDto: CreateCampaignParticipantDto) {
@@ -416,10 +424,10 @@ export class CampaignParticipantService {
     payload: ImportCampaignEmployeesDto,
   ) {
     try {
-      console.log(
+      this.logger.log(
         `[Import] Starting import for campaign ${campaignId}, company ${payload.company_id}`,
       );
-      console.log(
+      this.logger.log(
         `[Import] CSV length: ${payload.csv?.length || 0}, Rows provided: ${payload.rows?.length || 0}`,
       );
 
@@ -435,7 +443,7 @@ export class CampaignParticipantService {
         ? payload.rows
         : this.parseCsv(payload.csv ?? '');
 
-      console.log(`[Import] Parsed ${rows.length} rows from CSV`);
+      this.logger.log(`[Import] Parsed ${rows.length} rows from CSV`);
 
       const normalizedRows = Array.from(
         new Map(
@@ -458,7 +466,7 @@ export class CampaignParticipantService {
         ),
       ];
 
-      console.log(
+      this.logger.log(
         `[Import] Starting import of ${normalizedRows.length} employees for campaign ${campaignId}`,
       );
 
@@ -473,7 +481,7 @@ export class CampaignParticipantService {
 
       for (let i = 0; i < normalizedRows.length; i += BATCH_SIZE) {
         const batch = normalizedRows.slice(i, i + BATCH_SIZE);
-        console.log(
+        this.logger.log(
           `[Import] Processing batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} rows)`,
         );
 
@@ -508,7 +516,7 @@ export class CampaignParticipantService {
               existingEmployee &&
               existingEmployee.company.id !== payload.company_id
             ) {
-              console.warn(
+              this.logger.warn(
                 `[Import] Employee ${email} already exists for different company. Skipping.`,
               );
               continue;
@@ -536,21 +544,23 @@ export class CampaignParticipantService {
           }
 
           if (employeesToSave.length > 0) {
-            const savedBatch =
-              await this.employeeRepository.save(employeesToSave);
-            for (const employee of savedBatch) {
-              if (employee.email) {
-                employeesByEmail.set(employee.email.toLowerCase(), employee);
+            // Save batch within a transaction
+            await this.employeeRepository.manager.transaction(async (transactionalEntityManager) => {
+              const savedBatch = await transactionalEntityManager.save(employeesToSave);
+              for (const employee of savedBatch) {
+                if (employee.email) {
+                  employeesByEmail.set(employee.email.toLowerCase(), employee);
+                }
               }
-            }
-            console.log(
-              `[Import] Saved ${savedBatch.length} employees in batch`,
-            );
+              this.logger.log(
+                `[Import] Saved ${savedBatch.length} employees in batch`,
+              );
+            });
           }
         } catch (error) {
-          console.error(
+          this.logger.error(
             `[Import] Error processing batch starting at index ${i}:`,
-            error,
+            error instanceof Error ? error.stack : undefined,
           );
           throwPersistenceError(error, {
             defaultMessage: `Failed to import employees for batch ${Math.floor(i / BATCH_SIZE) + 1}`,
@@ -569,7 +579,7 @@ export class CampaignParticipantService {
 
       const employees = Array.from(employeesByEmail.values());
 
-      console.log(
+      this.logger.log(
         `[Import] Successfully imported ${employees.length} unique employees`,
       );
 
@@ -612,7 +622,7 @@ export class CampaignParticipantService {
         try {
           participants =
             await this.campaignParticipantRepository.save(participantsToCreate);
-          console.log(
+          this.logger.log(
             `[Import] Created ${participants.length} new participants`,
           );
 
@@ -622,7 +632,7 @@ export class CampaignParticipantService {
                 .map((participant) => participant.id)
                 .filter((id): id is number => id !== undefined && id !== null);
 
-              console.log(
+              this.logger.log(
                 `[Import] Reloading ${participantIds.length} participants with employee relations`,
               );
 
@@ -631,19 +641,24 @@ export class CampaignParticipantService {
                   where: { id: In(participantIds) },
                   relations: { employee: true },
                 });
-                console.log(
+                this.logger.log(
                   `[Import] Reloaded ${participants.length} participants with employee relations`,
                 );
               }
             }
           } catch (reloadError) {
-            console.warn(
+            this.logger.warn(
               '[Import] Could not reload participants with relations, continuing with direct mapping:',
-              reloadError,
+              reloadError instanceof Error
+                ? reloadError.message
+                : String(reloadError),
             );
           }
         } catch (error) {
-          console.error('[Import] Error saving participants:', error);
+          this.logger.error(
+            '[Import] Error saving participants',
+            error instanceof Error ? error.stack : undefined,
+          );
           throwPersistenceError(error, {
             defaultMessage: 'Failed to create campaign participants',
             duplicateMessage:
@@ -658,7 +673,9 @@ export class CampaignParticipantService {
         }
       }
 
-      console.log('[Import] Company names extracted:', uniqueCompanyNames);
+      this.logger.log(
+        `[Import] Company names extracted: ${uniqueCompanyNames.join(', ') || 'none'}`,
+      );
 
       const result = {
         imported_employees: employees.length,
@@ -698,17 +715,15 @@ export class CampaignParticipantService {
           };
         }),
         company_names: uniqueCompanyNames,
+        analysis_status: 'manual_trigger_required',
       };
-
-      this.triggerAnalysisIfReady(campaignId, uniqueCompanyNames[0]).catch(
-        (error) => {
-          console.error('[Import] Error in auto-trigger analysis:', error);
-        },
-      );
 
       return result;
     } catch (error) {
-      console.error('[Import] Fatal error during import:', error);
+      this.logger.error(
+        '[Import] Fatal error during import',
+        error instanceof Error ? error.stack : undefined,
+      );
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException
@@ -729,64 +744,6 @@ export class CampaignParticipantService {
             'A generated participation token already exists',
         },
       });
-    }
-  }
-
-  /**
-   * Automatically triggers analysis if campaign responses are ready
-   * This runs in background after import completes
-   */
-  private async triggerAnalysisIfReady(
-    campaignId: number,
-    companyName?: string,
-  ): Promise<void> {
-    try {
-      await this.findCampaignOrThrow(campaignId);
-
-      const participants = await this.campaignParticipantRepository.find({
-        where: {
-          campaign: { id: campaignId },
-          employee: { deleted_at: IsNull() },
-        },
-        relations: { employee: true },
-      });
-
-      const completedCount = participants.filter(
-        (p) => p.status === CampaignParticipantStatus.COMPLETED,
-      ).length;
-
-      const participantCount = participants.length;
-
-      const completionRate =
-        participantCount > 0 ? completedCount / participantCount : 0;
-
-      if (completedCount >= 5 || completionRate >= 0.5) {
-        console.log(
-          `[Auto-Analysis] Triggering analysis for campaign ${campaignId} ` +
-            `(${completedCount}/${participantCount} completed, ${companyName})`,
-        );
-
-        const userEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-
-        await this.campaignService.analyzeWithCompanyName(
-          campaignId,
-          userEmail,
-          companyName,
-        );
-
-        console.log(`[Auto-Analysis] Analysis triggered successfully`);
-      } else {
-        console.log(
-          `[Auto-Analysis] Skipping analysis for campaign ${campaignId} ` +
-            `(${completedCount}/${participantCount} completed - not enough data)`,
-        );
-      }
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        console.warn(`[Auto-Analysis] Campaign ${campaignId} not found`);
-        return;
-      }
-      console.error('[Auto-Analysis] Error:', error);
     }
   }
 
@@ -880,7 +837,7 @@ export class CampaignParticipantService {
       return [];
     }
 
-    console.log('[CSV] Headers detected:', headers);
+    this.logger.log(`[CSV] Headers detected: ${headers.join(', ')}`);
 
     const rows: ImportCampaignEmployeeRowDto[] = [];
 
@@ -895,7 +852,7 @@ export class CampaignParticipantService {
         ).trim();
 
         if (!email || !email.includes('@')) {
-          console.warn(
+          this.logger.warn(
             `[CSV] Row ${i + 2}: Missing or invalid email '${email}', skipping`,
           );
           continue;
@@ -906,11 +863,7 @@ export class CampaignParticipantService {
           first_name: (row.first_name ?? row.prenom ?? '').trim() || undefined,
           last_name: (row.last_name ?? row.nom ?? '').trim() || undefined,
           phone: (row.phone ?? '').trim() || undefined,
-          status:
-            ((row as Record<string, string>).status ??
-              (row as Record<string, string>).statut ??
-              '')
-              .trim() || undefined,
+          status: (row.status ?? row.statut ?? '').trim() || undefined,
           department:
             (
               row.department ??
@@ -919,19 +872,17 @@ export class CampaignParticipantService {
               ''
             ).trim() || undefined,
           company_name:
-            (
-              (row.company_name ??
-                (row as any).entreprise ??
-                (row as any).company) ||
-              ''
-            ).trim() || undefined,
+            CampaignParticipantService.getCompanyNameFromCsvRow(row),
         });
       } catch (error) {
-        console.error(`[CSV] Error parsing row ${i + 2}:`, error);
+        this.logger.error(
+          `[CSV] Error parsing row ${i + 2}`,
+          error instanceof Error ? error.stack : undefined,
+        );
       }
     }
 
-    console.log(
+    this.logger.log(
       `[CSV] Successfully parsed ${rows.length} valid rows from ${dataLineCount} total rows`,
     );
     return rows;

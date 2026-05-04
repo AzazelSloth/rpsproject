@@ -1,20 +1,19 @@
 "use client";
 
-import { useState } from "react";
+"use client";
+
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
-import { createDemoAuthResponse, saveAuth, type AuthResponse } from "@/lib/backend/auth";
-import { isBackendConfigured } from "@/lib/backend/client";
-import { appFetch } from "@/lib/api";
+import { createDemoAuthResponse, login, saveAuth } from "@/lib/backend/auth";
+import { isMockBackendEnabled } from "@/lib/backend/client";
 
 const DEMO_EMAIL = "demo@laroche360.ca";
-const DEMO_PASSWORD_MASK = "********";
-const DEMO_BUTTON_LABEL = "Acceder au mode démo";
 const headingFontClass = "font-[family-name:var(--font-manrope)]";
-const disabledInputClassName =
-  "w-full rounded-[12px] border border-[#ddd2c0] bg-[#efe8db] px-4 py-3 text-sm text-slate-500 outline-none disabled:cursor-not-allowed";
+const inputClassName =
+  "w-full rounded-[12px] border border-[#ddd2c0] bg-[#f8f3ea] px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#c9a86c] focus:ring-2 focus:ring-[#c9a86c]/30 disabled:cursor-not-allowed disabled:text-slate-500";
 const primaryButtonClassName =
   "w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.14)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:cursor-not-allowed disabled:opacity-60";
 const secondaryButtonClassName =
@@ -24,46 +23,27 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const isDemoMode = isMockBackendEnabled();
 
-  function openDemoSession() {
+  async function handleLogin(event?: FormEvent) {
+    event?.preventDefault();
     setError(null);
     setIsLoading(true);
 
     try {
-      if (!isBackendConfigured()) {
+      if (isDemoMode) {
         saveAuth(createDemoAuthResponse("Mode demo", DEMO_EMAIL));
         router.push("/dashboard");
         return;
       }
 
-      void openTemporaryAccessSession();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ouverture de session indisponible.");
-      setIsLoading(false);
-    }
-  }
-
-  async function openTemporaryAccessSession() {
-    try {
-      const response = await appFetch("/api/auth/temporary-access", {
-        method: "POST",
-        cache: "no-store",
-      });
-
-      const payload = (await response.json()) as AuthResponse | { error?: string };
-
-      if (!response.ok) {
-        throw new Error(
-          "error" in payload && payload.error
-            ? payload.error
-            : "Ouverture de session indisponible.",
-        );
-      }
-
-      saveAuth(payload as AuthResponse);
+      const response = await login({ email, password });
+      saveAuth(response);
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ouverture de session indisponible.");
+      setError(err instanceof Error ? err.message : "Connexion administrateur indisponible.");
     } finally {
       setIsLoading(false);
     }
@@ -90,32 +70,47 @@ export default function LoginPage() {
             Votre espace de pilotage des risques psychosociaux.
           </h1>
 
+          <p className="max-w-2xl text-base leading-7 text-slate-600">
+            {isDemoMode
+              ? "Le mode demo est actif parce que le projet est configure explicitement en mock."
+              : "Accédez à votre espace avec un compte autorisé."}
+          </p>
+
+          <p className="text-sm text-slate-600">
+            Pas encore de compte ?{' '}
+            <Link href="/signup" className="font-semibold text-[#c9a86c] hover:underline">
+              Créer un compte
+            </Link>
+          </p>
+
           <div className="flex flex-wrap gap-3">
-            <button
-              onClick={openDemoSession}
-              disabled={isLoading}
-              className={secondaryButtonClassName}
-            >
-              {isLoading ? "Ouverture..." : DEMO_BUTTON_LABEL}
-            </button>
+            {isDemoMode ? (
+              <button
+                onClick={() => void handleLogin()}
+                disabled={isLoading}
+                className={secondaryButtonClassName}
+              >
+                {isLoading ? "Ouverture..." : "Acceder au mode demo"}
+              </button>
+            ) : null}
             <Link
               href="/survey-response"
               className="rounded-[12px] border border-[#d8ccba] bg-[#fffaf1] px-5 py-3 text-sm font-semibold text-slate-700 no-underline transition hover:bg-[#f8eedf]"
             >
-              Voir le parcours salarié
+              Voir le parcours salarie
             </Link>
           </div>
         </section>
 
         <Card className="mx-auto w-full max-w-md rounded-[22px] border border-[#dfd1b9] bg-[rgba(255,252,246,0.95)] p-6 shadow-[0_24px_60px_rgba(40,33,24,0.16)] sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
-            Bienvenue
+            {isDemoMode ? "Mode demo" : "Acces administrateur"}
           </p>
           <h2 className={`mt-2 ${headingFontClass} text-2xl font-extrabold tracking-tight text-slate-900`}>
-            Accès à votre espace
+            {isDemoMode ? "Acces a votre espace" : "Connexion administrateur"}
           </h2>
 
-          <div className="mt-6 space-y-4">
+          <form onSubmit={(event) => void handleLogin(event)} className="mt-6 space-y-4">
             <div className="space-y-2">
               <label htmlFor="login-email" className="text-sm font-semibold text-slate-700">
                 Email
@@ -123,10 +118,12 @@ export default function LoginPage() {
               <input
                 id="login-email"
                 type="email"
-                value={DEMO_EMAIL}
-                disabled
-                readOnly
-                className={disabledInputClassName}
+                value={isDemoMode ? DEMO_EMAIL : email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={isDemoMode || isLoading}
+                readOnly={isDemoMode}
+                className={inputClassName}
+                placeholder="admin@entreprise.com"
               />
             </div>
 
@@ -137,10 +134,12 @@ export default function LoginPage() {
               <input
                 id="login-password"
                 type="password"
-                value={DEMO_PASSWORD_MASK}
-                disabled
-                readOnly
-                className={disabledInputClassName}
+                value={isDemoMode ? "********" : password}
+                onChange={(event) => setPassword(event.target.value)}
+                disabled={isDemoMode || isLoading}
+                readOnly={isDemoMode}
+                className={inputClassName}
+                placeholder="Votre mot de passe"
               />
             </div>
 
@@ -150,15 +149,14 @@ export default function LoginPage() {
               </p>
             ) : null}
 
-            <button
-              type="button"
-              onClick={openDemoSession}
-              disabled={isLoading}
-              className={primaryButtonClassName}
-            >
-              {isLoading ? "Ouverture..." : DEMO_BUTTON_LABEL}
+            <button type="submit" disabled={isLoading} className={primaryButtonClassName}>
+              {isLoading
+                ? "Connexion..."
+                : isDemoMode
+                  ? "Acceder au mode demo"
+                  : "Se connecter"}
             </button>
-          </div>
+          </form>
         </Card>
       </div>
     </div>

@@ -54,7 +54,10 @@ export class QuestionController {
 
   @Patch('campaign/:campaignId/reorder')
   @ApiBody({ type: [ReorderQuestionDto] })
-  @ApiResponse({ status: 200, description: 'Questions réordonnées avec succès' })
+  @ApiResponse({
+    status: 200,
+    description: 'Questions réordonnées avec succès',
+  })
   reorder(
     @Param('campaignId', ParseIntPipe) campaignId: number,
     @Body() items: ReorderQuestionDto[],

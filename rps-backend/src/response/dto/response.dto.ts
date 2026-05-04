@@ -10,7 +10,7 @@ import {
 } from 'class-validator';
 
 export class CreateResponseDto {
-  @ApiProperty({ description: 'Identifiant unique de l\'employé', example: 1 })
+  @ApiProperty({ description: "Identifiant unique de l'employé", example: 1 })
   @IsInt()
   @Min(1)
   @IsNotEmpty()
@@ -22,7 +22,10 @@ export class CreateResponseDto {
   @IsNotEmpty()
   question_id: number;
 
-  @ApiProperty({ description: 'Réponse à la question', example: 'Ceci est ma réponse' })
+  @ApiProperty({
+    description: 'Réponse à la question',
+    example: 'Ceci est ma réponse',
+  })
   @IsString()
   @MinLength(1)
   @MaxLength(4000)
@@ -31,13 +34,21 @@ export class CreateResponseDto {
 }
 
 export class UpdateResponseDto {
-  @ApiProperty({ description: 'Identifiant unique de l\'employé', example: 1, required: false })
+  @ApiProperty({
+    description: "Identifiant unique de l'employé",
+    example: 1,
+    required: false,
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
   employee_id?: number;
 
-  @ApiProperty({ description: 'Identifiant unique de la question', example: 1, required: false })
+  @ApiProperty({
+    description: 'Identifiant unique de la question',
+    example: 1,
+    required: false,
+  })
   @IsOptional()
   @IsInt()
   @Min(1)

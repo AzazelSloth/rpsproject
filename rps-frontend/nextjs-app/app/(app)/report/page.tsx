@@ -1,8 +1,8 @@
+import { PageErrorState } from "@/components/rps/page-error-state";
 import { Card, SectionHeader } from "@/components/rps/ui";
-import { getServerTrpcCaller } from "@/lib/trpc/server";
-import { isBackendConfigured } from "@/lib/backend/client";
+import { isBackendConfigured, isMockBackendEnabled } from "@/lib/backend/client";
 import { getServerBackendCollection as getBackendCollection } from "@/lib/backend/server";
-import type { BackendCampaign, BackendReport, BackendCompany } from "@/lib/backend/types";
+import type { BackendCampaign, BackendCompany, BackendReport } from "@/lib/backend/types";
 import { CampaignReportsTable } from "./CampaignReportsTable";
 
 export const dynamic = "force-dynamic";
@@ -15,12 +15,12 @@ export default async function ReportPage({
   const { scenario, campaignId } = await searchParams;
   const requestedCampaignId = campaignId ? Number(campaignId) : null;
 
-  if (!isBackendConfigured()) {
+  if (!isBackendConfigured() && !isMockBackendEnabled()) {
     return (
       <section className="space-y-6">
         <SectionHeader
           eyebrow="Rapports"
-          title="Rapports Résultats"
+          title="Rapports Resultats"
           description="Connecte le backend pour gerer les analyses RPS."
         />
         <Card className="p-8 text-center">
@@ -30,35 +30,40 @@ export default async function ReportPage({
     );
   }
 
-  let campaigns: BackendCampaign[] = [];
-  let reports: BackendReport[] = [];
-  let companies: BackendCompany[] = [];
-
   try {
-    [campaigns, reports, companies] = await Promise.all([
+    const [campaigns, reports, companies] = await Promise.all([
       getBackendCollection<BackendCampaign>("/campaigns"),
       getBackendCollection<BackendReport>("/reports"),
       getBackendCollection<BackendCompany>("/companies"),
     ]);
-  } catch {
-    // Fall back to empty state
-  }
 
-  return (
-    <section className="space-y-6">
-      <SectionHeader
+    return (
+      <section className="space-y-6">
+        <SectionHeader
+          eyebrow="Rapports"
+          title="Rapports Resultats"
+          description="Lance l'analyse IA d'une campagne et retrouve tes rapports dans tes emails."
+        />
+
+        <CampaignReportsTable
+          campaigns={campaigns}
+          reports={reports}
+          companies={companies}
+          scenario={scenario ?? null}
+          initialCampaignId={requestedCampaignId}
+        />
+      </section>
+    );
+  } catch (error) {
+    return (
+      <PageErrorState
         eyebrow="Rapports"
         title="Rapports Resultats"
         description="Lance l'analyse IA d'une campagne et retrouve tes rapports dans tes emails."
+        message={
+          error instanceof Error ? error.message : "Les rapports n'ont pas pu etre charges."
+        }
       />
-
-      <CampaignReportsTable
-        campaigns={campaigns}
-        reports={reports}
-        companies={companies}
-        scenario={scenario ?? null}
-        initialCampaignId={requestedCampaignId}
-      />
-    </section>
-  );
+    );
+  }
 }

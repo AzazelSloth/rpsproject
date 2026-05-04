@@ -26,6 +26,13 @@ export class EmployeeService {
     private readonly companyRepository: Repository<Company>,
   ) {}
 
+  private static getCompanyNameFromCsvRow(
+    row: Record<string, string>,
+  ): string | undefined {
+    const companyName = row.company_name ?? row.entreprise ?? row.company ?? '';
+    return companyName.trim() || undefined;
+  }
+
   async create(createEmployeeDto: CreateEmployeeDto) {
     const company = await this.findCompanyOrThrow(createEmployeeDto.company_id);
     const email = createEmployeeDto.email.trim().toLowerCase();
@@ -82,12 +89,15 @@ export class EmployeeService {
     }
   }
 
-  async findAll() {
+  async findAll(page: number = 1, limit: number = 50) {
     try {
+      const skip = (page - 1) * limit;
       const employees = await this.employeeRepository.find({
         where: { deleted_at: IsNull() },
         order: { id: 'ASC' },
         relations: { company: true, responses: true },
+        skip,
+        take: limit,
       });
 
       return employees.map((employee) => {
@@ -306,11 +316,7 @@ export class EmployeeService {
         first_name: (row.first_name ?? row.prenom ?? '').trim() || undefined,
         last_name: (row.last_name ?? row.nom ?? '').trim() || undefined,
         phone: (row.phone ?? '').trim() || undefined,
-        status:
-          ((row as Record<string, string>).status ??
-            (row as Record<string, string>).statut ??
-            '')
-            .trim() || undefined,
+        status: (row.status ?? row.statut ?? '').trim() || undefined,
         department:
           (
             row.department ??
@@ -318,13 +324,7 @@ export class EmployeeService {
             row.titre_professionnel ??
             ''
           ).trim() || undefined,
-        company_name:
-          (
-            (row.company_name ??
-              (row as any).entreprise ??
-              (row as any).company) ||
-            ''
-          ).trim() || undefined,
+        company_name: EmployeeService.getCompanyNameFromCsvRow(row),
       });
     }
 

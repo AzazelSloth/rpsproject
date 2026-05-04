@@ -8,7 +8,6 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SurveyResponse } from '../response/response.entity';
-import { Employee } from '../employee/employee.entity';
 import { throwPersistenceError } from '../common/database-error.util';
 import { Company } from '../company/company.entity';
 import { getN8nWebhookUrl } from '../n8n/n8n.config';
@@ -230,9 +229,9 @@ export class CampaignService {
       where: {
         employee: {
           campaign_participations: {
-            campaign: { id: campaignId }
-          }
-        }
+            campaign: { id: campaignId },
+          },
+        },
       },
       relations: ['employee', 'question'],
       order: { employee: { id: 'ASC' }, question: { order_index: 'ASC' } },
@@ -249,7 +248,8 @@ export class CampaignService {
         row = {
           Employeur: employee.company_name || defaultCompanyName,
           Email: employee.email || '',
-          "Nom et Prenom": `${employee.first_name || ''} ${employee.last_name || ''}`.trim(),
+          'Nom et Prenom':
+            `${employee.first_name || ''} ${employee.last_name || ''}`.trim(),
           Fonction: employee.department || '',
         };
         employeeMap.set(employee.id, row);
@@ -272,7 +272,10 @@ export class CampaignService {
     userEmail: string,
   ) {
     // Récupérer les données des employés avec leurs réponses
-    const employeesData = await this.getCampaignResponsesFormatted(campaignId, companyName);
+    const employeesData = await this.getCampaignResponsesFormatted(
+      campaignId,
+      companyName,
+    );
 
     // Construire le payload au format attendu par n8n (identique au frontend)
     const payload = {

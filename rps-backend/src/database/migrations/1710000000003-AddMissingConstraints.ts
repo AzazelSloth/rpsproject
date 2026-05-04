@@ -4,6 +4,12 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class AddMissingConstraints1710000000003 implements MigrationInterface {
   name = 'AddMissingConstraints1710000000003';
 
+  private isEmployeeTokenRows(
+    value: unknown,
+  ): value is Array<{ id: number; survey_token: string | null }> {
+    return Array.isArray(value);
+  }
+
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       ALTER TABLE "responses"
@@ -42,12 +48,14 @@ export class AddMissingConstraints1710000000003 implements MigrationInterface {
         AND "response"."deleted_at" IS NULL
     `);
 
-    const employees: Array<{ id: number; survey_token: string | null }> =
-      await queryRunner.query(`
+    const employeeRows: unknown = await queryRunner.query(`
         SELECT "id", "survey_token"
         FROM "employees"
         ORDER BY "id" ASC
       `);
+    const employees = this.isEmployeeTokenRows(employeeRows)
+      ? employeeRows
+      : [];
 
     const seenTokens = new Set<string>();
 

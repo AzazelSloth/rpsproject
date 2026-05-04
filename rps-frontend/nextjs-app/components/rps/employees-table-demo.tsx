@@ -17,7 +17,7 @@ import type {
   EmployeeManagementData,
   SurveyOption,
 } from "@/lib/repositories/rps-repository";
-import { getTrpcClient } from "@/lib/trpc/client";
+import { formatTrpcError, getTrpcClient } from "@/lib/trpc/client";
 
 type RemindResponse =
   | {
@@ -64,6 +64,7 @@ export function EmployeesTableDemo({
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [surveyDetails, setSurveyDetails] = useState<any>(null);
+  const [surveyDetailsError, setSurveyDetailsError] = useState<string | null>(null);
   const [loadingSurveyDetails, setLoadingSurveyDetails] = useState(false);
 
   const availableSurveys = useMemo(() => {
@@ -177,17 +178,29 @@ export function EmployeesTableDemo({
 
     if (!campaignId) {
       setSurveyDetails(null);
+      setSurveyDetailsError(null);
       return;
     }
 
     const fetchSurveyDetails = async () => {
       setLoadingSurveyDetails(true);
+      setSurveyDetailsError(null);
       try {
         const details = await getTrpcClient().adminSurveys.campaigns.findOne.query(campaignId);
         setSurveyDetails(details);
       } catch (err) {
-        console.error("Failed to fetch survey details:", err);
         setSurveyDetails(null);
+        const message = formatTrpcError(err);
+
+        if (/404|not found|introuvable/i.test(message)) {
+          setSurveyDetailsError("Le sondage selectionne est introuvable ou a ete supprime.");
+        } else if (/backend unavailable|fetch failed|network|ECONNREFUSED|ENOTFOUND/i.test(message)) {
+          setSurveyDetailsError("Le backend est indisponible pour charger le detail du sondage.");
+        } else if (/not configured|PRECONDITION_FAILED/i.test(message)) {
+          setSurveyDetailsError("Le backend n'est pas configure pour charger le detail du sondage.");
+        } else {
+          setSurveyDetailsError(message || "Une erreur est survenue lors du chargement du sondage.");
+        }
       } finally {
         setLoadingSurveyDetails(false);
       }
@@ -500,7 +513,11 @@ export function EmployeesTableDemo({
           </h3>
           
           {loadingSurveyDetails ? (
-            <p className="mt-4 text-sm text-slate-500">Chargement des détails...</p>
+            <p className="mt-4 text-sm text-slate-500">Chargement des details...</p>
+          ) : surveyDetailsError ? (
+            <div className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3">
+              <p className="text-sm font-medium text-rose-700">{surveyDetailsError}</p>
+            </div>
           ) : surveyDetails ? (
             <div className="mt-4 space-y-4">
               {/* Dates */}
@@ -563,7 +580,7 @@ export function EmployeesTableDemo({
               </div>
             </div>
           ) : (
-            <p className="mt-4 text-sm text-slate-500">Impossible de charger les détails du sondage.</p>
+            <p className="mt-4 text-sm text-slate-500">Aucun detail de sondage disponible.</p>
           )}
         </Card>
       )}

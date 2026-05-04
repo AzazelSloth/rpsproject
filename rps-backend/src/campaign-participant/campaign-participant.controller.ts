@@ -38,7 +38,10 @@ export class CampaignParticipantController {
 
   @Post('token/:token/submit')
   @ApiBody({ type: SubmitCampaignResponsesDto })
-  @ApiResponse({ status: 201, description: 'Réponses enregistrées avec succès' })
+  @ApiResponse({
+    status: 201,
+    description: 'Réponses enregistrées avec succès',
+  })
   @ApiResponse({ status: 400, description: 'Données invalides' })
   submitByToken(
     @Param('token') token: string,
@@ -105,7 +108,10 @@ export class CampaignParticipantController {
   @UseGuards(AuthGuard)
   @Patch(':id')
   @ApiBody({ type: UpdateCampaignParticipantDto })
-  @ApiResponse({ status: 200, description: 'Participant mis à jour avec succès' })
+  @ApiResponse({
+    status: 200,
+    description: 'Participant mis à jour avec succès',
+  })
   @ApiResponse({ status: 400, description: 'Données invalides' })
   update(
     @Param('id', ParseIntPipe) id: number,

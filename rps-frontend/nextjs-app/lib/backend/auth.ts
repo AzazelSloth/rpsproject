@@ -1,4 +1,4 @@
-import { postBackend } from "./client";
+import { appFetch } from "@/lib/api";
 
 export const DEMO_AUTH_TOKEN = "auth-disabled";
 
@@ -34,6 +34,24 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+async function readJsonOrThrow<T>(response: Response): Promise<T> {
+  const payload = (await response.json().catch(() => null)) as
+    | T
+    | { error?: string; message?: string }
+    | null;
+
+  if (!response.ok) {
+    const message =
+      payload && typeof payload === "object" && ("error" in payload || "message" in payload)
+        ? payload.error || payload.message
+        : null;
+
+    throw new Error(message || "La requete d'authentification a echoue.");
+  }
+
+  return payload as T;
+}
+
 export function createDemoAuthResponse(name?: string, email?: string): AuthResponse {
   return {
     user: {
@@ -46,77 +64,79 @@ export function createDemoAuthResponse(name?: string, email?: string): AuthRespo
 }
 
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
-  return postBackend<AuthResponse, LoginCredentials>("/auth/login", {
-    ...credentials,
-    email: normalizeEmail(credentials.email),
+  const response = await appFetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...credentials,
+      email: normalizeEmail(credentials.email),
+    }),
   });
+
+  return readJsonOrThrow<AuthResponse>(response);
 }
 
 export async function register(credentials: RegisterCredentials): Promise<AuthResponse> {
-  return postBackend<AuthResponse, RegisterCredentials>("/auth/register", {
-    ...credentials,
-    email: normalizeEmail(credentials.email),
+  const response = await appFetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...credentials,
+      email: normalizeEmail(credentials.email),
+    }),
   });
+
+  return readJsonOrThrow<AuthResponse>(response);
 }
 
 export async function temporaryAccess(
   credentials: TemporaryAccessCredentials,
 ): Promise<AuthResponse> {
-  return postBackend<AuthResponse, TemporaryAccessCredentials>("/auth/temporary-access", {
-    ...credentials,
-    email: normalizeEmail(credentials.email),
-    name: credentials.name?.trim() || undefined,
+  const response = await appFetch("/api/auth/temporary-access", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...credentials,
+      email: normalizeEmail(credentials.email),
+      name: credentials.name?.trim() || undefined,
+    }),
   });
+
+  return readJsonOrThrow<AuthResponse>(response);
 }
 
 export async function logout() {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user");
-  }
-  // Supprimer les cookies côté client via API call
-  if (typeof window !== "undefined") {
-    document.cookie = 'auth_token=; path=/; max-age=0';
-    document.cookie = 'auth_user=; path=/; max-age=0';
-  }
+  await appFetch("/api/auth/logout", {
+    method: "POST",
+  });
 }
 
-export function saveAuth(response: AuthResponse) {
-  if (typeof window !== "undefined") {
-    // localStorage (pour le client-side JS)
-    localStorage.setItem("auth_token", response.token);
-    localStorage.setItem("auth_user", JSON.stringify(response.user));
-    
-    // Cookies (pour le middleware SSR)
-    document.cookie = `auth_token=${response.token}; path=/; max-age=604800; samesite=lax`; // 7 jours
-    document.cookie = `auth_user=${encodeURIComponent(JSON.stringify(response.user))}; path=/; max-age=604800; samesite=lax`;
-  }
+export function saveAuth(_response: AuthResponse) {
+  return;
 }
 
-export function getToken(): string | null {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("auth_token");
+export async function getSessionUser(): Promise<User | null> {
+  const response = await appFetch("/api/auth/session", {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (response.status === 401) {
+    return null;
   }
-  return null;
+
+  const payload = await readJsonOrThrow<{ user: User | null }>(response);
+  return payload.user;
 }
 
 export function getUser(): User | null {
-  if (typeof window !== "undefined") {
-    const userStr = localStorage.getItem("auth_user");
-    if (userStr) {
-      return JSON.parse(userStr);
-    }
-  }
   return null;
 }
 
 export function isAuthenticated(): boolean {
-  return getToken() !== null;
+  return false;
 }
 
 export function isDemoSession(): boolean {
-  const token = getToken();
-  const user = getUser();
-
-  return token === DEMO_AUTH_TOKEN || user?.email === "demo@laroche360.ca";
+  return false;
 }

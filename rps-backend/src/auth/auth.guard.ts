@@ -25,7 +25,11 @@ export const DEMO_AUTH_USER: AuthTokenPayload = {
 };
 
 export function isAuthDisabled() {
-  return process.env.AUTH_DISABLED === 'true';
+  return (
+    process.env.AUTH_DISABLED === 'true' &&
+    process.env.ALLOW_LOCAL_AUTH_BYPASS === 'true' &&
+    process.env.NODE_ENV !== 'production'
+  );
 }
 
 @Injectable()

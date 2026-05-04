@@ -89,7 +89,12 @@ export class CampaignController {
 
   @Post(':id/analyze-with-company')
   @UseGuards(AuthGuard)
-  @ApiBody({ schema: { type: 'object', properties: { company_name: { type: 'string' } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { company_name: { type: 'string' } },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Analyse générée avec succès' })
   async analyzeWithCompany(
     @Param('id', ParseIntPipe) id: number,

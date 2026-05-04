@@ -10,6 +10,7 @@ import { EmployeeModule } from './employee/employee.module';
 import { QuestionModule } from './question/question.module';
 import { ReportModule } from './report/report.module';
 import { ResponseModule } from './response/response.module';
+import { HealthModule } from './health/health.module';
 
 const shouldEnableDatabase =
   process.env.NODE_ENV !== 'test' || process.env.ENABLE_DATABASE === 'true';
@@ -39,7 +40,10 @@ const persistenceImports = shouldEnableDatabase
   : [];
 
 @Module({
-  imports: persistenceImports,
+  imports: [
+    ...persistenceImports,
+    HealthModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

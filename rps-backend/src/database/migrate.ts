@@ -1,14 +1,10 @@
 import AppDataSource from './data-source';
 import bcryptModule from 'bcrypt';
+import { getBootstrapAdminEmails } from '../auth/admin-access.config';
 import { User } from '../auth/user.entity';
 
 const INITIAL_MIGRATION_NAME = 'InitialSchema1710000000000';
 const INITIAL_MIGRATION_TIMESTAMP = 1710000000000;
-const BOOTSTRAP_ADMIN_EMAILS = [
-  'isabelle@laroche360.ca',
-  'roxanne@laroche360.ca',
-];
-
 const bcrypt = bcryptModule as unknown as {
   hash(data: string, saltOrRounds: number): Promise<string>;
 };
@@ -17,8 +13,21 @@ function asBoolean(value: unknown): boolean {
   return value === true || value === 't' || value === 'true' || value === 1;
 }
 
+function readExistsValue(rows: unknown): unknown {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return undefined;
+  }
+
+  const firstRow: unknown = rows[0];
+  if (!firstRow || typeof firstRow !== 'object' || !('exists' in firstRow)) {
+    return undefined;
+  }
+
+  return (firstRow as { exists?: unknown }).exists;
+}
+
 async function ensureMigrationBaselineForLegacySchema() {
-  const [legacySchemaRow] = await AppDataSource.query(
+  const legacySchemaRows: unknown = await AppDataSource.query(
     `
       SELECT EXISTS (
         SELECT 1
@@ -29,7 +38,7 @@ async function ensureMigrationBaselineForLegacySchema() {
     `,
   );
 
-  const hasLegacySchema = asBoolean(legacySchemaRow?.exists);
+  const hasLegacySchema = asBoolean(readExistsValue(legacySchemaRows));
   if (!hasLegacySchema) {
     return;
   }
@@ -43,7 +52,7 @@ async function ensureMigrationBaselineForLegacySchema() {
     )
   `);
 
-  const [initialRecordedRow] = await AppDataSource.query(
+  const initialRecordedRows: unknown = await AppDataSource.query(
     `
       SELECT EXISTS (
         SELECT 1
@@ -54,7 +63,7 @@ async function ensureMigrationBaselineForLegacySchema() {
     [INITIAL_MIGRATION_NAME],
   );
 
-  const initialRecorded = asBoolean(initialRecordedRow?.exists);
+  const initialRecorded = asBoolean(readExistsValue(initialRecordedRows));
   if (initialRecorded) {
     return;
   }
@@ -75,9 +84,10 @@ async function ensureMigrationBaselineForLegacySchema() {
 async function ensureBootstrapAdmins() {
   const bootstrapPassword =
     process.env.ADMIN_BOOTSTRAP_PASSWORD?.trim() || 'password';
+  const bootstrapEmails = getBootstrapAdminEmails();
   const userRepository = AppDataSource.getRepository(User);
 
-  for (const email of BOOTSTRAP_ADMIN_EMAILS) {
+  for (const email of bootstrapEmails) {
     const normalizedEmail = email.toLowerCase();
     const existingUser = await userRepository.findOne({
       where: { email: normalizedEmail },

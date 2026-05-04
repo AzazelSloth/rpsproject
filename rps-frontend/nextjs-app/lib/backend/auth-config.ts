@@ -1,12 +1,14 @@
-export const allowedAdminEmails = [
-  "isabelle@laroche360.ca",
-  "roxanne@laroche360.ca",
-];
-
 export function normalizeAdminEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+export function getConfiguredAdminEmails() {
+  return (process.env.ADMIN_ALLOWED_EMAILS ?? "")
+    .split(",")
+    .map((value) => normalizeAdminEmail(value))
+    .filter(Boolean);
+}
+
 export function isAllowedAdminEmail(email: string) {
-  return allowedAdminEmails.includes(normalizeAdminEmail(email));
+  return getConfiguredAdminEmails().includes(normalizeAdminEmail(email));
 }

@@ -6,6 +6,13 @@
 INSERT INTO users (name, email, password)
 VALUES ('Admin Demo', 'admin@demo-rps.fr', '$2b$10$rH0z9X.vKJH7qN8qN8qN8OYqZ9X.vKJH7qN8qN8qN8OYqZ9X.vKJH');
 
+-- Utilisatrices Laroche 360 (Canada)
+-- Mot de passe: password (hash bcrypt identique)
+INSERT INTO users (name, email, password)
+VALUES 
+  ('Isabelle Laroche', 'isabelle@laroche360.ca', '$2b$10$rH0z9X.vKJH7qN8qN8qN8OYqZ9X.vKJH7qN8qN8qN8OYqZ9X.vKJH'),
+  ('Roxanne Laroche', 'roxanne@laroche360.ca', '$2b$10$rH0z9X.vKJH7qN8qN8qN8OYqZ9X.vKJH7qN8qN8qN8OYqZ9X.vKJH');
+
 -- Entreprise demo
 INSERT INTO companies (name) VALUES ('Laroche Consulting');
 

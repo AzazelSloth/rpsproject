@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isBackendConfigured } from "@/lib/backend/client";
+import { isMockBackendEnabled } from "@/lib/backend/client";
 import { postServerBackend as postBackend } from "@/lib/backend/server";
 
 type SurveySubmissionPayload = {
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!isBackendConfigured()) {
+  if (isMockBackendEnabled()) {
     return NextResponse.json({ success: true, mode: "demo" });
   }
 

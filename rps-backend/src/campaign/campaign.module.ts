@@ -8,7 +8,10 @@ import { CampaignService } from './campaign.service';
 import { SurveyResponse } from '../response/response.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Campaign, Company, SurveyResponse]), AuthModule],
+  imports: [
+    TypeOrmModule.forFeature([Campaign, Company, SurveyResponse]),
+    AuthModule,
+  ],
   controllers: [CampaignController],
   providers: [CampaignService],
   exports: [TypeOrmModule, CampaignService],

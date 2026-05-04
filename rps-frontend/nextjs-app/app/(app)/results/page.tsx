@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageErrorState } from "@/components/rps/page-error-state";
 import { Card, Pill, PrimaryButton, SectionHeader } from "@/components/rps/ui";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
 
@@ -10,17 +11,19 @@ export default async function ResultsPage({
   searchParams: Promise<{ scenario?: string; view?: string }>;
 }) {
   const { scenario, view } = await searchParams;
-  const [resultsData, surveyBuilderData, managementData] = await Promise.all([
-    getServerTrpcCaller().data.results({
-    scenario: scenario ?? null,
-    }),
-    getServerTrpcCaller().data.surveyBuilder({
-      scenario: scenario ?? null,
-    }),
-    getServerTrpcCaller().data.employeeManagement({
-      scenario: scenario ?? null,
-    }),
-  ]);
+
+  try {
+    const [resultsData, surveyBuilderData, managementData] = await Promise.all([
+      getServerTrpcCaller().data.results({
+        scenario: scenario ?? null,
+      }),
+      getServerTrpcCaller().data.surveyBuilder({
+        scenario: scenario ?? null,
+      }),
+      getServerTrpcCaller().data.employeeManagement({
+        scenario: scenario ?? null,
+      }),
+    ]);
   const { metrics, bars, analysis } = resultsData;
   const resultsHref = scenario
     ? `/results?view=detail&scenario=${encodeURIComponent(scenario)}`
@@ -40,7 +43,7 @@ export default async function ResultsPage({
         ? "warning"
         : "neutral";
 
-  return (
+    return (
     <section className="space-y-6">
       <SectionHeader
         eyebrow="Resultats"
@@ -259,7 +262,21 @@ export default async function ResultsPage({
         </>
       ) : null}
     </section>
-  );
+    );
+  } catch (error) {
+    return (
+      <PageErrorState
+        eyebrow="Resultats"
+        title="Resultats par sondage"
+        description="Consulte les indicateurs et les analyses detaillees du sondage selectionne."
+        message={
+          error instanceof Error
+            ? error.message
+            : "Les resultats n'ont pas pu etre charges."
+        }
+      />
+    );
+  }
 }
 
 function formatShortDate(value: string | null) {

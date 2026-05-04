@@ -49,7 +49,10 @@ export class UpdateCampaignParticipantDto {
   @IsDate()
   reminder_sent_at?: Date | null;
 
-  @ApiProperty({ description: 'Date de completion du sondage', required: false })
+  @ApiProperty({
+    description: 'Date de completion du sondage',
+    required: false,
+  })
   @IsOptional()
   @Type(() => Date)
   @IsDate()
@@ -72,7 +75,10 @@ export class SubmitCampaignResponseItemDto {
 }
 
 export class SubmitCampaignResponsesDto {
-  @ApiProperty({ description: 'Liste des reponses au sondage', type: [SubmitCampaignResponseItemDto] })
+  @ApiProperty({
+    description: 'Liste des reponses au sondage',
+    type: [SubmitCampaignResponseItemDto],
+  })
   @IsArray()
   @ArrayNotEmpty()
   @ValidateNested({ each: true })
@@ -81,7 +87,10 @@ export class SubmitCampaignResponsesDto {
 }
 
 export class ImportCampaignEmployeeRowDto {
-  @ApiProperty({ description: "Adresse email de l'employe", example: 'jean.dupont@example.com' })
+  @ApiProperty({
+    description: "Adresse email de l'employe",
+    example: 'jean.dupont@example.com',
+  })
   @IsEmail()
   @MaxLength(255)
   email: string;
@@ -124,13 +133,19 @@ export class ImportCampaignEmployeeRowDto {
 }
 
 export class ImportCampaignEmployeesDto {
-  @ApiProperty({ description: "Identifiant unique de l'entreprise", example: 1 })
+  @ApiProperty({
+    description: "Identifiant unique de l'entreprise",
+    example: 1,
+  })
   @IsInt()
   @Min(1)
   @IsNotEmpty()
   company_id: number;
 
-  @ApiProperty({ description: 'Liste des employes a importer', required: false })
+  @ApiProperty({
+    description: 'Liste des employes a importer',
+    required: false,
+  })
   @IsOptional()
   @IsArray()
   @ArrayNotEmpty()
@@ -138,7 +153,10 @@ export class ImportCampaignEmployeesDto {
   @Type(() => ImportCampaignEmployeeRowDto)
   rows?: ImportCampaignEmployeeRowDto[];
 
-  @ApiProperty({ description: 'Contenu CSV des employes a importer', required: false })
+  @ApiProperty({
+    description: 'Contenu CSV des employes a importer',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   @MinLength(1)
@@ -152,7 +170,11 @@ export class ImportCampaignEmployeesDto {
 }
 
 export class SendCampaignRemindersDto {
-  @ApiProperty({ description: "Nombre minimum de jours depuis l'invitation", example: 0, required: false })
+  @ApiProperty({
+    description: "Nombre minimum de jours depuis l'invitation",
+    example: 0,
+    required: false,
+  })
   @IsOptional()
   @IsInt()
   @Min(0)

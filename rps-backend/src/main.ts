@@ -1,33 +1,62 @@
 import 'dotenv/config';
-import express from 'express';
+import type { Server } from 'http';
+import express, { NextFunction, Request, Response } from 'express';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { AppModule } from './app.module';
+import { WinstonLoggerService } from './common/winston-logger.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bodyParser: true,
+    logger: new WinstonLoggerService(),
   });
   const apiPrefix = 'api';
   const swaggerPath = process.env.SWAGGER_PATH ?? 'api-docs';
 
-  // Augmente les limites de taille pour les uploads CSV volumineux
+  // Security middleware
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
+  }));
+
+  // Rate limiting - stricter for auth endpoints
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // limit each IP to 10 requests per windowMs
+    message: 'Too many login attempts, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100, // limit each IP to 100 requests per windowMs
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Apply rate limiting before other middleware
+  app.use('/api/auth/login', authLimiter);
+  app.use('/api/auth/register', authLimiter);
+  app.use(generalLimiter);
+
+  // Body size limits for CSV imports
   app.use(express.json({ limit: '50mb' }));
   app.use(express.text({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-  app.setGlobalPrefix(apiPrefix);
-
-  const corsOrigin =
-    process.env.CORS_ORIGIN?.split(',') || 'http://localhost:3001';
-  app.enableCors({
-    origin: corsOrigin,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  });
-  app.use((request, response, next) => {
+  // Global headers
+  app.use((request: Request, response: Response, next: NextFunction) => {
     if (
       request.originalUrl.startsWith(`/${swaggerPath}`) ||
       request.originalUrl.startsWith(`/${apiPrefix}/${swaggerPath}`)
@@ -39,6 +68,7 @@ async function bootstrap() {
     response.setHeader('Content-Type', 'application/json; charset=utf-8');
     next();
   });
+
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.useGlobalPipes(
     new ValidationPipe({
@@ -71,7 +101,11 @@ async function bootstrap() {
 
   await app.listen(port, '0.0.0.0');
 
-  const server = app.getHttpServer();
+  const server = app.getHttpServer() as Server & {
+    keepAliveTimeout: number;
+    headersTimeout: number;
+    requestTimeout: number;
+  };
   server.keepAliveTimeout = 90000;
   server.headersTimeout = 100000;
   server.requestTimeout = 120000;
@@ -79,4 +113,4 @@ async function bootstrap() {
   console.log(`Backend running on http://0.0.0.0:${port}`);
 }
 
-bootstrap();
+void bootstrap();

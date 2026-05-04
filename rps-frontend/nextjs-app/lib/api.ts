@@ -1,4 +1,3 @@
-const DEFAULT_API_URL = "http://127.0.0.1:3000/api";
 const DEFAULT_APP_URL = "http://127.0.0.1:3001";
 
 export class ApiResponseError extends Error {
@@ -31,7 +30,7 @@ function joinUrl(baseUrl: string, path: string) {
   return `${trimTrailingSlash(baseUrl)}${ensureLeadingSlash(path)}`;
 }
 
-export function getApiBaseUrl() {
+export function getApiBaseUrl(): string | null {
   const serverUrl = process.env.API_URL?.trim();
   const publicUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 
@@ -44,18 +43,26 @@ export function getApiBaseUrl() {
       return trimTrailingSlash(publicUrl);
     }
 
-    return DEFAULT_API_URL;
+    return null;
   }
 
   if (isAbsoluteHttpUrl(publicUrl)) {
     return trimTrailingSlash(publicUrl);
   }
 
-  return DEFAULT_API_URL;
+  return null;
 }
 
 export function getApiUrl(path: string) {
-  return joinUrl(getApiBaseUrl(), path);
+  const baseUrl = getApiBaseUrl();
+
+  if (!baseUrl) {
+    throw new Error(
+      "Backend API URL is not configured. Set NEXT_PUBLIC_API_URL for browser requests and API_URL for server-side requests."
+    );
+  }
+
+  return joinUrl(baseUrl, path);
 }
 
 export function getAppBaseUrl() {

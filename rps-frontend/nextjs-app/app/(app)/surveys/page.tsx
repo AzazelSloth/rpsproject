@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageErrorState } from "@/components/rps/page-error-state";
 import { SurveyBuilderDemo } from "@/components/rps/survey-builder-demo";
 import { Card, Pill, SectionHeader } from "@/components/rps/ui";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
@@ -16,34 +17,36 @@ export default async function SurveysPage({
     activeTab === "edit" && campaignId
       ? Number.parseInt(campaignId, 10) || null
       : null;
-  const surveyBuilderData = await getServerTrpcCaller().data.surveyBuilder({
-    scenario: scenario ?? null,
-    campaignId: selectedCampaignId,
-  });
-  const managementData =
-    activeTab === "list"
-      ? await getServerTrpcCaller().data.employeeManagement({
-          scenario: scenario ?? null,
-        })
-      : null;
-  const resultsHref = scenario
-    ? `/results?scenario=${encodeURIComponent(scenario)}`
-    : "/results";
-  const companyName =
-    surveyBuilderData.companies.find((company) => company.id === surveyBuilderData.companyId)?.name ??
-    "Entreprise a definir";
-  const completionRate = managementData?.participationRate ?? 0;
-  const statusLabel = formatStatusLabel(surveyBuilderData.status);
-  const statusTone =
-    surveyBuilderData.status === "active"
-      ? "success"
-      : surveyBuilderData.status === "draft"
-        ? "warning"
-        : "neutral";
 
-  if (activeTab === "list") {
-    return (
-      <section className="space-y-6">
+  try {
+    const surveyBuilderData = await getServerTrpcCaller().data.surveyBuilder({
+      scenario: scenario ?? null,
+      campaignId: selectedCampaignId,
+    });
+    const managementData =
+      activeTab === "list"
+        ? await getServerTrpcCaller().data.employeeManagement({
+            scenario: scenario ?? null,
+          })
+        : null;
+    const resultsHref = scenario
+      ? `/results?scenario=${encodeURIComponent(scenario)}`
+      : "/results";
+    const companyName =
+      surveyBuilderData.companies.find((company) => company.id === surveyBuilderData.companyId)?.name ??
+      "Entreprise a definir";
+    const completionRate = managementData?.participationRate ?? 0;
+    const statusLabel = formatStatusLabel(surveyBuilderData.status);
+    const statusTone =
+      surveyBuilderData.status === "active"
+        ? "success"
+        : surveyBuilderData.status === "draft"
+          ? "warning"
+          : "neutral";
+
+    if (activeTab === "list") {
+      return (
+        <section className="space-y-6">
         <SectionHeader
           eyebrow="Gestion des sondages"
           title="Liste des sondages"
@@ -122,12 +125,12 @@ export default async function SurveysPage({
             </table>
           </div>
         </Card>
-      </section>
-    );
-  }
+        </section>
+      );
+    }
 
-  return (
-    <section className="space-y-6">
+    return (
+      <section className="space-y-6">
       <SectionHeader
         eyebrow="Gestion des sondages"
         title={
@@ -143,8 +146,22 @@ export default async function SurveysPage({
         initialData={surveyBuilderData}
         mode={activeTab === "edit" ? "edit" : "create"}
       />
-    </section>
-  );
+      </section>
+    );
+  } catch (error) {
+    return (
+      <PageErrorState
+        eyebrow="Gestion des sondages"
+        title="Sondages"
+        description="Cree, modifie ou consulte les sondages disponibles."
+        message={
+          error instanceof Error
+            ? error.message
+            : "Les donnees sondage n'ont pas pu etre chargees."
+        }
+      />
+    );
+  }
 }
 
 function formatShortDate(value: string | null) {

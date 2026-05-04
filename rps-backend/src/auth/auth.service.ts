@@ -2,12 +2,14 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import bcryptModule from 'bcrypt';
 import { Repository } from 'typeorm';
+import { getAllowedAdminEmails, isRegistrationAllowed } from './admin-access.config';
 import { LoginDto, RegisterDto, TemporaryAccessDto } from './dto/auth.dto';
 import { DEMO_AUTH_USER, isAuthDisabled } from './auth.guard';
 import { User } from './user.entity';
@@ -16,11 +18,6 @@ const bcrypt = bcryptModule as unknown as {
   compare(data: string, encrypted: string): Promise<boolean>;
   hash(data: string, saltOrRounds: number): Promise<string>;
 };
-
-const allowedAdminEmails = new Set([
-  'isabelle@laroche360.ca',
-  'roxanne@laroche360.ca',
-]);
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -46,11 +43,20 @@ function buildDemoAuthResponse(name?: string, email?: string) {
   };
 }
 
+function isTemporaryAccessEnabled() {
+  return process.env.TEMPORARY_ACCESS_ENABLED === 'true';
+}
+
+function isAllowedAdminEmail(email: string) {
+  return new Set(getAllowedAdminEmails()).has(normalizeEmail(email));
+}
+
 @Injectable()
 export class AuthService {
   constructor(
+    @Optional()
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly userRepository: Repository<User> | null,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -60,11 +66,17 @@ export class AuthService {
     }
 
     const normalizedEmail = normalizeEmail(registerDto.email);
-    if (!allowedAdminEmails.has(normalizedEmail)) {
-      throw new ForbiddenException('Registration not allowed for this email');
+    
+    // Check if registration is allowed for this email
+    const allowedAdminEmails = getAllowedAdminEmails();
+    const isExplicitlyAllowed = allowedAdminEmails.includes(normalizedEmail);
+    const isDomainAllowed = isRegistrationAllowed(normalizedEmail);
+    
+    if (!isExplicitlyAllowed && !isDomainAllowed) {
+      throw new ForbiddenException('Registration restricted to authorized emails or domains');
     }
 
-    const existingUser = await this.userRepository.findOne({
+    const existingUser = await this.userRepository?.findOne({
       where: { email: normalizedEmail },
     });
 
@@ -73,17 +85,21 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-    const user = this.userRepository.create({
+    const user = this.userRepository?.create({
       ...registerDto,
       email: normalizedEmail,
       password: hashedPassword,
     });
 
-    const savedUser = await this.userRepository.save(user);
-    const token = this.generateToken(savedUser);
+    const savedUser = await this.userRepository?.save(user!);
+    const token = this.generateToken(savedUser!);
 
     return {
-      user: { id: savedUser.id, email: savedUser.email, name: savedUser.name },
+      user: {
+        id: savedUser!.id,
+        email: savedUser!.email,
+        name: savedUser!.name,
+      },
       token,
     };
   }
@@ -94,11 +110,8 @@ export class AuthService {
     }
 
     const normalizedEmail = normalizeEmail(loginDto.email);
-    if (!allowedAdminEmails.has(normalizedEmail)) {
-      throw new ForbiddenException('Login not allowed for this email');
-    }
 
-    const user = await this.userRepository.findOne({
+    const user = await this.userRepository?.findOne({
       where: { email: normalizedEmail },
     });
 
@@ -123,23 +136,33 @@ export class AuthService {
   }
 
   async temporaryAccess(temporaryAccessDto: TemporaryAccessDto) {
+    if (!isTemporaryAccessEnabled()) {
+      throw new ForbiddenException(
+        'Temporary access is disabled. Use the admin login flow.',
+      );
+    }
+
     const normalizedEmail = normalizeEmail(temporaryAccessDto.email);
 
-    if (!allowedAdminEmails.has(normalizedEmail)) {
+    if (!isAllowedAdminEmail(normalizedEmail)) {
       throw new ForbiddenException('Access not allowed for this email');
     }
+
+    // Add a small delay for security/debugging purposes
+    const delayMs = Number(process.env.TEMPORARY_ACCESS_DELAY_MS || 2000);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
 
     if (isAuthDisabled()) {
       return buildDemoAuthResponse(temporaryAccessDto.name, normalizedEmail);
     }
 
     const requestedName = temporaryAccessDto.name?.trim();
-    let user = await this.userRepository.findOne({
+    let user = await this.userRepository?.findOne({
       where: { email: normalizedEmail },
     });
 
     if (!user) {
-      user = this.userRepository.create({
+      user = this.userRepository?.create({
         email: normalizedEmail,
         name: requestedName || buildDefaultNameFromEmail(normalizedEmail),
         password: null,
@@ -150,14 +173,14 @@ export class AuthService {
       user.name = buildDefaultNameFromEmail(normalizedEmail);
     }
 
-    const savedUser = await this.userRepository.save(user);
-    const token = this.generateToken(savedUser);
+    const savedUser = await this.userRepository?.save(user!);
+    const token = this.generateToken(savedUser!);
 
     return {
       user: {
-        id: savedUser.id,
-        email: savedUser.email,
-        name: savedUser.name,
+        id: savedUser!.id,
+        email: savedUser!.email,
+        name: savedUser!.name,
       },
       token,
     };
@@ -180,7 +203,7 @@ export class AuthService {
       };
     }
 
-    const user = await this.userRepository.findOne({
+    const user = await this.userRepository?.findOne({
       where: { id },
       select: ['id', 'email', 'name', 'created_at'],
     });

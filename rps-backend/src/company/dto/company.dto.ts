@@ -8,7 +8,10 @@ import {
 } from 'class-validator';
 
 export class CreateCompanyDto {
-  @ApiProperty({ description: 'Nom de l\'entreprise', example: 'ACME Corporation' })
+  @ApiProperty({
+    description: "Nom de l'entreprise",
+    example: 'ACME Corporation',
+  })
   @IsString()
   @MinLength(2)
   @MaxLength(150)
@@ -17,7 +20,11 @@ export class CreateCompanyDto {
 }
 
 export class UpdateCompanyDto {
-  @ApiProperty({ description: 'Nom de l\'entreprise', example: 'ACME Corporation', required: false })
+  @ApiProperty({
+    description: "Nom de l'entreprise",
+    example: 'ACME Corporation',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   @MinLength(2)

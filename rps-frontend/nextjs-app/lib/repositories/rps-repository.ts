@@ -6,7 +6,8 @@ import {
   trendByRange,
 } from "@/lib/demo-data";
 import {
-  isBackendConfigured,
+  BackendConfigurationError,
+  isMockBackendEnabled,
 } from "@/lib/backend/client";
 import {
   getServerBackendCollection as getBackendCollection,
@@ -29,6 +30,13 @@ import {
 } from "@/lib/strapi/mappers";
 import { getStrapiSingle, isStrapiConfigured } from "@/lib/strapi/client";
 import type { StrapiReportTemplate } from "@/lib/strapi/types";
+
+export class RepositoryDataError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RepositoryDataError";
+  }
+}
 
 type DashboardData = {
   metrics: {
@@ -138,13 +146,33 @@ export type ReportDocumentData = {
   template: ReportTemplateData;
 };
 
+function toRepositoryError(message: string, error?: unknown): RepositoryDataError {
+  if (error instanceof BackendConfigurationError) {
+    throw error;
+  }
+
+  if (error instanceof RepositoryDataError) {
+    return error;
+  }
+
+  if (error instanceof Error && error.message) {
+    return new RepositoryDataError(`${message} ${error.message}`);
+  }
+
+  return new RepositoryDataError(message);
+}
+
+function isBackendNotFoundError(error: unknown) {
+  return error instanceof Error && /404/.test(error.message);
+}
+
 export async function getSurveyCampaign(
   scenario?: string | null,
   campaignId?: number | null,
 ) {
   const demoDataset = getDemoDataset(scenario);
 
-  if (!isBackendConfigured()) {
+  if (isMockBackendEnabled()) {
     return demoDataset.campaign;
   }
 
@@ -153,12 +181,12 @@ export async function getSurveyCampaign(
     const activeCampaign = resolveSelectedCampaign(campaigns, campaignId);
 
     if (!activeCampaign) {
-      return demoDataset.campaign;
+      throw new RepositoryDataError("Aucun sondage n'est disponible pour le moment.");
     }
 
     return mapBackendCampaign(activeCampaign);
-  } catch {
-    return demoDataset.campaign;
+  } catch (error) {
+    throw toRepositoryError("Impossible de charger le sondage selectionne.", error);
   }
 }
 
@@ -183,12 +211,17 @@ export type SurveyOption = {
 export async function getAllSurveys(scenario?: string | null): Promise<SurveyOption[]> {
   const demoDataset = getDemoDataset(scenario);
 
-  if (!isBackendConfigured()) {
+  if (isMockBackendEnabled()) {
     return [buildDemoSurveyOption(demoDataset)];
   }
 
   try {
     const campaigns = await getBackendCollection<BackendCampaign>("/campaigns");
+
+    if (!campaigns.length) {
+      return [];
+    }
+
     const progressEntries = await Promise.allSettled(
       campaigns.map((campaign) =>
         getBackendItem<BackendCampaignProgress>(
@@ -211,8 +244,8 @@ export async function getAllSurveys(scenario?: string | null): Promise<SurveyOpt
       .map((campaign) =>
         mapSurveyOption(campaign, progressByCampaignId.get(campaign.id) ?? null),
       );
-  } catch {
-    return [buildDemoSurveyOption(demoDataset)];
+  } catch (error) {
+    throw toRepositoryError("Impossible de charger la liste des sondages.", error);
   }
 }
 
@@ -222,7 +255,7 @@ export async function getSurveyBuilderData(
 ): Promise<SurveyBuilderData> {
   const demoDataset = getDemoDataset(scenario);
 
-  if (isBackendConfigured()) {
+  if (!isMockBackendEnabled()) {
     try {
       const [campaigns, companies] = await Promise.all([
         getBackendCollection<BackendCampaign>("/campaigns"),
@@ -264,16 +297,15 @@ export async function getSurveyBuilderData(
         companyId: companyOptions[0]?.id ?? null,
         companies: companyOptions,
         campaigns: campaignOptions,
-        title: "Nouveau sondage RPS",
-        description:
-          "Sondage trimestriel visant a mesurer le stress, la charge de travail et la qualite de l'environnement professionnel.",
+        title: "",
+        description: "",
         status: "draft",
         startDate: "",
         endDate: "",
         questions: [],
       };
-    } catch {
-      // Fall back to the demo-backed shape below.
+    } catch (error) {
+      throw toRepositoryError("Impossible de charger le builder de sondage.", error);
     }
   }
 
@@ -310,15 +342,15 @@ export async function getSurveyBuilderData(
 export async function getEmployees(scenario?: string | null) {
   const demoDataset = getDemoDataset(scenario);
 
-  if (!isBackendConfigured()) {
+  if (isMockBackendEnabled()) {
     return demoDataset.employees;
   }
 
   try {
     const entries = await getBackendCollection<BackendEmployee>("/employees");
     return entries.map(mapBackendEmployee);
-  } catch {
-    return demoDataset.employees;
+  } catch (error) {
+    throw toRepositoryError("Impossible de charger la liste des employes.", error);
   }
 }
 
@@ -328,7 +360,7 @@ export async function getEmployeeManagementData(
 ): Promise<EmployeeManagementData> {
   const demoDataset = getDemoDataset(scenario);
 
-  if (!isBackendConfigured()) {
+  if (isMockBackendEnabled()) {
     return {
       campaignId: demoDataset.campaign.id,
       companyId: 1,
@@ -372,7 +404,7 @@ export async function getEmployeeManagementData(
       campaigns[0];
 
     if (!activeCampaign) {
-      throw new Error("no_campaign");
+      return buildEmptyEmployeeManagementData();
     }
 
     const progress = await getBackendItem<BackendCampaignProgress>(
@@ -405,40 +437,8 @@ export async function getEmployeeManagementData(
           surveyUrl: `/survey-response/${participant.participation_token}`,
         })),
     };
-  } catch {
-    return {
-      campaignId: demoDataset.campaign.id,
-      companyId: 1,
-      campaignName: demoDataset.campaign.title,
-      campaignStatus: demoDataset.campaign.status,
-      participationRate: demoDataset.dashboardMetrics.participationRate,
-      totalParticipants: demoDataset.employees.length,
-      completedParticipants: demoDataset.employees.filter(
-        (employee) => employee.responseStatus === "Responded",
-      ).length,
-      pendingParticipants: demoDataset.employees.filter(
-        (employee) => employee.responseStatus !== "Responded",
-      ).length,
-      remindedParticipants: 1,
-      participants: demoDataset.employees.map((employee, index) => ({
-        id: employee.id,
-        employeeId: employee.id,
-        name: employee.name,
-        email: employee.email,
-        department: employee.department,
-        status: employee.responseStatus === "Responded" ? "completed" : "pending",
-        responseStatus: employee.responseStatus,
-        invitationSentAt: "2026-03-15T09:00:00.000Z",
-        reminderSentAt:
-          employee.responseStatus === "Responded" || index > 1
-            ? null
-            : "2026-03-20T09:00:00.000Z",
-        completedAt:
-          employee.responseStatus === "Responded" ? "2026-03-18T09:00:00.000Z" : null,
-        participationToken: `${demoSurveyAccessToken}-${employee.id}`,
-        surveyUrl: `/survey-response/${demoSurveyAccessToken}-${employee.id}`,
-      })),
-    };
+  } catch (error) {
+    throw toRepositoryError("Impossible de charger les participants du sondage.", error);
   }
 }
 
@@ -448,7 +448,7 @@ export async function getDashboardData(
 ): Promise<DashboardData> {
   const demoDataset = getDemoDataset(scenario);
 
-  if (!isBackendConfigured()) {
+  if (isMockBackendEnabled()) {
     return {
       metrics: demoDataset.dashboardMetrics,
       trendByRange: demoDataset.trendByRange,
@@ -465,7 +465,7 @@ export async function getDashboardData(
     const selectedCampaign = resolveSelectedCampaign(campaigns, campaignId);
 
     if (!selectedCampaign) {
-      throw new Error("no_campaign");
+      throw new RepositoryDataError("Aucun sondage n'est disponible pour le tableau de bord.");
     }
 
     const progress = await getBackendItem<BackendCampaignProgress>(
@@ -473,13 +473,8 @@ export async function getDashboardData(
     );
 
     return buildDashboardData(selectedCampaign, progress, responses);
-  } catch {
-    return {
-      metrics: demoDataset.dashboardMetrics,
-      trendByRange: demoDataset.trendByRange,
-      departmentDistribution: demoDataset.departmentDistribution,
-      insights: demoDataset.aiInsights,
-    };
+  } catch (error) {
+    throw toRepositoryError("Impossible de charger le tableau de bord.", error);
   }
 }
 
@@ -489,7 +484,7 @@ export async function getResultsData(
 ): Promise<ResultsData> {
   const demoDataset = getDemoDataset(scenario);
 
-  if (!isBackendConfigured()) {
+  if (isMockBackendEnabled()) {
     return {
       metrics: {
         participationRate: demoDataset.dashboardMetrics.participationRate,
@@ -508,7 +503,7 @@ export async function getResultsData(
     const selectedCampaign = resolveSelectedCampaign(campaigns, campaignId);
 
     if (!selectedCampaign) {
-      throw new Error("no_campaign");
+      throw new RepositoryDataError("Aucun sondage n'est disponible pour afficher les resultats.");
     }
 
     const progress = await getBackendItem<BackendCampaignProgress>(
@@ -516,15 +511,8 @@ export async function getResultsData(
     );
 
     return buildResultsData(selectedCampaign, progress, responses);
-  } catch {
-    return {
-      metrics: {
-        participationRate: demoDataset.dashboardMetrics.participationRate,
-        averageStress: demoDataset.dashboardMetrics.averageStress,
-      },
-      bars: demoDataset.stressByDepartment,
-      analysis: demoDataset.aiAnalysis,
-    };
+  } catch (error) {
+    throw toRepositoryError("Impossible de charger les resultats du sondage.", error);
   }
 }
 
@@ -535,7 +523,7 @@ export async function getReportData(
   const demoDataset = getDemoDataset(scenario);
   const template = await getReportTemplateData();
 
-  if (!isBackendConfigured()) {
+  if (isMockBackendEnabled()) {
     return {
       ...demoDataset.reportData,
       archivedReportPath: null,
@@ -552,7 +540,7 @@ export async function getReportData(
     const selectedCampaign = resolveSelectedCampaign(campaigns, campaignId);
 
     if (!selectedCampaign) {
-      throw new Error("no_campaign");
+      throw new RepositoryDataError("Aucun sondage n'est disponible pour generer un rapport.");
     }
 
     const progress = await getBackendItem<BackendCampaignProgress>(
@@ -563,12 +551,8 @@ export async function getReportData(
       ...buildReportData(selectedCampaign, progress, responses, reports),
       template,
     };
-  } catch {
-    return {
-      ...demoDataset.reportData,
-      archivedReportPath: null,
-      template,
-    };
+  } catch (error) {
+    throw toRepositoryError("Impossible de charger le rapport.", error);
   }
 }
 
@@ -591,7 +575,7 @@ export async function getSurveyResponseData(
 ): Promise<SurveyResponseData> {
   const demoDataset = getDemoDataset(scenario);
 
-  if (!isBackendConfigured()) {
+  if (isMockBackendEnabled()) {
     return {
       participantToken: demoSurveyAccessToken,
       employeeId: demoDataset.employees[0]?.id ?? 1,
@@ -613,7 +597,8 @@ export async function getSurveyResponseData(
       if (questionnaire) {
         return mapBackendQuestionnaire(questionnaire);
       }
-    } catch {
+    } catch (error) {
+      if (isBackendNotFoundError(error)) {
         return {
           participantToken: null,
           employeeId: null,
@@ -623,8 +608,11 @@ export async function getSurveyResponseData(
           campaignName: "",
           status: "not-found",
           completedAt: null,
-        questions: [],
-      };
+          questions: [],
+        };
+      }
+
+      throw toRepositoryError("Impossible de charger le questionnaire salarie.", error);
     }
   }
 
@@ -633,6 +621,10 @@ export async function getSurveyResponseData(
       getSurveyCampaign(scenario),
       getBackendCollection<BackendEmployee>("/employees"),
     ]);
+
+    if (!employeeEntries.length) {
+      throw new RepositoryDataError("Aucun employe n'est disponible pour ce questionnaire.");
+    }
 
     return {
       participantToken: null,
@@ -647,19 +639,24 @@ export async function getSurveyResponseData(
       completedAt: null,
       questions: currentCampaign.questions,
     };
-  } catch {
-    return {
-      participantToken: demoSurveyAccessToken,
-      employeeId: demoDataset.employees[0]?.id ?? 1,
-      employeeName: demoDataset.employees[0]?.name ?? "Salarie demo",
-      employeeTitle: demoDataset.employees[0]?.department ?? "Collaborateur",
-      companyName: demoDataset.campaign.companyName ?? "Entreprise demo",
-      campaignName: demoDataset.campaign.title,
-      status: "pending",
-      completedAt: null,
-      questions: demoDataset.surveyQuestions,
-    };
+  } catch (error) {
+    throw toRepositoryError("Impossible de charger le questionnaire salarie.", error);
   }
+}
+
+function buildEmptyEmployeeManagementData(): EmployeeManagementData {
+  return {
+    campaignId: null,
+    companyId: null,
+    campaignName: "",
+    campaignStatus: "draft",
+    participationRate: 0,
+    totalParticipants: 0,
+    completedParticipants: 0,
+    pendingParticipants: 0,
+    remindedParticipants: 0,
+    participants: [],
+  };
 }
 
 function mapBackendQuestionnaire(entry: BackendQuestionnaire): SurveyResponseData {

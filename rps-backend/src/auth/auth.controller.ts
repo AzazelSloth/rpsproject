@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ApiBody, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
+import { isAuthDisabled } from './auth.guard';
 import { LoginDto, RegisterDto, TemporaryAccessDto } from './dto/auth.dto';
 import { AuthGuard } from './auth.guard';
 import type { AuthenticatedRequest } from './auth.guard';
@@ -18,7 +19,10 @@ export class AuthController {
 
   @Post('register')
   @ApiBody({ type: RegisterDto })
-  @ApiResponse({ status: 201, description: 'Utilisateur enregistré avec succès' })
+  @ApiResponse({
+    status: 201,
+    description: 'Utilisateur enregistré avec succès',
+  })
   @ApiResponse({ status: 400, description: 'Données invalides' })
   register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
@@ -34,10 +38,22 @@ export class AuthController {
 
   @Post('temporary-access')
   @ApiBody({ type: TemporaryAccessDto })
-  @ApiResponse({ status: 201, description: 'Accès temporaire créé avec succès' })
+  @ApiResponse({
+    status: 201,
+    description: 'Accès temporaire créé avec succès',
+  })
   @ApiResponse({ status: 400, description: 'Données invalides' })
-  temporaryAccess(@Body() temporaryAccessDto: TemporaryAccessDto) {
+  async temporaryAccess(@Body() temporaryAccessDto: TemporaryAccessDto) {
     return this.authService.temporaryAccess(temporaryAccessDto);
+  }
+
+  @Get('temporary-access-config')
+  temporaryAccessConfig() {
+    return {
+      delayMs: Number(process.env.TEMPORARY_ACCESS_DELAY_MS || 2000),
+      environment: process.env.NODE_ENV,
+      authDisabled: isAuthDisabled(),
+    };
   }
 
   @Get('me')
