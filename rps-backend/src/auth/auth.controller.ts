@@ -37,7 +37,16 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Profil utilisateur' })
+  @ApiResponse({ status: 401, description: 'Non autorisé' })
   getProfile(@Request() req: AuthenticatedRequest) {
     return this.authService.validateUser(req.user.sub);
+  }
+
+  @Post('logout')
+  @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Déconnexion réussie' })
+  logout(@Request() req: AuthenticatedRequest) {
+    return { message: 'Logged out successfully' };
   }
 }

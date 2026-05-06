@@ -1,14 +1,19 @@
 import { ApiResponseError, apiFetch, getApiBaseUrl } from "@/lib/api";
 
 const BACKEND_MODE_REAL = "real";
+const BACKEND_MODE_MOCK = "mock";
 
-type BackendMode = typeof BACKEND_MODE_REAL;
+type BackendMode = typeof BACKEND_MODE_REAL | typeof BACKEND_MODE_MOCK;
 
 export class BackendConfigurationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "BackendConfigurationError";
   }
+}
+
+export function isMockBackendEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_BACKEND_MODE?.trim().toLowerCase() === BACKEND_MODE_MOCK;
 }
 
 function resolveBackendUrl(): string | null {

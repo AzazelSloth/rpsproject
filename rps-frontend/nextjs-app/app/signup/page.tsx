@@ -57,9 +57,7 @@ export default function SignupPage() {
             Créez votre espace administrateur.
           </h1>
 
-          <p className="max-w-2xl text-base leading-7 text-slate-600">
-            Inscrivez-vous avec un email autorisé pour accéder à la plateforme.
-          </p>
+         
 
           <div className="flex flex-wrap gap-3">
             <Link

@@ -218,7 +218,7 @@ export function SurveyBuilderDemo({
     }
 
     const alreadyExists = companies.some(
-      (company) => company.name.trim().toLowerCase() === trimmedName.toLowerCase(),
+      (company) => company.name?.trim().toLowerCase() === trimmedName.toLowerCase(),
     );
 
     if (alreadyExists) {

@@ -7,6 +7,7 @@ import {
 } from "@/lib/demo-data";
 import {
   BackendConfigurationError,
+  isMockBackendEnabled,
 } from "@/lib/backend/client";
 import {
   getServerBackendCollection as getBackendCollection,
@@ -339,79 +340,88 @@ export async function getEmployeeManagementData(
   scenario?: string | null,
   campaignId?: number | null,
 ): Promise<EmployeeManagementData> {
-  try {
-      completedParticipants: demoDataset.employees.filter(
-        (employee) => employee.responseStatus === "Responded",
-      ).length,
-      pendingParticipants: demoDataset.employees.filter(
-        (employee) => employee.responseStatus !== "Responded",
-      ).length,
-      remindedParticipants: 1,
-      participants: demoDataset.employees.map((employee, index) => ({
-        id: employee.id,
-        employeeId: employee.id,
-        name: employee.name,
-        email: employee.email,
-        department: employee.department,
-        status: employee.responseStatus === "Responded" ? "completed" : "pending",
-        responseStatus: employee.responseStatus,
-        invitationSentAt: "2026-03-15T09:00:00.000Z",
-        reminderSentAt:
-          employee.responseStatus === "Responded" || index > 1
-            ? null
-            : "2026-03-20T09:00:00.000Z",
-        completedAt:
-          employee.responseStatus === "Responded" ? "2026-03-18T09:00:00.000Z" : null,
-        participationToken: `${demoSurveyAccessToken}-${employee.id}`,
-        surveyUrl: `/survey-response/${demoSurveyAccessToken}-${employee.id}`,
-      })),
-    };
-  }
+  const demoDataset = getDemoDataset(scenario);
 
-  try {
-    const campaigns = await getBackendCollection<BackendCampaign>("/campaigns");
-    const activeCampaign =
-      (campaignId ? campaigns.find((item) => item.id === campaignId) : null) ??
-      campaigns.find((item) => item.status === "active") ??
-      campaigns[0];
+  if (!isMockBackendEnabled()) {
+    try {
+      const campaigns = await getBackendCollection<BackendCampaign>("/campaigns");
+      const activeCampaign =
+        (campaignId ? campaigns.find((item) => item.id === campaignId) : null) ??
+        campaigns.find((item) => item.status === "active") ??
+        campaigns[0];
 
-    if (!activeCampaign) {
-      return buildEmptyEmployeeManagementData();
+      if (!activeCampaign) {
+        return buildEmptyEmployeeManagementData();
+      }
+
+      const progress = await getBackendItem<BackendCampaignProgress>(
+        `/campaign-participants/campaign/${activeCampaign.id}/progress`,
+      );
+
+      return {
+        campaignId: activeCampaign.id,
+        companyId: activeCampaign.company?.id ?? null,
+        campaignName: activeCampaign.name,
+        campaignStatus: activeCampaign.status,
+        participationRate: progress.participation_rate,
+        totalParticipants: progress.total_participants,
+        completedParticipants: progress.completed_participants,
+        pendingParticipants: progress.pending_participants,
+        remindedParticipants: progress.reminded_participants,
+        participants: progress.participants.map((participant) => ({
+            id: participant.id,
+            employeeId: participant.employee.id,
+            name: `${participant.employee.first_name} ${participant.employee.last_name}`.trim(),
+            email: participant.employee.email,
+            department: participant.employee.department ?? "Non renseigne",
+            status: participant.status,
+            responseStatus:
+              participant.status === "completed" ? "Responded" : "Not responded",
+            invitationSentAt: participant.invitation_sent_at,
+            reminderSentAt: participant.reminder_sent_at,
+            completedAt: participant.completed_at,
+            participationToken: participant.participation_token,
+            surveyUrl: `/survey-response/${participant.participation_token}`,
+          })),
+      };
+    } catch (error) {
+      throw toRepositoryError("Impossible de charger les participants du sondage.", error);
     }
-
-    const progress = await getBackendItem<BackendCampaignProgress>(
-      `/campaign-participants/campaign/${activeCampaign.id}/progress`,
-    );
-
-    return {
-      campaignId: activeCampaign.id,
-      companyId: activeCampaign.company?.id ?? null,
-      campaignName: activeCampaign.name,
-      campaignStatus: activeCampaign.status,
-      participationRate: progress.participation_rate,
-      totalParticipants: progress.total_participants,
-      completedParticipants: progress.completed_participants,
-      pendingParticipants: progress.pending_participants,
-      remindedParticipants: progress.reminded_participants,
-      participants: progress.participants.map((participant) => ({
-          id: participant.id,
-          employeeId: participant.employee.id,
-          name: `${participant.employee.first_name} ${participant.employee.last_name}`.trim(),
-          email: participant.employee.email,
-          department: participant.employee.department ?? "Non renseigne",
-          status: participant.status,
-          responseStatus:
-            participant.status === "completed" ? "Responded" : "Not responded",
-          invitationSentAt: participant.invitation_sent_at,
-          reminderSentAt: participant.reminder_sent_at,
-          completedAt: participant.completed_at,
-          participationToken: participant.participation_token,
-          surveyUrl: `/survey-response/${participant.participation_token}`,
-        })),
-    };
-  } catch (error) {
-    throw toRepositoryError("Impossible de charger les participants du sondage.", error);
   }
+
+  return {
+    campaignId: null,
+    companyId: null,
+    campaignName: "",
+    campaignStatus: "draft",
+    participationRate: 0,
+    totalParticipants: 0,
+    completedParticipants: demoDataset.employees.filter(
+      (employee) => employee.responseStatus === "Responded",
+    ).length,
+    pendingParticipants: demoDataset.employees.filter(
+      (employee) => employee.responseStatus !== "Responded",
+    ).length,
+    remindedParticipants: 1,
+    participants: demoDataset.employees.map((employee, index) => ({
+      id: employee.id,
+      employeeId: employee.id,
+      name: employee.name,
+      email: employee.email,
+      department: employee.department,
+      status: employee.responseStatus === "Responded" ? "completed" : "pending",
+      responseStatus: employee.responseStatus,
+      invitationSentAt: "2026-03-15T09:00:00.000Z",
+      reminderSentAt:
+        employee.responseStatus === "Responded" || index > 1
+          ? null
+          : "2026-03-20T09:00:00.000Z",
+      completedAt:
+        employee.responseStatus === "Responded" ? "2026-03-18T09:00:00.000Z" : null,
+      participationToken: `${demoSurveyAccessToken}-${employee.id}`,
+      surveyUrl: `/survey-response/${demoSurveyAccessToken}-${employee.id}`,
+    })),
+  };
 }
 
 export async function getDashboardData(

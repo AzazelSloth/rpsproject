@@ -60,9 +60,7 @@ export default function LoginPage() {
             Votre espace de pilotage des risques psychosociaux.
           </h1>
 
-          <p className="max-w-2xl text-base leading-7 text-slate-600">
-            Accédez à votre espace avec un compte autorisé.
-          </p>
+        
 
           <p className="text-sm text-slate-600">
             Pas encore de compte ?{' '}

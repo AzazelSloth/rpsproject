@@ -14,7 +14,6 @@ import { CreateResponseDto, UpdateResponseDto } from './dto/response.dto';
 import { ResponseService } from './response.service';
 import { AuthGuard } from '../auth/auth.guard';
 
-@UseGuards(AuthGuard)
 @Controller('responses')
 export class ResponseController {
   constructor(private readonly responseService: ResponseService) {}
@@ -28,16 +27,19 @@ export class ResponseController {
   }
 
   @Get()
+  @UseGuards(AuthGuard)
   findAll() {
     return this.responseService.findAll();
   }
 
   @Get(':id')
+  @UseGuards(AuthGuard)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.responseService.findOne(id);
   }
 
   @Patch(':id')
+  @UseGuards(AuthGuard)
   @ApiBody({ type: UpdateResponseDto })
   @ApiResponse({ status: 200, description: 'Réponse mise à jour avec succès' })
   @ApiResponse({ status: 400, description: 'Données invalides' })
@@ -49,6 +51,7 @@ export class ResponseController {
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.responseService.remove(id);
   }

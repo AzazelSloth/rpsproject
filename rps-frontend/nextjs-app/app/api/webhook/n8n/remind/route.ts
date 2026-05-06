@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getApiUrl } from "@/lib/api";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,8 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward l'appel vers le backend (sendReminders endpoint)
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:3000';
-    const backendUrl = `${apiUrl}/campaign-participants/campaign/${campaignId}/remind`;
+    const backendUrl = getApiUrl(`/campaign-participants/campaign/${campaignId}/remind`);
 
     // Récupérer le token JWT depuis la requête entrante pour le forward
     const authHeader = request.headers.get('authorization');
