@@ -86,7 +86,11 @@ export function getAppUrl(path: string) {
   return joinUrl(getAppBaseUrl(), path);
 }
 
-function mergeJsonHeaders(initHeaders?: HeadersInit, body?: BodyInit | null) {
+function mergeJsonHeaders(
+  initHeaders?: HeadersInit,
+  body?: BodyInit | null,
+  method?: string
+) {
   const headers = new Headers(initHeaders);
 
   if (body && !(body instanceof FormData) && !headers.has("Content-Type")) {
@@ -94,10 +98,14 @@ function mergeJsonHeaders(initHeaders?: HeadersInit, body?: BodyInit | null) {
   }
 
   // Automatically include CSRF token for non-GET requests if available
-  if (typeof document !== 'undefined' && 
-      initHeaders?.method !== 'GET' && 
-      initHeaders?.method !== 'HEAD' && 
-      initHeaders?.method !== 'OPTIONS') {
+  const normalizedMethod = method?.toUpperCase() ?? "GET";
+
+  if (
+    typeof document !== "undefined" &&
+    normalizedMethod !== "GET" &&
+    normalizedMethod !== "HEAD" &&
+    normalizedMethod !== "OPTIONS"
+  ) {
     const csrfToken = getCookie('XSRF-TOKEN') || getCookie('_csrf');
     if (csrfToken) {
       headers.set('X-CSRF-Token', csrfToken);
@@ -118,7 +126,7 @@ function getCookie(name: string): string | null {
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}) {
   const response = await fetch(getApiUrl(endpoint), {
     ...options,
-    headers: mergeJsonHeaders(options.headers, options.body),
+    headers: mergeJsonHeaders(options.headers, options.body, options.method),
   });
 
   if (!response.ok) {
