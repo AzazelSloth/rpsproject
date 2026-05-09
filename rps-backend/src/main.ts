@@ -10,6 +10,11 @@ import csurf from 'csurf';
 import { AppModule } from './app.module';
 import { WinstonLoggerService } from './common/winston-logger.service';
 
+function readPositiveInt(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bodyParser: true,
@@ -35,17 +40,28 @@ async function bootstrap() {
   // app.use(csurf({ cookie: true }));
 
   // Rate limiting - stricter for auth endpoints
+  const isProduction = process.env.NODE_ENV === 'production';
+  const authRateLimitMax = readPositiveInt(
+    process.env.AUTH_RATE_LIMIT_MAX,
+    isProduction ? 20 : 100,
+  );
+  const generalRateLimitMax = readPositiveInt(
+    process.env.RATE_LIMIT_MAX,
+    isProduction ? 1000 : 5000,
+  );
+
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // limit each IP to 10 requests per windowMs
-    message: 'Too many login attempts, please try again later.',
+    max: authRateLimitMax,
+    message: 'Trop de tentatives de connexion. Veuillez reessayer plus tard.',
     standardHeaders: true,
     legacyHeaders: false,
   });
 
   const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100, // limit each IP to 100 requests per windowMs
+    max: generalRateLimitMax,
+    message: 'Trop de requetes. Veuillez reessayer plus tard.',
     standardHeaders: true,
     legacyHeaders: false,
   });

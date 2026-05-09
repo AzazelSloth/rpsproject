@@ -131,17 +131,6 @@ export default async function SurveysPage({
 
     return (
       <section className="space-y-6">
-      <SectionHeader
-        eyebrow="Gestion des sondages"
-        title={
-          activeTab === "edit" ? "Modifier un sondage" : "Creer un sondage"
-        }
-        description={
-          activeTab === "edit"
-            ? "Ajuste le sondage existant, mets a jour les questions et valide la nouvelle version. L'ajout d'entreprise est bloque en mode modification."
-            : "Un builder minimal oriente RH, avec structure, typologie de questions et apercu du futur questionnaire salarie."
-        }
-      />
       <SurveyBuilderDemo
         initialData={surveyBuilderData}
         mode={activeTab === "edit" ? "edit" : "create"}

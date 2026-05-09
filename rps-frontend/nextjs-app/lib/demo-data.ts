@@ -233,10 +233,10 @@ const dynamicInsights = [
 export const navItems = [
   { href: "/dashboard", label: "Tableau de bord" },
   { href: "/surveys?tab=list", label: "Liste des sondages" },
-  { href: "/surveys?tab=create", label: "Creer un sondage" },
+  { href: "/surveys?tab=create", label: "Créer un sondage" },
   { href: "/surveys?tab=edit", label: "Modifier un sondage" },
-  { href: "/employees", label: "Gestion des employes" },
-  { href: "/results", label: "Resultats" },
+  { href: "/employees", label: "Gestion des employés" },
+  { href: "/results", label: "Résultats" },
 ];
 
 export const notifications = dynamicNotifications;
