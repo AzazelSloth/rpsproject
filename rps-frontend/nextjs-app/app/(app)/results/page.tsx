@@ -33,7 +33,7 @@ export default async function ResultsPage({
     : "/report";
   const companyName =
     surveyBuilderData.companies.find((company) => company.id === surveyBuilderData.companyId)?.name ??
-    "Entreprise a definir";
+    "Entreprise à définir";
   const completionRate = managementData.participationRate ?? 0;
   const statusLabel = formatStatusLabel(surveyBuilderData.status);
   const statusTone =
@@ -46,9 +46,9 @@ export default async function ResultsPage({
     return (
     <section className="space-y-6">
       <SectionHeader
-        eyebrow="Resultats"
-        title="Resultats par sondage"
-        description="Selectionne un sondage pour consulter les indicateurs et les analyses detaillees."
+        eyebrow="Résultats"
+        title="Résultats par sondage"
+        description="Sélectionne un sondage pour consulter les indicateurs et les analyses détaillées."
       />
 
       <Card className="overflow-hidden">
@@ -58,12 +58,12 @@ export default async function ResultsPage({
               Tableau des sondages
             </h3>
             <p className="mt-1 text-sm text-slate-500">
-              Retrouve rapidement un sondage pour acceder aux resultats.
+              Retrouve rapidement un sondage pour accéder aux résultats.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <input
-              placeholder="recherche le nom de l'entreprise"
+              placeholder="Rechercher le nom de l'entreprise"
               className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
             />
             <select className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none">
@@ -80,10 +80,10 @@ export default async function ResultsPage({
               <tr>
                 <th className="px-6 py-4">Entreprise</th>
                 <th className="px-6 py-4">Statut</th>
-                <th className="px-6 py-4">Taux de completion</th>
-                <th className="px-6 py-4">Date de debut</th>
+                <th className="px-6 py-4">Taux de complétion</th>
+                <th className="px-6 py-4">Date de début</th>
                 <th className="px-6 py-4">Date de fin</th>
-                <th className="px-6 py-4">Resultats</th>
+                <th className="px-6 py-4">Résultats</th>
               </tr>
             </thead>
             <tbody>
@@ -100,7 +100,7 @@ export default async function ResultsPage({
                     <Pill tone={completionRate >= 70 ? "success" : "warning"}>
                       {completionRate}%
                     </Pill>
-                    <span className="text-xs text-slate-500">completion globale</span>
+                    <span className="text-xs text-slate-500">complétion globale</span>
                   </div>
                 </td>
                 <td className="px-6 py-4 text-slate-600">
@@ -115,7 +115,7 @@ export default async function ResultsPage({
                     className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
                     style={{ color: '#ffffff' }}
                   >
-                    Voir les resultats
+                    Voir les résultats
                   </Link>
                 </td>
               </tr>
@@ -128,7 +128,7 @@ export default async function ResultsPage({
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-[family-name:var(--font-manrope)] text-2xl font-extrabold">
-              Detail du sondage
+              Détail du sondage
             </h2>
             <Link href={reportHref} className="inline-flex">
               <PrimaryButton>Voir le rapport</PrimaryButton>
@@ -140,17 +140,17 @@ export default async function ResultsPage({
               {
                 label: "Taux de participation",
                 value: `${metrics.participationRate}%`,
-                tone: "Le niveau de reponse permet une lecture exploitable.",
+                tone: "Le niveau de réponse permet une lecture exploitable.",
               },
               {
                 label: "Stress moyen",
                 value: `${metrics.averageStress} / 5`,
-                tone: "Indicateur consolide sur les reponses recues.",
+                tone: "Indicateur consolidé sur les réponses reçues.",
               },
               {
-                label: "Departements analyses",
+                label: "Départements analysés",
                 value: `${bars.length}`,
-                tone: "Comparaison inter-equipes en temps reel.",
+                tone: "Comparaison inter-équipes en temps réel.",
               },
               {
                 label: "Alertes prioritaires",
@@ -173,12 +173,12 @@ export default async function ResultsPage({
             <Card className="p-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-sm text-slate-500">Lecture departement par departement</p>
+                  <p className="text-sm text-slate-500">Lecture département par département</p>
                   <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
-                    Intensite du stress percu
+                    Intensité du stress perçu
                   </h3>
                 </div>
-                <Pill tone="warning">Priorites de restitution</Pill>
+                <Pill tone="warning">Priorités de restitution</Pill>
               </div>
 
               <div className="mt-8 space-y-5">
@@ -209,9 +209,9 @@ export default async function ResultsPage({
 
             <div className="space-y-5">
               <Card className="p-6">
-                <p className="text-sm text-slate-500">Repartition des retours</p>
+                <p className="text-sm text-slate-500">Répartition des retours</p>
                 <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
-                  Lecture executive
+                  Lecture exécutive
                 </h3>
                 <div className="mt-5 space-y-4">
                   <div className="rounded-[14px] border border-emerald-100 bg-emerald-50 px-4 py-4">
@@ -235,7 +235,7 @@ export default async function ResultsPage({
                       Recommandation de lecture
                     </p>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Commencer par les equipes les plus exposees, puis relier les ecarts a la participation et au contexte managerial.
+                      Commencer par les équipes les plus exposées, puis relier les écarts à la participation et au contexte managérial.
                     </p>
                   </div>
                 </div>
@@ -251,7 +251,7 @@ export default async function ResultsPage({
                     <div key={item} className="rounded-[14px] border border-amber-100 bg-amber-50 px-4 py-4">
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-sm font-medium leading-6 text-slate-700">{item}</p>
-                        <Pill tone={index === 0 ? "warning" : "neutral"}>{index === 0 ? "Priorite" : "Lecture"}</Pill>
+                        <Pill tone={index === 0 ? "warning" : "neutral"}>{index === 0 ? "Priorité" : "Lecture"}</Pill>
                       </div>
                     </div>
                   ))}
@@ -266,13 +266,13 @@ export default async function ResultsPage({
   } catch (error) {
     return (
       <PageErrorState
-        eyebrow="Resultats"
-        title="Resultats par sondage"
-        description="Consulte les indicateurs et les analyses detaillees du sondage selectionne."
+        eyebrow="Résultats"
+        title="Résultats par sondage"
+        description="Consulte les indicateurs et les analyses détaillées du sondage sélectionné."
         message={
           error instanceof Error
             ? error.message
-            : "Les resultats n'ont pas pu etre charges."
+            : "Les résultats n'ont pas pu être chargés."
         }
       />
     );
