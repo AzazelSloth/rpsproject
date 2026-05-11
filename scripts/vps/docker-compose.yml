@@ -32,6 +32,8 @@ services:
     depends_on:
       n8n:
         condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - rps_network
 
@@ -108,6 +110,8 @@ services:
       DB_POSTGRESDB_PASSWORD: ${DB_PASSWORD:-rps_pass}
     volumes:
       - n8n_data:${N8N_USER_FOLDER:-/home/node/.n8n}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - rps_network
 

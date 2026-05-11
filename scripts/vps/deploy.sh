@@ -99,6 +99,19 @@ ensure_absolute_path_or_default() {
   printf '%s' "$value"
 }
 
+resolve_container_db_host() {
+  local value="${1:-}"
+
+  case "$value" in
+    localhost|127.0.0.1|::1)
+      printf '%s' "host.docker.internal"
+      ;;
+    *)
+      printf '%s' "$value"
+      ;;
+  esac
+}
+
 if [ -z "$PUBLIC_BASE_URL" ]; then
   if [ -n "$DOMAIN_NAME" ]; then
     PUBLIC_BASE_URL="https://$DOMAIN_NAME"
@@ -110,6 +123,7 @@ fi
 PUBLIC_BASE_URL="$(trim_trailing_slash "$PUBLIC_BASE_URL")"
 N8N_PATH="$(ensure_leading_and_trailing_slash "$N8N_PATH")"
 N8N_USER_FOLDER="$(ensure_absolute_path_or_default "$N8N_USER_FOLDER" "/home/node/.n8n")"
+CONTAINER_DB_HOST="$(resolve_container_db_host "$DB_HOST")"
 
 if [ -z "$NEXT_PUBLIC_APP_URL" ]; then
   NEXT_PUBLIC_APP_URL="$PUBLIC_BASE_URL"
@@ -178,7 +192,7 @@ COMPOSE_PROJECT_NAME=rps-$ENV
 NODE_ENV=production
 PORT=3000
 JWT_SECRET=$JWT_SECRET
-DB_HOST=$DB_HOST
+DB_HOST=$CONTAINER_DB_HOST
 DB_PORT=$DB_PORT
 DB_USER=$DB_USER
 DB_PASSWORD=$DB_PASSWORD
@@ -213,7 +227,7 @@ TZ=$TZ
 GENERIC_TIMEZONE=$GENERIC_TIMEZONE
 DB_TYPE=$DB_TYPE
 DB_NAME_N8N=$DB_NAME_N8N
-DB_POSTGRESDB_HOST=$DB_HOST
+DB_POSTGRESDB_HOST=$CONTAINER_DB_HOST
 DB_POSTGRESDB_PORT=$DB_PORT
 DB_POSTGRESDB_DATABASE=$DB_NAME_N8N
 DB_POSTGRESDB_USER=$DB_USER
@@ -258,7 +272,7 @@ ensure_external_database_ready() {
 
   echo "Verifying external database connectivity..."
   docker compose run --rm \
-    -e DB_HOST="$DB_HOST" \
+    -e DB_HOST="$CONTAINER_DB_HOST" \
     -e DB_PORT="$DB_PORT" \
     -e DB_USER="$DB_USER" \
     -e DB_PASSWORD="$DB_PASSWORD" \
@@ -268,7 +282,7 @@ ensure_external_database_ready() {
 
   echo "Ensuring application and n8n databases exist..."
   docker compose run --rm \
-    -e DB_HOST="$DB_HOST" \
+    -e DB_HOST="$CONTAINER_DB_HOST" \
     -e DB_PORT="$DB_PORT" \
     -e DB_USER="$DB_USER" \
     -e DB_PASSWORD="$DB_PASSWORD" \
