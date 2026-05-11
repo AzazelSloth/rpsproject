@@ -87,6 +87,18 @@ ensure_leading_and_trailing_slash() {
   printf '%s/' "${value%/}"
 }
 
+ensure_absolute_path_or_default() {
+  local value="${1:-}"
+  local fallback="$2"
+
+  if [ -z "$value" ] || [ "${value#/}" = "$value" ]; then
+    printf '%s' "$fallback"
+    return
+  fi
+
+  printf '%s' "$value"
+}
+
 if [ -z "$PUBLIC_BASE_URL" ]; then
   if [ -n "$DOMAIN_NAME" ]; then
     PUBLIC_BASE_URL="https://$DOMAIN_NAME"
@@ -97,6 +109,7 @@ fi
 
 PUBLIC_BASE_URL="$(trim_trailing_slash "$PUBLIC_BASE_URL")"
 N8N_PATH="$(ensure_leading_and_trailing_slash "$N8N_PATH")"
+N8N_USER_FOLDER="$(ensure_absolute_path_or_default "$N8N_USER_FOLDER" "/home/node/.n8n")"
 
 if [ -z "$NEXT_PUBLIC_APP_URL" ]; then
   NEXT_PUBLIC_APP_URL="$PUBLIC_BASE_URL"
@@ -217,9 +230,13 @@ if command -v pm2 >/dev/null 2>&1; then
 fi
 
 if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet nginx; then
-  echo "Stopping host nginx to free ports 80/443 for Docker..."
-  sudo systemctl stop nginx || true
-  sudo systemctl disable nginx || true
+  if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+    echo "Stopping host nginx to free ports 80/443 for Docker..."
+    sudo -n systemctl stop nginx || true
+    sudo -n systemctl disable nginx || true
+  else
+    echo "Host nginx is active but passwordless sudo is unavailable; skipping host nginx shutdown."
+  fi
 fi
 
 cd "$COMPOSE_DIR"
