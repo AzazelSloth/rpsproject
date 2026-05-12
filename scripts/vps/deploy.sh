@@ -347,7 +347,10 @@ if [ "$MIGRATION_DONE" != "true" ]; then
 fi
 
 echo "Starting full stack..."
-docker compose up -d --build --remove-orphans
+docker compose up -d --build --force-recreate --remove-orphans nginx backend frontend
+
+echo "Ensuring nginx is recreated with the latest mounted configuration..."
+docker compose up -d --force-recreate nginx
 
 wait_for_url() {
   local name="$1"
@@ -369,7 +372,12 @@ wait_for_url() {
 }
 
 if ! wait_for_url "backend" "http://127.0.0.1:8787/api/health" 18 5; then
+  echo "Backend is running but not reachable through nginx on 127.0.0.1:8787."
+  echo "Collecting direct container and nginx diagnostics..."
+  docker compose exec -T backend sh -lc "node -e \"fetch('http://127.0.0.1:3000/api/health').then(async (response) => { console.log('[backend direct]', response.status, await response.text()); }).catch((error) => { console.error('[backend direct] request failed:', error.message); process.exit(1); })\"" || true
+  docker compose exec -T nginx sh -lc "wget -qO- http://127.0.0.1:8786/api/health || true" || true
   docker compose logs backend --tail 120 || true
+  docker compose logs nginx --tail 120 || true
   exit 1
 fi
 
