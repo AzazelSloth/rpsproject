@@ -406,7 +406,8 @@ if ! wait_for_nginx_path "frontend" "/login" 12 5; then
 fi
 
 if [ "$N8N_BASIC_AUTH_ACTIVE" = "true" ]; then
-  if ! docker compose exec -T nginx sh -lc "wget -qO- --user='${N8N_BASIC_AUTH_USER}' --password='${N8N_BASIC_AUTH_PASSWORD}' http://127.0.0.1:8786/n8n/ >/dev/null"; then
+  n8n_basic_auth_header="$(printf '%s' "${N8N_BASIC_AUTH_USER}:${N8N_BASIC_AUTH_PASSWORD}" | base64 | tr -d '\n')"
+  if ! docker compose exec -T nginx sh -lc "wget -qO- --header='Authorization: Basic ${n8n_basic_auth_header}' http://127.0.0.1:8786/n8n/ >/dev/null"; then
     echo "ERROR: n8n did not respond behind nginx."
     docker compose logs n8n nginx --tail 120 || true
     exit 1
