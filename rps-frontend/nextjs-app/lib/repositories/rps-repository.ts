@@ -203,6 +203,12 @@ export type SurveyOption = {
 };
 
 export async function getAllSurveys(scenario?: string | null): Promise<SurveyOption[]> {
+  const demoDataset = getDemoDataset(scenario);
+
+  if (isMockBackendEnabled()) {
+    return [buildDemoSurveyOption(demoDataset)];
+  }
+
   try {
     const campaigns = await getBackendCollection<BackendCampaign>("/campaigns");
 
