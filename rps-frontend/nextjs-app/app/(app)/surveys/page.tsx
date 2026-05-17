@@ -34,7 +34,7 @@ export default async function SurveysPage({
       : "/results";
     const companyName =
       surveyBuilderData.companies.find((company) => company.id === surveyBuilderData.companyId)?.name ??
-      "Entreprise a definir";
+      "Entreprise a définir";
     const completionRate = managementData?.participationRate ?? 0;
     const statusLabel = formatStatusLabel(surveyBuilderData.status);
     const statusTone =
@@ -50,7 +50,7 @@ export default async function SurveysPage({
         <SectionHeader
           eyebrow="Gestion des sondages"
           title="Liste des sondages"
-          description="Consulte les sondages en cours, leur statut et le niveau de completion avant d'acceder aux resultats."
+          description="Consultez les sondages en cours, leur statut et le niveau de complétion avant d'acceder aux resultats."
         />
 
         <Card className="overflow-hidden">
@@ -82,10 +82,10 @@ export default async function SurveysPage({
                 <tr>
                   <th className="px-6 py-4">Entreprise</th>
                   <th className="px-6 py-4">Statut</th>
-                  <th className="px-6 py-4">Taux de completion</th>
-                  <th className="px-6 py-4">Date de debut</th>
+                  <th className="px-6 py-4">Taux de complétion</th>
+                  <th className="px-6 py-4">Date de début</th>
                   <th className="px-6 py-4">Date de fin</th>
-                  <th className="px-6 py-4">Resultats</th>
+                  <th className="px-6 py-4">Résultats</th>
                 </tr>
               </thead>
               <tbody>
@@ -102,7 +102,7 @@ export default async function SurveysPage({
                       <Pill tone={completionRate >= 70 ? "success" : "warning"}>
                         {completionRate}%
                       </Pill>
-                      <span className="text-xs text-slate-500">completion globale</span>
+                      <span className="text-xs text-slate-500">complétion globale</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-slate-600">
@@ -117,7 +117,7 @@ export default async function SurveysPage({
                       className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
                       style={{ color: '#ffffff' }}
                     >
-                      Voir les resultats
+                      Voir les résultats
                     </Link>
                   </td>
                 </tr>
@@ -134,12 +134,12 @@ export default async function SurveysPage({
       <SectionHeader
         eyebrow="Gestion des sondages"
         title={
-          activeTab === "edit" ? "Modifier un sondage" : "Creer un sondage"
+          activeTab === "edit" ? "Modifier un sondage" : "Créer un sondage"
         }
         description={
           activeTab === "edit"
             ? "Ajuste le sondage existant, mets a jour les questions et valide la nouvelle version. L'ajout d'entreprise est bloque en mode modification."
-            : "Un builder minimal oriente RH, avec structure, typologie de questions et apercu du futur questionnaire salarie."
+            : "Configure un nouveau sondage en choisissant les entreprises a sonder, les questions a poser et le calendrier de diffusion."
         }
       />
       <SurveyBuilderDemo

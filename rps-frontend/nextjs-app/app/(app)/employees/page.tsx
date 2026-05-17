@@ -63,7 +63,7 @@ export default async function EmployeesPage({
     return (
       <PageErrorState
         eyebrow="Participants"
-        title="Gestion des employes"
+        title="Gestion des employés"
         description="Consulte les participants, les relances et les liens individuels."
         message={
           error instanceof Error

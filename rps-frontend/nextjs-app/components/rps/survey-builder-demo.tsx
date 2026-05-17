@@ -146,8 +146,6 @@ export function SurveyBuilderDemo({
   const isAllStepsComplete = Boolean(
     campaignId && status === "active" && questions.length > 0 && hasImportedEmployees,
   );
-  const builderTitle = mode === "edit" ? "Modifier un sondage" : "Créer un sondage";
-
   useEffect(() => {
     setCompanies(initialData.companies);
     setCampaigns(initialData.campaigns);
@@ -365,7 +363,7 @@ export function SurveyBuilderDemo({
     }
 
     if (!campaignMatchesCompany) {
-      setError("Le sondage selectionne n'appartient pas a cette entreprise. Enregistrez ou selectionnez le bon sondage avant l'import.");
+      setError("Le sondage sélectionné n'appartient pas à cette entreprise. Enregistrez ou sélectionnez le bon sondage avant l'import.");
       return;
     }
 
@@ -558,7 +556,7 @@ export function SurveyBuilderDemo({
     copyToClipboard(links).then((copied) => {
       setImportFeedback(
         copied
-          ? "Tous les liens ont ete copies dans le presse-papiers."
+          ? "Tous les liens ont ete copiés dans le presse-papiers."
           : "La copie automatique n'est pas disponible dans ce navigateur. Telechargez la liste des liens.",
       );
     });
@@ -958,10 +956,12 @@ export function SurveyBuilderDemo({
       <Card className="overflow-hidden border border-slate-200 bg-white p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="font-[family-name:var(--font-manrope)] text-3xl font-extrabold tracking-tight text-slate-900">
-              {builderTitle}
+            <h2 className="font-[family-name:var(--font-manrope)] text-2xl font-extrabold tracking-tight text-slate-900">
+              Configuration du sondage
             </h2>
-            <p className="mt-2 text-sm text-slate-500">Configuration en 6 étapes simples</p>
+            <p className="mt-2 text-sm text-slate-500">
+              Entreprise, période, description, import et statut.
+            </p>
           </div>
           <div className="flex flex-col items-end gap-2">
             <button

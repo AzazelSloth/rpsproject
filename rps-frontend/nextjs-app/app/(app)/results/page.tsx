@@ -48,7 +48,7 @@ export default async function ResultsPage({
       <SectionHeader
         eyebrow="Résultats"
         title="Résultats par sondage"
-        description="Selectionne un sondage pour consulter les indicateurs et les analyses detaillées."
+        description="Sélectionne un sondage pour consulter les indicateurs et les analyses detaillées."
       />
 
       <Card className="overflow-hidden">

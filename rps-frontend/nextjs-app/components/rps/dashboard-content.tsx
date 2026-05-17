@@ -31,10 +31,10 @@ export function DashboardContent({
       <SectionHeader
         eyebrow="Tableau de bord"
         title="Liste des entreprises"
-        description="Accede aux sondages par entreprise, avec statut, taux de completion et acces direct aux resultats."
+        description="Accède aux sondages par entreprise, avec statut, taux de complétion et acces direct aux resultats."
         action={
           <Link href="/surveys?tab=create" className="inline-flex">
-            <PrimaryButton>Creer un sondage</PrimaryButton>
+            <PrimaryButton>Créer un sondage</PrimaryButton>
           </Link>
         }
       />
@@ -76,10 +76,10 @@ export function DashboardContent({
               <tr>
                 <th className="px-6 py-4">Entreprise</th>
                 <th className="px-6 py-4">Statut</th>
-                <th className="px-6 py-4">Taux de completion</th>
-                <th className="px-6 py-4">Date de debut</th>
+                <th className="px-6 py-4">Taux de complétion</th>
+                <th className="px-6 py-4">Date de début</th>
                 <th className="px-6 py-4">Date de fin</th>
-                <th className="px-6 py-4">Resultats</th>
+                <th className="px-6 py-4">Résultats</th>
               </tr>
             </thead>
             <tbody>
@@ -124,7 +124,7 @@ export function DashboardContent({
                           className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
                           style={{ color: "#ffffff" }}
                         >
-                          Voir les resultats
+                          Voir les résultats
                         </Link>
                       </td>
                     </tr>
@@ -133,7 +133,7 @@ export function DashboardContent({
               ) : (
                 <tr className="border-t border-slate-100">
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                    Aucun sondage ne correspond a vos criteres de recherche.
+                    Aucun sondage ne correspond a vos critères de recherche.
                   </td>
                 </tr>
               )}

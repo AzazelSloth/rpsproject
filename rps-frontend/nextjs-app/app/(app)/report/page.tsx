@@ -20,7 +20,7 @@ export default async function ReportPage({
       <section className="space-y-6">
         <SectionHeader
           eyebrow="Rapports"
-          title="Rapports Resultats"
+          title="Rapports Résultats"
           description="Configure le backend pour lancer l'analyse IA de tes campagnes et recevoir tes rapports par email."
         />
         <Card className="p-8 text-center">
@@ -41,7 +41,7 @@ export default async function ReportPage({
       <section className="space-y-6">
         <SectionHeader
           eyebrow="Rapports"
-          title="Rapports Resultats"
+          title="Rapports Résultats"
           description="Analyse des campagnes et rapports par email."
         />
 
@@ -58,7 +58,7 @@ export default async function ReportPage({
     return (
       <PageErrorState
         eyebrow="Rapports"
-        title="Rapports Resultats"
+        title="Rapports Résultats"
         description="Analyse des campagnes et rapports par email."
         message={
           error instanceof Error ? error.message : "Les rapports n'ont pas pu être chargés."

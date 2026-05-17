@@ -10,9 +10,9 @@ import { getSessionUser, logout, type User as AuthUser } from "@/lib/backend/aut
 const pageTitles: Record<string, string> = {
   "/dashboard": "Bonjour, Admin",
   "/surveys": "",
-  "/employees": "Gestion des employes",
-  "/results": "Resultats",
-  "/report": "Synthese",
+  "/employees": "Gestion des employés",
+  "/results": "",
+  "/report": "Synthèse",
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -112,7 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="flex flex-col gap-2 pl-4">
                 {[
                   { href: "/surveys?tab=list", label: "Liste des sondages", tab: "list" },
-                  { href: "/surveys?tab=create", label: "Creer un sondage", tab: "create" },
+                  { href: "/surveys?tab=create", label: "Créer un sondage", tab: "create" },
                   { href: "/surveys?tab=edit", label: "Modifier un sondage", tab: "edit" },
                 ].map((item) => {
                   const active = isSurveyRoute && activeSurveyTab === item.tab;
@@ -144,7 +144,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }`}
             >
               <span className={pathname === "/employees" ? "text-white" : "text-inherit"}>
-                Gestion des employes
+                Gestion des employés
               </span>
               {pathname === "/employees" ? (
                 <span className="h-2.5 w-2.5 rounded-full bg-[#f0c36d]" />
@@ -160,7 +160,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }`}
             >
               <span className={pathname === "/results" ? "text-white" : "text-inherit"}>
-                Resultats
+                Résultats
               </span>
               {pathname === "/results" ? (
                 <span className="h-2.5 w-2.5 rounded-full bg-[#f0c36d]" />
@@ -195,8 +195,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <button
                   onClick={() => void handleLogout()}
                   className="ml-2 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  title="Se deconnecter"
-                  aria-label="Se deconnecter"
+                  title="Se déconnecter"
+                  aria-label="Se déconnecter"
                 >
                   <LogOut className="h-5 w-5" />
                 </button>
