@@ -40,9 +40,8 @@ export default async function SurveysPage({
     const statusTone =
       surveyBuilderData.status === "active"
         ? "success"
-        : surveyBuilderData.status === "draft"
-          ? "warning"
-          : "neutral";
+        : "neutral";
+    const showSurveyInList = surveyBuilderData.status !== "draft";
 
     if (activeTab === "list") {
       return (
@@ -50,29 +49,15 @@ export default async function SurveysPage({
         <SectionHeader
           eyebrow="Gestion des sondages"
           title="Liste des sondages"
-          description="Consultez les sondages en cours, leur statut et le niveau de complétion avant d'acceder aux resultats."
+          description="Consultez les sondages, leur statut et le niveau de complétion avant d'acceder aux resultats."
         />
 
         <Card className="overflow-hidden">
-          <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="border-b border-slate-200 px-6 py-5">
             <div>
               <h3 className="font-[family-name:var(--font-manrope)] text-xl font-bold">
-                Sondages en cours
+                Liste des sondages
               </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Filtre par entreprise ou statut pour retrouver rapidement un sondage.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                placeholder="Rechercher le nom de l'entreprise"
-                className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-              />
-              <select className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none">
-                <option value="active">active</option>
-                <option value="draft">brouillon</option>
-                <option value="archived">archive</option>
-              </select>
             </div>
           </div>
 
@@ -89,38 +74,46 @@ export default async function SurveysPage({
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-t border-slate-100 align-top">
-                  <td className="px-6 py-4">
-                    <p className="font-semibold">{companyName}</p>
-                    <p className="mt-1 text-slate-600">{surveyBuilderData.title}</p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <Pill tone={statusTone}>{statusLabel}</Pill>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-2">
-                      <Pill tone={completionRate >= 70 ? "success" : "warning"}>
-                        {completionRate}%
-                      </Pill>
-                      <span className="text-xs text-slate-500">complétion globale</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-slate-600">
-                    {formatShortDate(surveyBuilderData.startDate)}
-                  </td>
-                  <td className="px-6 py-4 text-slate-600">
-                    {formatShortDate(surveyBuilderData.endDate)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <Link
-                      href={resultsHref}
-                      className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
-                      style={{ color: '#ffffff' }}
-                    >
-                      Voir les résultats
-                    </Link>
-                  </td>
-                </tr>
+                {showSurveyInList ? (
+                  <tr className="border-t border-slate-100 align-top">
+                    <td className="px-6 py-4">
+                      <p className="font-semibold">{companyName}</p>
+                      <p className="mt-1 text-slate-600">{surveyBuilderData.title}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Pill tone={statusTone}>{statusLabel}</Pill>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-2">
+                        <Pill tone={completionRate >= 70 ? "success" : "warning"}>
+                          {completionRate}%
+                        </Pill>
+                        <span className="text-xs text-slate-500">complétion globale</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {formatShortDate(surveyBuilderData.startDate)}
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {formatShortDate(surveyBuilderData.endDate)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Link
+                        href={resultsHref}
+                        className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
+                        style={{ color: '#ffffff' }}
+                      >
+                        Voir les résultats
+                      </Link>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr className="border-t border-slate-100">
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                      Aucun sondage disponible.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -178,13 +171,13 @@ function formatShortDate(value: string | null) {
 
 function formatStatusLabel(value: string) {
   if (value === "active") {
-    return "active";
+    return "Activé";
   }
-  if (value === "draft") {
-    return "brouillon";
+  if (value === "terminated") {
+    return "Complété";
   }
   if (value === "archived") {
-    return "archive";
+    return "Archivé";
   }
   return value || "inconnu";
 }

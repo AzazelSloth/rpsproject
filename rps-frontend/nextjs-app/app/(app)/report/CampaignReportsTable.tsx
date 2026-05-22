@@ -37,7 +37,9 @@ export function CampaignReportsTable({
   }, [companies, campaigns]);
 
   const filteredCampaigns = useMemo(() => {
-    let filtered = campaigns;
+    let filtered = campaigns.filter(
+      (campaign) => campaign.status !== "draft" && campaign.status !== "preparation",
+    );
     if (filterCompanyId) {
       filtered = filtered.filter((c) => c.company?.id === filterCompanyId);
     }
@@ -164,6 +166,7 @@ export function CampaignReportsTable({
                     ? "success"
                     : "warning";
                 const hasReport = !!campaign.report;
+                const canOpenReport = canOpenReportForStatus(campaign.status);
 
                 return (
                   <tr key={campaign.id} className="border-t border-slate-100 align-top">
@@ -180,7 +183,7 @@ export function CampaignReportsTable({
                       {formatShortDate(campaign.start_date)}
                     </td>
                     <td className="px-6 py-4">
-                      {hasReport ? (
+                      {hasReport && canOpenReport ? (
                         <a
                           href={campaign.report!.report_path}
                           target="_blank"
@@ -189,6 +192,13 @@ export function CampaignReportsTable({
                         >
                           📄 Voir rapport
                         </a>
+                      ) : hasReport ? (
+                        <span
+                          aria-disabled="true"
+                          className="inline-flex cursor-not-allowed items-center gap-1 text-sm font-medium text-slate-400"
+                        >
+                          📄 Voir rapport
+                        </span>
                       ) : (
                         <span className="text-xs text-slate-400">Aucun rapport</span>
                       )}
@@ -238,10 +248,13 @@ function formatShortDate(value: string | null) {
 
 function formatStatusLabel(status: string) {
   const labels: Record<string, string> = {
-    preparation: "Preparation",
-    active: "Actif",
-    terminated: "Termine",
-    archived: "Archive",
+    active: "Activé",
+    terminated: "Complété",
+    archived: "Archivé",
   };
   return labels[status] || status;
+}
+
+function canOpenReportForStatus(status: string) {
+  return status === "terminated" || status === "archived";
 }

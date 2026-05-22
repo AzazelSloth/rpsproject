@@ -509,7 +509,9 @@ export function EmployeesTableDemo({
             Détails du sondage
           </p>
           <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold">
-            {loadingSurveyDetails ? "Chargement..." : (surveyDetails?.title || "Sondage sans titre")}
+            {loadingSurveyDetails
+              ? "Chargement..."
+              : surveyDetails?.name || surveyDetails?.title || selectedSurvey?.title || defaultCampaignName}
           </h3>
           
           {loadingSurveyDetails ? (
@@ -574,7 +576,7 @@ export function EmployeesTableDemo({
                 <p className="text-xs font-semibold uppercase text-slate-500 tracking-[0.05em]">Statut</p>
                 <div className="mt-2">
                   <Pill tone={surveyDetails?.status === 'active' ? 'success' : 'neutral'}>
-                    {surveyDetails?.status === 'active' ? 'Actif' : 'Inactif'}
+                    {formatSurveyStatusLabel(surveyDetails?.status)}
                   </Pill>
                 </div>
               </div>
@@ -656,9 +658,8 @@ export function EmployeesTableDemo({
                                 : "neutral"
                           }
                         >
-                          {participant.status}
+                          {formatParticipantStatusLabel(participant.status)}
                         </Pill>
-                        <span className="text-xs text-slate-500">{participant.responseStatus}</span>
                       </div>
                     </td>
                     <td className="hidden px-4 py-4 text-slate-600 sm:px-6 lg:table-cell">
@@ -717,4 +718,30 @@ function extractRemindedCount(result: RemindResponse) {
     result.count ??
     null
   );
+}
+
+function formatParticipantStatusLabel(value: "pending" | "reminded" | "completed") {
+  if (value === "pending") {
+    return "En attente";
+  }
+  if (value === "completed") {
+    return "Complété";
+  }
+  if (value === "reminded") {
+    return "Relancé";
+  }
+  return value;
+}
+
+function formatSurveyStatusLabel(value?: string) {
+  if (value === "active") {
+    return "Activé";
+  }
+  if (value === "terminated") {
+    return "Complété";
+  }
+  if (value === "archived") {
+    return "Archivé";
+  }
+  return value || "inconnu";
 }

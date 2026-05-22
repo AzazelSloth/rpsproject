@@ -108,8 +108,12 @@ export function SurveyBuilderDemo({
   const [description, setDescription] = useState(() =>
     mode === "create" ? "" : initialData.description,
   );
-  const [startDate, setStartDate] = useState(toDateInputValue(initialData.startDate));
-  const [endDate, setEndDate] = useState(toDateInputValue(initialData.endDate));
+  const [startDate, setStartDate] = useState(() =>
+    mode === "create" ? "" : toDateInputValue(initialData.startDate),
+  );
+  const [endDate, setEndDate] = useState(() =>
+    mode === "create" ? "" : toDateInputValue(initialData.endDate),
+  );
   const [questions, setQuestions] = useState(
     mode === "create"
       ? []
@@ -178,8 +182,8 @@ export function SurveyBuilderDemo({
     setStatus(mode === "create" ? "draft" : initialData.status);
     setTitle(mode === "create" ? "" : initialData.title);
     setDescription(mode === "create" ? "" : initialData.description);
-    setStartDate(toDateInputValue(initialData.startDate));
-    setEndDate(toDateInputValue(initialData.endDate));
+    setStartDate(mode === "create" ? "" : toDateInputValue(initialData.startDate));
+    setEndDate(mode === "create" ? "" : toDateInputValue(initialData.endDate));
     setQuestions(
       mode === "create"
         ? []
@@ -1260,7 +1264,7 @@ export function SurveyBuilderDemo({
 
         <div className="mt-6 grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {/* Card 1: Entreprise */}
-          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+          <div className="relative order-1 rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               1
             </span>
@@ -1286,10 +1290,10 @@ export function SurveyBuilderDemo({
                     Choisir un sondage
                   </option>
                   {campaigns
-                    .filter((c) => c.companyId === companyId)
+                    .filter((c) => c.companyId === companyId && c.status !== "draft")
                     .map((campaign) => (
                       <option key={campaign.id} value={campaign.id}>
-                        {campaign.name} ({campaign.status})
+                        {campaign.name} ({formatCampaignStatusLabel(campaign.status)})
                       </option>
                     ))}
                 </select>
@@ -1331,9 +1335,9 @@ export function SurveyBuilderDemo({
           </div>
 
           {/* Card 2: Periode */}
-          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+          <div className={`relative ${mode === "edit" ? "order-3" : "order-2"} rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col`}>
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-              2
+              {mode === "edit" ? 3 : 2}
             </span>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
               Période
@@ -1367,9 +1371,9 @@ export function SurveyBuilderDemo({
           </div>
 
           {/* Card 3: Nom et description */}
-          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+          <div className={`relative ${mode === "edit" ? "order-2" : "order-3"} rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col`}>
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-              3
+              {mode === "edit" ? 2 : 3}
             </span>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
               Nom et description
@@ -1390,7 +1394,7 @@ export function SurveyBuilderDemo({
           </div>
 
           {/* Card 4: Activation */}
-          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+          <div className="relative order-4 rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               4
             </span>
@@ -1430,7 +1434,7 @@ export function SurveyBuilderDemo({
           </div>
 
           {/* Card 5: Import */}
-          <div className="relative rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+          <div className="relative order-5 rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
               5
             </span>
@@ -2177,6 +2181,19 @@ function isEndDateBeforeStartDate(startDate: string, endDate: string) {
   }
 
   return new Date(`${endDate}T00:00:00`) < new Date(`${startDate}T00:00:00`);
+}
+
+function formatCampaignStatusLabel(value: string) {
+  if (value === "active") {
+    return "Activé";
+  }
+  if (value === "terminated") {
+    return "Complété";
+  }
+  if (value === "archived") {
+    return "Archivé";
+  }
+  return value || "inconnu";
 }
 
 

@@ -26,11 +26,12 @@ export default async function EmployeesPage({
       }),
     ]);
 
+    const visibleSurveys = surveysList.filter((survey) => survey.status !== "draft");
     const selectedSurvey =
       (requestedCampaignId
-        ? surveysList.find((survey) => survey.id === requestedCampaignId)
+        ? visibleSurveys.find((survey) => survey.id === requestedCampaignId)
         : null) ??
-      surveysList.find((survey) => survey.id === managementData.campaignId) ??
+      visibleSurveys.find((survey) => survey.id === managementData.campaignId) ??
       null;
     const effectiveCampaignId =
       requestedCampaignId ??
@@ -50,7 +51,7 @@ export default async function EmployeesPage({
         <EmployeesTableDemo
           managementData={managementData}
           companies={surveyBuilderData.companies}
-          surveys={surveysList}
+          surveys={visibleSurveys}
           defaultCompanyId={effectiveCompanyId}
           defaultCampaignId={effectiveCampaignId}
           defaultCampaignName={effectiveCampaignName}

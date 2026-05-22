@@ -48,9 +48,6 @@ export default function SignupPage() {
         <section className="space-y-7 rounded-[26px] border border-[#dfd1b9] bg-[rgba(255,252,246,0.88)] p-7 shadow-[0_30px_70px_rgba(40,33,24,0.12)] sm:p-10">
           <div className="flex flex-col items-start gap-2">
             <BrandLogo />
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
-              Mesurez, comprenez, agissez
-            </p>
           </div>
 
           <h1 className={`max-w-2xl ${headingFontClass} text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl`}>

@@ -51,9 +51,6 @@ export default function LoginPage() {
         <section className="space-y-7 rounded-[26px] border border-[#dfd1b9] bg-[rgba(255,252,246,0.88)] p-7 shadow-[0_30px_70px_rgba(40,33,24,0.12)] sm:p-10">
           <div className="flex flex-col items-start gap-2">
             <BrandLogo />
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
-              Mesurez, comprenez, agissez
-            </p>
           </div>
 
           <h1 className={`max-w-2xl ${headingFontClass} text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl`}>
@@ -69,21 +66,10 @@ export default function LoginPage() {
             </Link>
           </p>
 
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/survey-response"
-              className="rounded-[12px] border border-[#d8ccba] bg-[#fffaf1] px-5 py-3 text-sm font-semibold text-slate-700 no-underline transition hover:bg-[#f8eedf]"
-            >
-              Voir le parcours salarié
-            </Link>
-          </div>
         </section>
 
         <Card className="mx-auto w-full max-w-md rounded-[22px] border border-[#dfd1b9] bg-[rgba(255,252,246,0.95)] p-6 shadow-[0_24px_60px_rgba(40,33,24,0.16)] sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
-            Accès administrateur
-          </p>
-          <h2 className={`mt-2 ${headingFontClass} text-2xl font-extrabold tracking-tight text-slate-900`}>
+          <h2 className={`${headingFontClass} text-2xl font-extrabold tracking-tight text-slate-900`}>
             Connexion
           </h2>
 

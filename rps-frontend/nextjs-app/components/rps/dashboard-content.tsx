@@ -16,13 +16,17 @@ export function DashboardContent({
   const [statusFilter, setStatusFilter] = useState("all");
 
   const filteredSurveys = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
     return surveys.filter((survey) => {
       const matchesSearch =
-        survey.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        survey.title.toLowerCase().includes(searchQuery.toLowerCase());
+        !normalizedQuery ||
+        survey.companyName.toLowerCase().includes(normalizedQuery) ||
+        survey.title.toLowerCase().includes(normalizedQuery);
       const matchesStatus = statusFilter === "all" || survey.status === statusFilter;
+      const isVisible = survey.status !== "draft";
 
-      return matchesSearch && matchesStatus;
+      return isVisible && matchesSearch && matchesStatus;
     });
   }, [searchQuery, statusFilter, surveys]);
 
@@ -30,7 +34,7 @@ export function DashboardContent({
     <section className="space-y-6">
       <SectionHeader
         eyebrow="Tableau de bord"
-        title="Liste des entreprises"
+        title="Liste des sondages"
         description="Accède aux sondages par entreprise, avec statut, taux de complétion et acces direct aux resultats."
         action={
           <Link href="/surveys?tab=create" className="inline-flex">
@@ -40,34 +44,23 @@ export function DashboardContent({
       />
 
       <Card className="overflow-hidden">
-        <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h3 className="font-[family-name:var(--font-manrope)] text-xl font-bold">
-              Tableau des sondages
-            </h3>
-            <p className="mt-1 text-sm text-slate-500">
-              Recherche par entreprise et filtre par statut pour retrouver rapidement un sondage.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              placeholder="recherche le nom de l'entreprise"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-            />
-            <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-              className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-            >
-              <option value="all">Tous les statuts</option>
-              <option value="active">active</option>
-              <option value="draft">brouillon</option>
-              <option value="terminated">termine</option>
-              <option value="archived">archive</option>
-            </select>
-          </div>
+        <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 sm:flex-row sm:justify-end">
+          <input
+            placeholder="recherche le nom de l'entreprise"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+          />
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+          >
+            <option value="all">Tous les statuts</option>
+            <option value="active">Activé</option>
+            <option value="terminated">Complété</option>
+            <option value="archived">Archivé</option>
+          </select>
         </div>
 
         <div className="overflow-x-auto">
@@ -86,12 +79,7 @@ export function DashboardContent({
               {filteredSurveys.length > 0 ? (
                 filteredSurveys.map((survey) => {
                   const resultsHref = buildResultsHref(survey.id, scenario ?? null);
-                  const statusTone =
-                    survey.status === "active"
-                      ? "success"
-                      : survey.status === "draft" || survey.status === "preparation"
-                        ? "warning"
-                        : "neutral";
+                  const statusTone = survey.status === "active" ? "success" : "neutral";
 
                   return (
                     <tr key={survey.id} className="border-t border-slate-100 align-top">
@@ -171,16 +159,13 @@ function formatShortDate(value: string | null) {
 
 function formatStatusLabel(value: string) {
   if (value === "active") {
-    return "active";
-  }
-  if (value === "draft" || value === "preparation") {
-    return "brouillon";
+    return "Activé";
   }
   if (value === "terminated") {
-    return "termine";
+    return "Complété";
   }
   if (value === "archived") {
-    return "archive";
+    return "Archivé";
   }
   return value || "inconnu";
 }
