@@ -3,24 +3,38 @@ import { NextResponse } from "next/server";
 import { type User } from "@/lib/backend/auth";
 import { getBackendItem } from "@/lib/backend/client";
 
-function clearSessionCookies(response: NextResponse) {
+function isSecureRequest(request: Request) {
+  const forwardedProtocol = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim()
+    .toLowerCase();
+
+  if (forwardedProtocol) {
+    return forwardedProtocol === "https";
+  }
+
+  return new URL(request.url).protocol === "https:";
+}
+
+function clearSessionCookies(response: NextResponse, secure: boolean) {
   response.cookies.set("auth_token", "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure,
     path: "/",
     maxAge: 0,
   });
   response.cookies.set("auth_user", "", {
     httpOnly: false,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure,
     path: "/",
     maxAge: 0,
   });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const cookieStore = await cookies();
   const token = cookieStore.get("auth_token")?.value?.trim();
 
@@ -38,7 +52,7 @@ export async function GET() {
       },
       { status: 401 },
     );
-    clearSessionCookies(response);
+    clearSessionCookies(response, isSecureRequest(request));
     return response;
   }
 }

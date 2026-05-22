@@ -5,6 +5,20 @@ import { postBackend } from "@/lib/backend/client";
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
+function isSecureRequest(request: Request) {
+  const forwardedProtocol = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim()
+    .toLowerCase();
+
+  if (forwardedProtocol) {
+    return forwardedProtocol === "https";
+  }
+
+  return new URL(request.url).protocol === "https:";
+}
+
 export async function POST(request: Request) {
   try {
     const credentials = (await request.json()) as RegisterCredentials;
@@ -14,7 +28,7 @@ export async function POST(request: Request) {
     cookieStore.set("auth_token", response.token, {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecureRequest(request),
       path: "/",
       maxAge: SESSION_MAX_AGE_SECONDS,
     });

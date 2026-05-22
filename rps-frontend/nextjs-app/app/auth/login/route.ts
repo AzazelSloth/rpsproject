@@ -5,19 +5,33 @@ import { postBackend } from "@/lib/backend/client";
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
-function createCookieOptions(httpOnly: boolean) {
+function isSecureRequest(request: Request) {
+  const forwardedProtocol = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim()
+    .toLowerCase();
+
+  if (forwardedProtocol) {
+    return forwardedProtocol === "https";
+  }
+
+  return new URL(request.url).protocol === "https:";
+}
+
+function createCookieOptions(httpOnly: boolean, secure: boolean) {
   return {
     httpOnly,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure,
     path: "/",
     maxAge: SESSION_MAX_AGE_SECONDS,
   };
 }
 
-async function persistSession(response: AuthResponse) {
+async function persistSession(request: Request, response: AuthResponse) {
   const cookieStore = await cookies();
-  cookieStore.set("auth_token", response.token, createCookieOptions(true));
+  cookieStore.set("auth_token", response.token, createCookieOptions(true, isSecureRequest(request)));
 }
 
 export async function POST(request: Request) {
@@ -25,7 +39,7 @@ export async function POST(request: Request) {
     const credentials = (await request.json()) as LoginCredentials;
     const response = await postBackend<AuthResponse, LoginCredentials>("/auth/login", credentials);
 
-    await persistSession(response);
+    await persistSession(request, response);
     return NextResponse.json(response);
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "";
