@@ -1,5 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { DataSource } from 'typeorm';
 import { HealthController } from './health.controller';
+
+type HealthControllerWithLogger = HealthController & {
+  logger: { error: jest.Mock };
+};
 
 describe('HealthController', () => {
   const originalEnv = {
@@ -19,7 +24,9 @@ describe('HealthController', () => {
     process.env.N8N_WEBHOOK_URL =
       'http://localhost:5678/webhook/sondage-rps-solutions-tech';
     delete process.env.N8N_HEALTH_REQUIRED;
-    global.fetch = jest.fn().mockRejectedValue(new Error('offline')) as unknown as typeof fetch;
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(new Error('offline')) as unknown as typeof fetch;
     const controller = new HealthController(createDataSourceMock());
 
     await expect(controller.getHealth()).resolves.toMatchObject({
@@ -35,7 +42,9 @@ describe('HealthController', () => {
     process.env.N8N_WEBHOOK_URL =
       'http://localhost:5678/webhook/sondage-rps-solutions-tech';
     process.env.N8N_HEALTH_REQUIRED = 'true';
-    global.fetch = jest.fn().mockRejectedValue(new Error('offline')) as unknown as typeof fetch;
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(new Error('offline')) as unknown as typeof fetch;
     const controller = new HealthController(createDataSourceMock());
 
     await expect(controller.getHealth()).resolves.toMatchObject({
@@ -52,7 +61,9 @@ describe('HealthController', () => {
     const controller = new HealthController(
       createDataSourceMock(jest.fn().mockRejectedValue(new Error('db down'))),
     );
-    jest.spyOn((controller as any).logger, 'error').mockImplementation();
+    jest
+      .spyOn((controller as HealthControllerWithLogger).logger, 'error')
+      .mockImplementation();
 
     await expect(controller.getHealth()).resolves.toMatchObject({
       status: 'degraded',
@@ -64,7 +75,9 @@ describe('HealthController', () => {
   });
 });
 
-function createDataSourceMock(query = jest.fn().mockResolvedValue([{ ok: 1 }])) {
+function createDataSourceMock(
+  query = jest.fn().mockResolvedValue([{ ok: 1 }]),
+) {
   return { query } as unknown as DataSource;
 }
 

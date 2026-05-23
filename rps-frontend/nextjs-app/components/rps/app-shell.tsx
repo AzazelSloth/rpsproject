@@ -8,25 +8,30 @@ import { BrandLogo } from "@/components/rps/brand-logo";
 import { getSessionUser, logout, type User as AuthUser } from "@/lib/backend/auth";
 
 const pageTitles: Record<string, string> = {
-  "/dashboard": "Bonjour, Admin",
   "/surveys": "",
   "/employees": "Gestion des employés",
   "/results": "",
   "/report": "Synthèse",
 };
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  initialUser,
+}: {
+  children: React.ReactNode;
+  initialUser: AuthUser;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const title = pageTitles[pathname] ?? "RPS";
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(initialUser);
   const activeSurveyTab = searchParams.get("tab") ?? "create";
   const isSurveyRoute = pathname === "/surveys";
   const [surveysOpen, setSurveysOpen] = useState(isSurveyRoute);
   const showSurveyMenu = surveysOpen || isSurveyRoute;
-  const displayName = user?.name?.trim() || "Admin";
-  const displayEmail = user?.email?.trim() || "Session administrateur";
+  const displayEmail = user?.email?.trim() || "";
+  const displayName = user?.name?.trim() || displayEmail.split("@")[0] || "Compte";
+  const title = pathname === "/dashboard" ? `Bonjour, ${displayName}` : pageTitles[pathname] ?? "RPS";
   const initials =
     displayName
       .split(/\s+/)
@@ -190,7 +195,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-900">{displayName}</p>
-                  <p className="text-xs text-slate-500">{displayEmail}</p>
+                  <p className="text-xs text-slate-500">{displayEmail || "Session en cours"}</p>
                 </div>
                 <button
                   onClick={() => void handleLogout()}

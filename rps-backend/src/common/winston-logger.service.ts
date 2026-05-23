@@ -1,23 +1,64 @@
-import { LoggerService, ConsoleLogger, Scope } from '@nestjs/common';
+import { LoggerService, ConsoleLogger } from '@nestjs/common';
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import { join } from 'path';
 
 const { combine, timestamp, printf, errors } = winston.format;
 
-// Custom format for structured logs
-const customFormat = printf(({ level, message, timestamp, stack, ...meta }) => {
-  let log = `${timestamp} [${level.toUpperCase()}]: ${message}`;
+function formatLogValue(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint' ||
+    typeof value === 'symbol'
+  ) {
+    return String(value);
+  }
+
+  if (value instanceof Error) {
+    return value.stack ?? value.message;
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return '[unserializable]';
+  }
+}
+
+const customFormat = printf((info) => {
+  const meta = { ...info } as Record<string, unknown>;
+  const level = formatLogValue(meta.level).toUpperCase();
+  const timestampValue = formatLogValue(meta.timestamp);
+  const message = formatLogValue(meta.message);
+  const stack = meta.stack;
+
+  delete meta.level;
+  delete meta.message;
+  delete meta.timestamp;
+  delete meta.stack;
+
+  let log = `${timestampValue} [${level}]: ${message}`;
+
   if (Object.keys(meta).length > 0) {
     log += ` ${JSON.stringify(meta)}`;
   }
-  if (stack) {
-    log += `\n${stack}`;
+
+  if (stack !== undefined && stack !== null) {
+    log += `\n${formatLogValue(stack)}`;
   }
+
   return log;
 });
 
-export class WinstonLoggerService extends ConsoleLogger implements LoggerService {
+export class WinstonLoggerService
+  extends ConsoleLogger
+  implements LoggerService
+{
   private readonly logger: winston.Logger;
 
   constructor() {

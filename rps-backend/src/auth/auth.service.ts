@@ -9,7 +9,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import bcryptModule from 'bcrypt';
 import { Repository } from 'typeorm';
-import { getAllowedAdminEmails, isRegistrationAllowed } from './admin-access.config';
+import {
+  getAllowedAdminEmails,
+  isRegistrationAllowed,
+} from './admin-access.config';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { User } from './user.entity';
 
@@ -130,7 +133,7 @@ export class AuthService {
     });
   }
 
-  async validateUser(id: number) {
+  async validateUser(id: number, tokenEmail?: string) {
     const user = await this.userRepository?.findOne({
       where: { id },
       select: ['id', 'email', 'name', 'created_at'],
@@ -138,6 +141,13 @@ export class AuthService {
 
     if (!user) {
       throw new UnauthorizedException('User not found');
+    }
+
+    if (
+      tokenEmail &&
+      normalizeEmail(user.email ?? '') !== normalizeEmail(tokenEmail)
+    ) {
+      throw new UnauthorizedException('Session user mismatch');
     }
 
     return user;

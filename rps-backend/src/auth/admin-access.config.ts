@@ -28,10 +28,12 @@ export function getAllowedRegistrationDomains(): string[] {
 export function isRegistrationAllowed(email: string): boolean {
   const normalizedEmail = email.trim().toLowerCase();
   const allowedDomains = getAllowedRegistrationDomains();
-  
+
   if (allowedDomains.length === 0) {
     return false;
   }
-  
-  return allowedDomains.some(domain => normalizedEmail.endsWith(`@${domain}`));
+
+  return allowedDomains.some((domain) =>
+    normalizedEmail.endsWith(`@${domain}`),
+  );
 }

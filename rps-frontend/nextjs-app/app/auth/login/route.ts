@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { type AuthResponse, type LoginCredentials } from "@/lib/backend/auth";
 import { postBackend } from "@/lib/backend/client";
@@ -29,18 +28,51 @@ function createCookieOptions(httpOnly: boolean, secure: boolean) {
   };
 }
 
-async function persistSession(request: Request, response: AuthResponse) {
-  const cookieStore = await cookies();
-  cookieStore.set("auth_token", response.token, createCookieOptions(true, isSecureRequest(request)));
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function setSessionCookies(response: NextResponse, token: string, secure: boolean) {
+  response.cookies.set("auth_token", token, createCookieOptions(true, secure));
+  response.cookies.set("auth_user", "", {
+    httpOnly: false,
+    sameSite: "lax",
+    secure,
+    path: "/",
+    maxAge: 0,
+  });
+}
+
+function clearSessionCookies(response: NextResponse, secure: boolean) {
+  response.cookies.set("auth_token", "", {
+    ...createCookieOptions(true, secure),
+    maxAge: 0,
+  });
+  response.cookies.set("auth_user", "", {
+    httpOnly: false,
+    sameSite: "lax",
+    secure,
+    path: "/",
+    maxAge: 0,
+  });
 }
 
 export async function POST(request: Request) {
+  const secure = isSecureRequest(request);
+
   try {
     const credentials = (await request.json()) as LoginCredentials;
     const response = await postBackend<AuthResponse, LoginCredentials>("/auth/login", credentials);
+    const requestedEmail = normalizeEmail(credentials.email);
+    const returnedEmail = normalizeEmail(response.user.email);
 
-    await persistSession(request, response);
-    return NextResponse.json(response);
+    if (returnedEmail !== requestedEmail) {
+      throw new Error("La session retournee ne correspond pas au compte demande.");
+    }
+
+    const nextResponse = NextResponse.json(response);
+    setSessionCookies(nextResponse, response.token, secure);
+    return nextResponse;
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "";
     const isRateLimited = /429\s+Too Many Requests|too many/i.test(rawMessage);
@@ -53,11 +85,13 @@ export async function POST(request: Request) {
           ? rawMessage
           : "Identifiants incorrects.";
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         error: message,
       },
       { status: isRateLimited ? 429 : 401 },
     );
+    clearSessionCookies(response, secure);
+    return response;
   }
 }

@@ -1271,10 +1271,25 @@ export function SurveyBuilderDemo({
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
               Entreprise
             </p>
-            
+
+            <select
+              value={companyId ?? ""}
+              onChange={(event) => handleCompanySelection(Number(event.target.value))}
+              className="mt-3 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+            >
+              <option value="" disabled>
+                Choisir
+              </option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
+
             {/* Survey Selection Dropdown (Edit Mode) */}
             {mode === "edit" && (
-              <div className="mt-3">
+              <div className="mt-4">
                 <label className="text-xs font-medium text-slate-600">Sondage</label>
                 <select
                   value={campaignId ?? ""}
@@ -1299,21 +1314,6 @@ export function SurveyBuilderDemo({
                 </select>
               </div>
             )}
-
-            <select
-              value={companyId ?? ""}
-              onChange={(event) => handleCompanySelection(Number(event.target.value))}
-              className="mt-3 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
-            >
-              <option value="" disabled>
-                Choisir
-              </option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
             {isCreateMode ? (
               <div className="mt-2 flex gap-2">
                 <input

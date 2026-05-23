@@ -7,9 +7,9 @@ export default async function DashboardLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  await requireServerSessionUser();
+  const user = await requireServerSessionUser();
 
   return <Suspense fallback={<div className="min-h-screen bg-[#f7f3eb]" />}>
-    <AppShell>{children}</AppShell>
+    <AppShell initialUser={user}>{children}</AppShell>
   </Suspense>;
 }

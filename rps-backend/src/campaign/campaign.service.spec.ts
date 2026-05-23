@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
@@ -196,10 +197,11 @@ describe('CampaignService', () => {
       .spyOn(service as any, 'getCampaignResponsesFormatted')
       .mockResolvedValue([{ Employeur: 'Entreprise Test', Q1: '4' }]);
     jest.spyOn((service as any).logger, 'error').mockImplementation();
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue({ ok: false, status: 500, statusText: 'Error' }) as
-      unknown as typeof fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: 'Error',
+    }) as unknown as typeof fetch;
 
     await expect(
       (service as any).triggerAnalysis(

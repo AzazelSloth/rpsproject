@@ -40,10 +40,7 @@ const persistenceImports = shouldEnableDatabase
   : [];
 
 @Module({
-  imports: [
-    ...persistenceImports,
-    HealthModule,
-  ],
+  imports: [...persistenceImports, HealthModule],
   controllers: [AppController],
   providers: [AppService],
 })

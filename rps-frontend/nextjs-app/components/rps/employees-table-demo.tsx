@@ -79,12 +79,19 @@ export function EmployeesTableDemo({
     surveys.find((survey) => String(survey.id) === selectedCampaignId) ??
     availableSurveys[0] ??
     null;
+  const selectedSurveyTitle = selectedSurvey
+    ? formatSurveyDisplayTitle(selectedSurvey.title, selectedSurvey.createdAt)
+    : defaultCampaignName;
   const lockedCompanyId =
     selectedSurvey?.companyId ? String(selectedSurvey.companyId) : selectedCompanyId;
   const hasCompanyMismatch = Boolean(
     selectedSurvey?.companyId &&
       selectedCompanyId &&
       String(selectedSurvey.companyId) !== selectedCompanyId,
+  );
+  const surveyDetailsTitle = formatSurveyDisplayTitle(
+    surveyDetails?.name ?? surveyDetails?.title ?? selectedSurveyTitle,
+    surveyDetails?.created_at ?? surveyDetails?.createdAt ?? selectedSurvey?.createdAt,
   );
   const pendingParticipantsCount = managementData.participants.filter(
     (participant) => participant.status !== "completed",
@@ -101,6 +108,11 @@ export function EmployeesTableDemo({
     if (!remindCompanyId) return surveys;
     return surveys.filter((survey) => String(survey.companyId) === remindCompanyId);
   }, [remindCompanyId, surveys]);
+  const selectedReminderSurvey =
+    remindAvailableSurveys.find((survey) => String(survey.id) === remindCampaignId) ?? null;
+  const selectedReminderSurveyTitle = selectedReminderSurvey
+    ? formatSurveyDisplayTitle(selectedReminderSurvey.title, selectedReminderSurvey.createdAt)
+    : null;
 
   const filteredParticipants = useMemo(() => {
     return managementData.participants.filter((participant) => {
@@ -373,7 +385,7 @@ export function EmployeesTableDemo({
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2">
                   <Info className="h-4 w-4 text-blue-700" />
                   <p className="text-xs text-blue-800">
-                    {selectedSurvey.title}
+                    Sondage sélectionné : <span className="font-semibold">{selectedSurveyTitle}</span>
                   </p>
                 </div>
               )}
@@ -488,7 +500,7 @@ export function EmployeesTableDemo({
             <p className="text-sm text-slate-500">Participants à relancer</p>
             <p className="mt-2 text-2xl font-bold text-slate-900">{pendingParticipantsCount}</p>
             <p className="mt-1 text-xs text-slate-500">
-              Sondage sélectionné : {remindCampaignId ? remindAvailableSurveys.find(s => String(s.id) === remindCampaignId)?.title : "Aucun sondage"}
+              Sondage sélectionné : {selectedReminderSurveyTitle ?? "Aucun sondage"}
             </p>
           </div>
 
@@ -509,9 +521,7 @@ export function EmployeesTableDemo({
             Détails du sondage
           </p>
           <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold">
-            {loadingSurveyDetails
-              ? "Chargement..."
-              : surveyDetails?.name || surveyDetails?.title || selectedSurvey?.title || defaultCampaignName}
+            {loadingSurveyDetails ? "Chargement..." : surveyDetailsTitle}
           </h3>
           
           {loadingSurveyDetails ? (
@@ -703,6 +713,37 @@ function formatShortDate(value: string | null) {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+  });
+}
+
+function formatSurveyDisplayTitle(title: string | null | undefined, createdAt?: string | null) {
+  const trimmedTitle = title?.trim() ?? "";
+
+  if (trimmedTitle && !isUntitledSurveyTitle(trimmedTitle)) {
+    return trimmedTitle;
+  }
+
+  return `Sondage ${formatSurveyCreationDate(createdAt)}`;
+}
+
+function isUntitledSurveyTitle(title: string) {
+  const normalizedTitle = title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return normalizedTitle === "sondage sans titre" || normalizedTitle === "sans titre";
+}
+
+function formatSurveyCreationDate(createdAt?: string | null) {
+  const creationDate = createdAt ? new Date(createdAt) : new Date();
+  const safeDate = Number.isNaN(creationDate.getTime()) ? new Date() : creationDate;
+
+  return safeDate.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
   });
 }
 

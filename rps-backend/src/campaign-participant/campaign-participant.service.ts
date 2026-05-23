@@ -839,9 +839,12 @@ export class CampaignParticipantService {
         employee_id: participant.employee.id,
         email,
         name,
+        first_name: firstName,
         survey_url: `${appUrl}/survey-response/${participant.participation_token}`,
         campaign_name: campaignName,
         company_name: companyName,
+        start_date: campaign.start_date,
+        end_date: campaign.end_date,
       };
     });
 

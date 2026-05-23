@@ -224,6 +224,7 @@ export type SurveyOption = {
   companyName: string;
   startDate: string | null;
   endDate: string | null;
+  createdAt: string | null;
   participationRate: number;
   totalParticipants: number;
   completedParticipants: number;
@@ -365,7 +366,7 @@ export async function getEmployeeManagementData(
     return {
       campaignId: activeCampaign.id,
       companyId: activeCampaign.company?.id ?? null,
-      campaignName: activeCampaign.name,
+      campaignName: formatCampaignTitle(activeCampaign.name, activeCampaign.created_at),
       campaignStatus: activeCampaign.status,
       participationRate: progress.participation_rate,
       totalParticipants: progress.total_participants,
@@ -584,12 +585,13 @@ function mapSurveyOption(
 ): SurveyOption {
   return {
     id: campaign.id,
-    title: campaign.name,
+    title: formatCampaignTitle(campaign.name, campaign.created_at),
     status: mapCampaignStatus(campaign.status),
     companyId: campaign.company?.id ?? null,
     companyName: campaign.company?.name ?? "Entreprise",
     startDate: campaign.start_date,
     endDate: campaign.end_date,
+    createdAt: campaign.created_at,
     participationRate: progress?.participation_rate ?? 0,
     totalParticipants: progress?.total_participants ?? 0,
     completedParticipants: progress?.completed_participants ?? 0,
@@ -600,7 +602,7 @@ function mapBackendCampaign(entry: BackendCampaign) {
   return {
     id: entry.id,
     documentId: `campaign-${entry.id}`,
-    title: entry.name,
+    title: formatCampaignTitle(entry.name, entry.created_at),
     description:
       entry.description ??
       "Description du sondage ici. Ce champ peut etre utilise pour fournir des instructions ou des informations supplementaires aux participants.",
@@ -678,6 +680,37 @@ function mapCampaignStatus(status: string) {
     default:
       return "draft" as const;
   }
+}
+
+function formatCampaignTitle(name: string | null | undefined, createdAt?: string | null) {
+  const trimmedName = name?.trim() ?? "";
+
+  if (trimmedName && !isUntitledCampaignName(trimmedName)) {
+    return trimmedName;
+  }
+
+  return `Sondage ${formatCampaignCreationDate(createdAt)}`;
+}
+
+function isUntitledCampaignName(name: string) {
+  const normalizedName = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return normalizedName === "sondage sans titre" || normalizedName === "sans titre";
+}
+
+function formatCampaignCreationDate(createdAt?: string | null) {
+  const creationDate = createdAt ? new Date(createdAt) : new Date();
+  const safeDate = Number.isNaN(creationDate.getTime()) ? new Date() : creationDate;
+
+  return safeDate.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+  });
 }
 
 function computeStressScore(responses: Pick<BackendResponse, "answer" | "question">[]) {

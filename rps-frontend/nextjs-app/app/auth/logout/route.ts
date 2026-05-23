@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 function isSecureRequest(request: Request) {
@@ -16,17 +15,17 @@ function isSecureRequest(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const cookieStore = await cookies();
   const secure = isSecureRequest(request);
+  const response = NextResponse.json({ success: true });
 
-  cookieStore.set("auth_token", "", {
+  response.cookies.set("auth_token", "", {
     httpOnly: true,
     sameSite: "lax",
     secure,
     path: "/",
     maxAge: 0,
   });
-  cookieStore.set("auth_user", "", {
+  response.cookies.set("auth_user", "", {
     httpOnly: false,
     sameSite: "lax",
     secure,
@@ -34,5 +33,5 @@ export async function POST(request: Request) {
     maxAge: 0,
   });
 
-  return NextResponse.json({ success: true });
+  return response;
 }

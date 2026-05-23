@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { PageErrorState } from "@/components/rps/page-error-state";
 import { SurveyBuilderDemo } from "@/components/rps/survey-builder-demo";
-import { Card, Pill, SectionHeader } from "@/components/rps/ui";
+import { SurveyListTable } from "@/components/rps/survey-list-table";
+import { SectionHeader } from "@/components/rps/ui";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
 
 export const dynamic = "force-dynamic";
@@ -19,108 +19,28 @@ export default async function SurveysPage({
       : null;
 
   try {
+    if (activeTab === "list") {
+      const surveys = await getServerTrpcCaller().data.listSurveys({
+        scenario: scenario ?? null,
+      });
+
+      return (
+        <section className="space-y-6">
+          <SectionHeader
+            eyebrow="Gestion des sondages"
+            title="Liste des sondages"
+            description="Consultez les sondages, leur statut et le niveau de completion avant d'acceder aux resultats."
+          />
+
+          <SurveyListTable surveys={surveys} scenario={scenario ?? null} />
+        </section>
+      );
+    }
+
     const surveyBuilderData = await getServerTrpcCaller().data.surveyBuilder({
       scenario: scenario ?? null,
       campaignId: selectedCampaignId,
     });
-    const managementData =
-      activeTab === "list"
-        ? await getServerTrpcCaller().data.employeeManagement({
-            scenario: scenario ?? null,
-          })
-        : null;
-    const resultsHref = scenario
-      ? `/results?scenario=${encodeURIComponent(scenario)}`
-      : "/results";
-    const companyName =
-      surveyBuilderData.companies.find((company) => company.id === surveyBuilderData.companyId)?.name ??
-      "Entreprise a définir";
-    const completionRate = managementData?.participationRate ?? 0;
-    const statusLabel = formatStatusLabel(surveyBuilderData.status);
-    const statusTone =
-      surveyBuilderData.status === "active"
-        ? "success"
-        : "neutral";
-    const showSurveyInList = surveyBuilderData.status !== "draft";
-
-    if (activeTab === "list") {
-      return (
-        <section className="space-y-6">
-        <SectionHeader
-          eyebrow="Gestion des sondages"
-          title="Liste des sondages"
-          description="Consultez les sondages, leur statut et le niveau de complétion avant d'acceder aux resultats."
-        />
-
-        <Card className="overflow-hidden">
-          <div className="border-b border-slate-200 px-6 py-5">
-            <div>
-              <h3 className="font-[family-name:var(--font-manrope)] text-xl font-bold">
-                Liste des sondages
-              </h3>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50 uppercase tracking-[0.18em] text-slate-500">
-                <tr>
-                  <th className="px-6 py-4">Entreprise</th>
-                  <th className="px-6 py-4">Statut</th>
-                  <th className="px-6 py-4">Taux de complétion</th>
-                  <th className="px-6 py-4">Date de début</th>
-                  <th className="px-6 py-4">Date de fin</th>
-                  <th className="px-6 py-4">Résultats</th>
-                </tr>
-              </thead>
-              <tbody>
-                {showSurveyInList ? (
-                  <tr className="border-t border-slate-100 align-top">
-                    <td className="px-6 py-4">
-                      <p className="font-semibold">{companyName}</p>
-                      <p className="mt-1 text-slate-600">{surveyBuilderData.title}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Pill tone={statusTone}>{statusLabel}</Pill>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-2">
-                        <Pill tone={completionRate >= 70 ? "success" : "warning"}>
-                          {completionRate}%
-                        </Pill>
-                        <span className="text-xs text-slate-500">complétion globale</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-slate-600">
-                      {formatShortDate(surveyBuilderData.startDate)}
-                    </td>
-                    <td className="px-6 py-4 text-slate-600">
-                      {formatShortDate(surveyBuilderData.endDate)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={resultsHref}
-                        className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
-                        style={{ color: '#ffffff' }}
-                      >
-                        Voir les résultats
-                      </Link>
-                    </td>
-                  </tr>
-                ) : (
-                  <tr className="border-t border-slate-100">
-                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                      Aucun sondage disponible.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-        </section>
-      );
-    }
 
     return (
       <section className="space-y-6">
@@ -155,29 +75,4 @@ export default async function SurveysPage({
       />
     );
   }
-}
-
-function formatShortDate(value: string | null) {
-  if (!value) {
-    return "-";
-  }
-
-  return new Date(value).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-
-function formatStatusLabel(value: string) {
-  if (value === "active") {
-    return "Activé";
-  }
-  if (value === "terminated") {
-    return "Complété";
-  }
-  if (value === "archived") {
-    return "Archivé";
-  }
-  return value || "inconnu";
 }

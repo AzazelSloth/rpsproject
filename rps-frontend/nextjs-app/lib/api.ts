@@ -4,13 +4,15 @@ export class ApiResponseError extends Error {
   status: number;
   statusText: string;
   body: string;
+  headers: Headers;
 
-  constructor(status: number, statusText: string, body = "") {
+  constructor(status: number, statusText: string, body = "", headers = new Headers()) {
     super(`API error: ${status} ${statusText}`);
     this.name = "ApiResponseError";
     this.status = status;
     this.statusText = statusText;
     this.body = body;
+    this.headers = headers;
   }
 }
 
@@ -131,7 +133,7 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}) {
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    throw new ApiResponseError(response.status, response.statusText, body);
+    throw new ApiResponseError(response.status, response.statusText, body, response.headers);
   }
 
   if (response.status === 204) {
