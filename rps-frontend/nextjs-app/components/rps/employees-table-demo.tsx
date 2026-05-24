@@ -97,23 +97,6 @@ export function EmployeesTableDemo({
     (participant) => participant.status !== "completed",
   ).length;
 
-  const [remindCompanyId, setRemindCompanyId] = useState<string>(
-    selectedCompanyId || (companies[0] ? String(companies[0].id) : "")
-  );
-  const [remindCampaignId, setRemindCampaignId] = useState<string>(
-    selectedCampaignId || ""
-  );
-
-  const remindAvailableSurveys = useMemo(() => {
-    if (!remindCompanyId) return surveys;
-    return surveys.filter((survey) => String(survey.companyId) === remindCompanyId);
-  }, [remindCompanyId, surveys]);
-  const selectedReminderSurvey =
-    remindAvailableSurveys.find((survey) => String(survey.id) === remindCampaignId) ?? null;
-  const selectedReminderSurveyTitle = selectedReminderSurvey
-    ? formatSurveyDisplayTitle(selectedReminderSurvey.title, selectedReminderSurvey.createdAt)
-    : null;
-
   const filteredParticipants = useMemo(() => {
     return managementData.participants.filter((participant) => {
       const haystack =
@@ -184,6 +167,19 @@ export function EmployeesTableDemo({
     return propCompanyId ?? managementData.companyId;
   }
 
+  const reminderCampaignId = resolveCampaignId();
+  const reminderCompanyId = resolveCompanyId();
+  const reminderSurvey =
+    surveys.find((survey) => survey.id === reminderCampaignId) ?? selectedSurvey;
+  const isReminderSelectionLoaded =
+    !reminderCampaignId || managementData.campaignId === reminderCampaignId;
+  const canRemindSelectedSurvey = Boolean(
+    reminderCampaignId &&
+      reminderCompanyId &&
+      !hasCompanyMismatch &&
+      isReminderSelectionLoaded,
+  );
+
   // Fetch survey details when campaign changes
   useEffect(() => {
     const campaignId = resolveCampaignId();
@@ -222,17 +218,21 @@ export function EmployeesTableDemo({
   }, [selectedCampaignId, surveys]);
 
   async function handleRemindPending() {
-    const campaignId = Number(remindCampaignId);
-    const companyId = Number(remindCompanyId);
+    const campaignId = reminderCampaignId;
+    const companyId = reminderCompanyId;
 
     if (!campaignId || !companyId) {
       setError("Sélectionnez une entreprise et un sondage valides pour procéder.");
       return;
     }
 
-    const remindSurvey = remindAvailableSurveys.find(s => String(s.id) === remindCampaignId);
-    if (remindSurvey && companyId !== remindSurvey.companyId) {
+    if (reminderSurvey?.companyId && companyId !== reminderSurvey.companyId) {
       setError("L’entreprise choisie ne correspond pas au sondage sélectionné.");
+      return;
+    }
+
+    if (!isReminderSelectionLoaded) {
+      setError("Le sondage sélectionné est en cours de chargement. Réessayez dans un instant.");
       return;
     }
 
@@ -293,7 +293,7 @@ export function EmployeesTableDemo({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-5 xl:grid-cols-[2fr_1fr]">
+      <div className="grid gap-5">
         <Card className="p-4 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
             Suivi du sondage
@@ -322,6 +322,9 @@ export function EmployeesTableDemo({
                     );
                     if (companySurveys.length > 0) {
                       handleSurveySelection(String(companySurveys[0].id));
+                    } else {
+                      setSelectedCampaignId("");
+                      pushSelection(event.target.value, "");
                     }
                   }}
                   className="w-full appearance-none rounded-xl border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50 px-4 py-3 pr-10 text-sm font-medium text-slate-900 outline-none transition-all duration-200 hover:border-amber-300 hover:shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
@@ -416,101 +419,25 @@ export function EmployeesTableDemo({
               </p>
             </div>
           ) : null}
-        </Card>
 
-        <Card className="p-4 sm:p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-            Relance manuelle
-          </p>
-          <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold">
-            Relancer les employés en attente
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Sélectionnez l'entreprise et le sondage, puis envoyez une relance aux participants qui n'ont pas encore répondu.
-          </p>
-
-          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <div className="mt-5 flex flex-col gap-4 rounded-[12px] bg-slate-50 p-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Building2 className="h-4 w-4 text-amber-600" />
-                Entreprise
+              <p className="text-sm text-slate-500">Participants à relancer</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {isReminderSelectionLoaded ? pendingParticipantsCount : "-"}
               </p>
-              <div className="relative">
-                <select
-                  value={remindCompanyId}
-                  onChange={(event) => {
-                    setRemindCompanyId(event.target.value);
-                    const companySurveys = surveys.filter(
-                      (survey) => String(survey.companyId) === event.target.value
-                    );
-                    if (companySurveys.length > 0) {
-                      setRemindCampaignId(String(companySurveys[0].id));
-                    } else {
-                      setRemindCampaignId("");
-                    }
-                  }}
-                  className="w-full appearance-none rounded-xl border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50 px-4 py-3 pr-10 text-sm font-medium text-slate-900 outline-none transition-all duration-200 hover:border-amber-300 hover:shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
-                >
-                  <option value="">-- Choisir une entreprise --</option>
-                  {companies.map((company) => (
-                    <option key={company.id} value={String(company.id)}>
-                      {company.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                  <ChevronDown className="h-5 w-5 text-amber-600" />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <BarChart3 className="h-4 w-4 text-amber-600" />
-                Sondage concerné
+              <p className="mt-1 text-xs text-slate-500">
+                Sondage sélectionné : {selectedSurveyTitle || "Aucun sondage"}
               </p>
-              <div className="relative">
-                <select
-                  value={remindCampaignId}
-                  onChange={(event) => setRemindCampaignId(event.target.value)}
-                  disabled={remindAvailableSurveys.length === 0}
-                  className="w-full appearance-none rounded-xl border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50 px-4 py-3 pr-10 text-sm font-medium text-slate-900 outline-none transition-all duration-200 hover:border-amber-300 hover:shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {remindAvailableSurveys.length === 0 ? (
-                    <option value="">Aucun sondage disponible</option>
-                  ) : (
-                    <>
-                      <option value="">-- Choisir un sondage --</option>
-                      {remindAvailableSurveys.map((survey) => (
-                        <option key={survey.id} value={String(survey.id)}>
-                          {survey.title}
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                  <ChevronDown className="h-5 w-5 text-amber-600" />
-                </div>
-              </div>
             </div>
+            <button
+              onClick={handleRemindPending}
+              disabled={isPending || !canRemindSelectedSurvey}
+              className="rounded-[12px] bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60"
+            >
+              {isPending ? "En cours..." : "Forcer une relance manuelle"}
+            </button>
           </div>
-
-          <div className="mt-5 rounded-[12px] bg-slate-50 p-4">
-            <p className="text-sm text-slate-500">Participants à relancer</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{pendingParticipantsCount}</p>
-            <p className="mt-1 text-xs text-slate-500">
-              Sondage sélectionné : {selectedReminderSurveyTitle ?? "Aucun sondage"}
-            </p>
-          </div>
-
-          <button
-            onClick={handleRemindPending}
-            disabled={isPending || !remindCampaignId}
-            className="mt-4 w-full rounded-[12px] bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60"
-          >
-            {isPending ? "En cours..." : "Forcer une relance manuelle"}
-          </button>
         </Card>
       </div>
 

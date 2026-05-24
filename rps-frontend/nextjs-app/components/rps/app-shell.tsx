@@ -9,7 +9,7 @@ import { getSessionUser, logout, type User as AuthUser } from "@/lib/backend/aut
 
 const pageTitles: Record<string, string> = {
   "/surveys": "",
-  "/employees": "Gestion des employés",
+  "/employees": "",
   "/results": "",
   "/report": "Synthèse",
 };
