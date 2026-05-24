@@ -91,6 +91,22 @@ require_non_empty() {
   fi
 }
 
+prepare_n8n_data_dir() {
+  local data_dir="$1"
+
+  mkdir -p "$data_dir"
+
+  # n8n runs as the non-root `node` user in the container, so the bind mount
+  # must be writable by uid/gid 1000 before startup.
+  if docker run --rm -v "${data_dir}:/data" --entrypoint sh n8nio/n8n:latest -lc \
+    "mkdir -p /data && chown -R node:node /data && chmod 700 /data"; then
+    return 0
+  fi
+
+  echo "WARNING: Could not normalize n8n data directory ownership via Docker; applying permissive fallback."
+  chmod 777 "$data_dir"
+}
+
 trim_trailing_slash() {
   printf '%s' "${1%/}"
 }
@@ -308,6 +324,7 @@ COMPOSE_ENV_FILE="$COMPOSE_DIR/.env"
 N8N_TEMPLATE_DIR="$COMPOSE_DIR/n8n"
 N8N_RUNTIME_ENV_FILE="$N8N_RUNTIME_DIR/.env"
 N8N_RUNTIME_COMPOSE_FILE="$N8N_RUNTIME_DIR/docker-compose.yml"
+N8N_RUNTIME_DATA_DIR="$N8N_RUNTIME_DIR/data"
 
 if [ ! -f "$COMPOSE_DIR/docker-compose.yml" ]; then
   echo "ERROR: docker-compose.yml not found in $COMPOSE_DIR"
@@ -381,7 +398,7 @@ EOF
 chmod 600 "$COMPOSE_ENV_FILE"
 
 echo "Preparing dedicated n8n runtime in $N8N_RUNTIME_DIR..."
-mkdir -p "$N8N_RUNTIME_DIR" "$N8N_RUNTIME_DIR/data"
+mkdir -p "$N8N_RUNTIME_DIR"
 cp "$N8N_TEMPLATE_DIR/docker-compose.yml" "$N8N_RUNTIME_COMPOSE_FILE"
 
 cat > "$N8N_RUNTIME_ENV_FILE" <<EOF
@@ -422,6 +439,9 @@ REMINDER_MAX_COUNT=$REMINDER_MAX_COUNT
 EOF
 
 chmod 600 "$N8N_RUNTIME_ENV_FILE"
+
+echo "Normalizing n8n runtime data permissions..."
+prepare_n8n_data_dir "$N8N_RUNTIME_DATA_DIR"
 
 echo "Stopping legacy PM2 runtime if present..."
 if command -v pm2 >/dev/null 2>&1; then
