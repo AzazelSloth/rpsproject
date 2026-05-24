@@ -77,7 +77,7 @@ services:
       APP_DOMAIN: ${APP_DOMAIN:-appli.laroche360.ca}
       N8N_DOMAIN: ${N8N_DOMAIN:-automation.laroche360.ca}
     ports:
-      - "127.0.0.1:8787:8786"
+      - "8787:8786"
     volumes:
       - ./nginx.rps.conf:/etc/nginx/templates/default.conf.template:ro
       - nginx_cache:/var/cache/nginx
