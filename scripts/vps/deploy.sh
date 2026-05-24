@@ -98,13 +98,13 @@ prepare_n8n_data_dir() {
 
   # n8n runs as the non-root `node` user in the container, so the bind mount
   # must be writable by uid/gid 1000 before startup.
-  if docker run --rm -v "${data_dir}:/data" --entrypoint sh n8nio/n8n:latest -lc \
-    "mkdir -p /data && chown -R node:node /data && chmod 700 /data"; then
+  if docker run --rm --user 0:0 -v "${data_dir}:/data" --entrypoint sh n8nio/n8n:latest -lc \
+    "mkdir -p /data && chown -R node:node /data && chmod -R u+rwX,go-rwx /data"; then
     return 0
   fi
 
   echo "WARNING: Could not normalize n8n data directory ownership via Docker; applying permissive fallback."
-  chmod 777 "$data_dir"
+  chmod -R 777 "$data_dir"
 }
 
 trim_trailing_slash() {
@@ -325,6 +325,7 @@ N8N_TEMPLATE_DIR="$COMPOSE_DIR/n8n"
 N8N_RUNTIME_ENV_FILE="$N8N_RUNTIME_DIR/.env"
 N8N_RUNTIME_COMPOSE_FILE="$N8N_RUNTIME_DIR/docker-compose.yml"
 N8N_RUNTIME_DATA_DIR="$N8N_RUNTIME_DIR/data"
+APP_COMPOSE_PROJECT_NAME="rps-$ENV"
 
 if [ ! -f "$COMPOSE_DIR/docker-compose.yml" ]; then
   echo "ERROR: docker-compose.yml not found in $COMPOSE_DIR"
@@ -403,6 +404,7 @@ cp "$N8N_TEMPLATE_DIR/docker-compose.yml" "$N8N_RUNTIME_COMPOSE_FILE"
 
 cat > "$N8N_RUNTIME_ENV_FILE" <<EOF
 COMPOSE_PROJECT_NAME=n8n-$ENV
+APP_COMPOSE_PROJECT_NAME=$APP_COMPOSE_PROJECT_NAME
 N8N_BASIC_AUTH_ACTIVE=$N8N_BASIC_AUTH_ACTIVE
 N8N_BASIC_AUTH_USER=$N8N_BASIC_AUTH_USER
 N8N_BASIC_AUTH_PASSWORD=$N8N_BASIC_AUTH_PASSWORD
@@ -507,6 +509,19 @@ ensure_external_database_ready() {
 }
 
 ensure_external_database_ready
+
+ensure_app_network_ready() {
+  local network_name="${APP_COMPOSE_PROJECT_NAME}_rps_network"
+
+  if docker network inspect "$network_name" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo "Preparing shared Docker network for application services..."
+  docker compose create backend >/dev/null
+}
+
+ensure_app_network_ready
 
 echo "Starting dependencies..."
 (cd "$N8N_RUNTIME_DIR" && docker compose up -d)

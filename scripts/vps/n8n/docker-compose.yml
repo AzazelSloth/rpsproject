@@ -10,3 +10,10 @@ services:
       - ./data:${N8N_USER_FOLDER:-/home/node/.n8n}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    external: true
+    name: ${APP_COMPOSE_PROJECT_NAME:-rps-rps_dev}_rps_network
