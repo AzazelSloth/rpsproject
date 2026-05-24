@@ -627,14 +627,14 @@ fi
 
 if [ "$N8N_BASIC_AUTH_ACTIVE" = "true" ]; then
   n8n_basic_auth_header="$(printf '%s' "${N8N_BASIC_AUTH_USER}:${N8N_BASIC_AUTH_PASSWORD}" | base64 | tr -d '\n')"
-  if ! docker compose exec -T nginx sh -lc "wget -qO- --header='Host: ${N8N_DOMAIN}' --header='Authorization: Basic ${n8n_basic_auth_header}' http://127.0.0.1:8786/n8n/ >/dev/null"; then
+  if ! docker compose exec -T nginx sh -lc "wget -qO- --header='Host: ${N8N_DOMAIN}' --header='Authorization: Basic ${n8n_basic_auth_header}' http://127.0.0.1:8786/ >/dev/null"; then
     echo "ERROR: n8n did not respond behind nginx."
     docker compose logs nginx --tail 120 || true
     (cd "$N8N_RUNTIME_DIR" && docker compose logs --tail 120) || true
     exit 1
   fi
 else
-  if ! wait_for_nginx_host_path "n8n" "$N8N_DOMAIN" "/n8n/" 12 5; then
+  if ! wait_for_nginx_host_path "n8n" "$N8N_DOMAIN" "/" 12 5; then
     docker compose logs nginx --tail 120 || true
     (cd "$N8N_RUNTIME_DIR" && docker compose logs --tail 120) || true
     exit 1
