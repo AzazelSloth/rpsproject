@@ -13,10 +13,12 @@ else
 fi
 
 APP_DIR="${APP_DIR:-$HOME/rps-$ENV}"
+N8N_RUNTIME_DIR="${N8N_RUNTIME_DIR:-/srv/n8n}"
 REPO_URL="${REPO_URL:-git@github.com:AzazelSloth/rpsproject.git}"
 VPS_HOST="${VPS_HOST:-127.0.0.1}"
 DOMAIN_NAME="${DOMAIN_NAME:-}"
 PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-}"
+BACKEND_API_URL="${BACKEND_API_URL:-http://host.docker.internal:3000}"
 
 DB_HOST="${DB_HOST:-postgres}"
 SOURCE_DB_HOST="$DB_HOST"
@@ -62,10 +64,16 @@ STRAPI_API_TOKEN="${STRAPI_API_TOKEN:-}"
 APP_URL="${APP_URL:-}"
 APP_DOMAIN="${APP_DOMAIN:-}"
 N8N_DOMAIN="${N8N_DOMAIN:-}"
+API_KEY="${API_KEY:-}"
 SENDGRID_API_KEY="${SENDGRID_API_KEY:-}"
 SENDGRID_FROM_EMAIL="${SENDGRID_FROM_EMAIL:-}"
 SENDGRID_FROM_NAME="${SENDGRID_FROM_NAME:-Laroche 360}"
 SENDGRID_REPLY_TO="${SENDGRID_REPLY_TO:-}"
+REPORT_RECIPIENT_EMAIL="${REPORT_RECIPIENT_EMAIL:-abondelire@gmail.com}"
+GOOGLE_DRIVE_FOLDER="${GOOGLE_DRIVE_FOLDER:-RPS Reports}"
+REMINDER_CAMPAIGN_IDS="${REMINDER_CAMPAIGN_IDS:-}"
+REMINDER_MIN_DAYS="${REMINDER_MIN_DAYS:-6}"
+REMINDER_MAX_COUNT="${REMINDER_MAX_COUNT:-2}"
 
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -255,7 +263,7 @@ if [ -z "$APP_DOMAIN" ]; then
   APP_DOMAIN="appli.laroche360.ca"
 fi
 
-N8N_INTERNAL_BASE_URL="http://n8n:5678${N8N_PATH%/}"
+N8N_INTERNAL_BASE_URL="http://host.docker.internal:${N8N_PORT}${N8N_PATH%/}"
 
 require_command git
 require_command docker
@@ -297,9 +305,17 @@ git clone --depth 1 -b "$TARGET_BRANCH" "$REPO_URL" "$APP_DIR"
 
 COMPOSE_DIR="$APP_DIR/scripts/vps"
 COMPOSE_ENV_FILE="$COMPOSE_DIR/.env"
+N8N_TEMPLATE_DIR="$COMPOSE_DIR/n8n"
+N8N_RUNTIME_ENV_FILE="$N8N_RUNTIME_DIR/.env"
+N8N_RUNTIME_COMPOSE_FILE="$N8N_RUNTIME_DIR/docker-compose.yml"
 
 if [ ! -f "$COMPOSE_DIR/docker-compose.yml" ]; then
   echo "ERROR: docker-compose.yml not found in $COMPOSE_DIR"
+  exit 1
+fi
+
+if [ ! -f "$N8N_TEMPLATE_DIR/docker-compose.yml" ]; then
+  echo "ERROR: n8n docker-compose.yml not found in $N8N_TEMPLATE_DIR"
   exit 1
 fi
 
@@ -363,6 +379,49 @@ WEBHOOK_URL=$WEBHOOK_URL
 EOF
 
 chmod 600 "$COMPOSE_ENV_FILE"
+
+echo "Preparing dedicated n8n runtime in $N8N_RUNTIME_DIR..."
+mkdir -p "$N8N_RUNTIME_DIR" "$N8N_RUNTIME_DIR/data"
+cp "$N8N_TEMPLATE_DIR/docker-compose.yml" "$N8N_RUNTIME_COMPOSE_FILE"
+
+cat > "$N8N_RUNTIME_ENV_FILE" <<EOF
+COMPOSE_PROJECT_NAME=n8n-$ENV
+N8N_BASIC_AUTH_ACTIVE=$N8N_BASIC_AUTH_ACTIVE
+N8N_BASIC_AUTH_USER=$N8N_BASIC_AUTH_USER
+N8N_BASIC_AUTH_PASSWORD=$N8N_BASIC_AUTH_PASSWORD
+N8N_ENCRYPTION_KEY=$N8N_ENCRYPTION_KEY
+N8N_USER_FOLDER=$N8N_USER_FOLDER
+N8N_HOST=$N8N_HOST
+N8N_PORT=$N8N_PORT
+N8N_PROTOCOL=$N8N_PROTOCOL
+N8N_SECURE_COOKIE=$N8N_SECURE_COOKIE
+N8N_PATH=$N8N_PATH
+N8N_EDITOR_BASE_URL=$N8N_EDITOR_BASE_URL
+WEBHOOK_URL=$WEBHOOK_URL
+N8N_LISTEN_ADDRESS=$N8N_LISTEN_ADDRESS
+TZ=$TZ
+GENERIC_TIMEZONE=$GENERIC_TIMEZONE
+DB_TYPE=$DB_TYPE
+DB_NAME_N8N=$DB_NAME_N8N
+DB_POSTGRESDB_HOST=$CONTAINER_DB_HOST
+DB_POSTGRESDB_PORT=$DB_PORT
+DB_POSTGRESDB_DATABASE=$DB_NAME_N8N
+DB_POSTGRESDB_USER=$DB_USER
+DB_POSTGRESDB_PASSWORD=$DB_PASSWORD
+BACKEND_API_URL=$BACKEND_API_URL
+API_KEY=$API_KEY
+FROM_NAME=$SENDGRID_FROM_NAME
+FROM_EMAIL=$SENDGRID_FROM_EMAIL
+REPLY_TO_EMAIL=$SENDGRID_REPLY_TO
+REPORT_RECIPIENT_EMAIL=$REPORT_RECIPIENT_EMAIL
+SENDGRID_API_KEY=$SENDGRID_API_KEY
+GOOGLE_DRIVE_FOLDER=$GOOGLE_DRIVE_FOLDER
+REMINDER_CAMPAIGN_IDS=$REMINDER_CAMPAIGN_IDS
+REMINDER_MIN_DAYS=$REMINDER_MIN_DAYS
+REMINDER_MAX_COUNT=$REMINDER_MAX_COUNT
+EOF
+
+chmod 600 "$N8N_RUNTIME_ENV_FILE"
 
 echo "Stopping legacy PM2 runtime if present..."
 if command -v pm2 >/dev/null 2>&1; then
@@ -430,7 +489,7 @@ ensure_external_database_ready() {
 ensure_external_database_ready
 
 echo "Starting dependencies..."
-docker compose up -d n8n
+(cd "$N8N_RUNTIME_DIR" && docker compose up -d)
 
 MIGRATION_RETRIES=8
 MIGRATION_INTERVAL=5
@@ -452,7 +511,8 @@ done
 
 if [ "$MIGRATION_DONE" != "true" ]; then
   echo "ERROR: migrations failed after $MIGRATION_RETRIES attempts"
-  docker compose logs backend n8n --tail 100 || true
+  docker compose logs backend --tail 100 || true
+  (cd "$N8N_RUNTIME_DIR" && docker compose logs --tail 100) || true
   exit 1
 fi
 
@@ -519,12 +579,14 @@ if [ "$N8N_BASIC_AUTH_ACTIVE" = "true" ]; then
   n8n_basic_auth_header="$(printf '%s' "${N8N_BASIC_AUTH_USER}:${N8N_BASIC_AUTH_PASSWORD}" | base64 | tr -d '\n')"
   if ! docker compose exec -T nginx sh -lc "wget -qO- --header='Authorization: Basic ${n8n_basic_auth_header}' http://127.0.0.1:8786/n8n/ >/dev/null"; then
     echo "ERROR: n8n did not respond behind nginx."
-    docker compose logs n8n nginx --tail 120 || true
+    docker compose logs nginx --tail 120 || true
+    (cd "$N8N_RUNTIME_DIR" && docker compose logs --tail 120) || true
     exit 1
   fi
 else
   if ! wait_for_nginx_path "n8n" "/n8n/" 12 5; then
-    docker compose logs n8n nginx --tail 120 || true
+    docker compose logs nginx --tail 120 || true
+    (cd "$N8N_RUNTIME_DIR" && docker compose logs --tail 120) || true
     exit 1
   fi
 fi
