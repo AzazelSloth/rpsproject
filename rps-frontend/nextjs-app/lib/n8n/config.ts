@@ -1,5 +1,5 @@
 const DEFAULT_N8N_BASE_URL = "http://127.0.0.1:5678/n8n";
-const DEFAULT_N8N_WEBHOOK_PATH = "/webhook/sondage-rps-solutions-tech";
+const DEFAULT_N8N_WEBHOOK_PATH = "/webhook/rps-analysis";
 const WEBHOOK_SUFFIX_PATTERN = /\/webhook(?:-test|-waiting)?\/.+$/i;
 
 function trimTrailingSlash(value: string) {

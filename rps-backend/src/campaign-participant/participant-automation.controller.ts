@@ -19,6 +19,15 @@ export class ParticipantAutomationController {
     private readonly campaignParticipantService: CampaignParticipantService,
   ) {}
 
+  @Get('automation/campaigns/pending-reminders')
+  @ApiResponse({
+    status: 200,
+    description: 'Campagnes avec participants disponibles pour relance n8n',
+  })
+  getPendingReminderCampaigns() {
+    return this.campaignParticipantService.getPendingReminderCampaigns();
+  }
+
   @Get('campaigns/:campaignId/pending-reminders')
   @ApiResponse({
     status: 200,

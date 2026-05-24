@@ -22,7 +22,7 @@ describe('HealthController', () => {
 
   it('stays healthy when n8n is unavailable but optional', async () => {
     process.env.N8N_WEBHOOK_URL =
-      'http://localhost:5678/webhook/sondage-rps-solutions-tech';
+      'http://localhost:5678/webhook/rps-analysis';
     delete process.env.N8N_HEALTH_REQUIRED;
     global.fetch = jest
       .fn()
@@ -40,7 +40,7 @@ describe('HealthController', () => {
 
   it('degrades when n8n is required and unavailable', async () => {
     process.env.N8N_WEBHOOK_URL =
-      'http://localhost:5678/webhook/sondage-rps-solutions-tech';
+      'http://localhost:5678/webhook/rps-analysis';
     process.env.N8N_HEALTH_REQUIRED = 'true';
     global.fetch = jest
       .fn()

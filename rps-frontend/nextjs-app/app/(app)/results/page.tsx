@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageErrorState } from "@/components/rps/page-error-state";
 import { Card, Pill, PrimaryButton, SectionHeader } from "@/components/rps/ui";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
+import { ResultsAnalyzeButton } from "./ResultsAnalyzeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -114,13 +115,7 @@ export default async function ResultsPage({
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-2">
-                            <Link
-                              href={buildResultsHref(survey.id, scenario ?? null)}
-                              className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
-                              style={{ color: "#ffffff" }}
-                            >
-                              Résultats
-                            </Link>
+                            <ResultsAnalyzeButton campaignId={survey.id} />
                             {canOpenReport ? (
                               <Link
                                 href={buildReportHref(survey.id, scenario ?? null)}
@@ -339,18 +334,6 @@ function formatStatusLabel(value: string) {
 
 function canOpenReportForStatus(value: string) {
   return value === "terminated" || value === "archived";
-}
-
-function buildResultsHref(campaignId: number, scenario?: string | null) {
-  const params = new URLSearchParams();
-  params.set("view", "detail");
-  params.set("campaignId", String(campaignId));
-
-  if (scenario) {
-    params.set("scenario", scenario);
-  }
-
-  return `/results?${params.toString()}`;
 }
 
 function buildReportHref(campaignId: number | null, scenario?: string | null) {

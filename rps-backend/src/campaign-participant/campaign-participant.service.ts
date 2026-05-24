@@ -30,6 +30,27 @@ import {
   UpdateCampaignParticipantDto,
 } from './dto/campaign-participant.dto';
 
+type ReminderParticipantPayload = {
+  participant_id: number;
+  campaign_id: number;
+  campaign_name: string;
+  company_name: string;
+  nom: string;
+  email: string | null;
+  survey_url: string;
+  invitation_sent_at: Date | null;
+  reminder_sent_at: Date | null;
+  reminder_count: number;
+  status: CampaignParticipantStatus;
+};
+
+type ReminderCampaignPayload = {
+  campaign_id: number;
+  campaign_name: string;
+  company_name: string;
+  participants: ReminderParticipantPayload[];
+};
+
 @Injectable()
 export class CampaignParticipantService {
   private readonly logger = new Logger(CampaignParticipantService.name);
@@ -972,25 +993,62 @@ export class CampaignParticipantService {
       campaign_id: campaignId,
       campaign_name: campaign.name,
       company_name: campaign.company?.name ?? 'Entreprise',
-      participants: pendingParticipants.map((participant) => {
-        const firstName = participant.employee.first_name?.trim() || '';
-        const lastName = participant.employee.last_name?.trim() || '';
-        const name =
-          `${firstName} ${lastName}`.trim() ||
-          participant.employee.email ||
-          `Participant ${participant.id}`;
+      participants: pendingParticipants.map((participant) =>
+        this.formatReminderParticipant(participant, campaign, appUrl),
+      ),
+    };
+  }
 
-        return {
-          participant_id: participant.id,
-          nom: name,
-          email: participant.employee.email,
-          survey_url: `${appUrl}/survey-response/${participant.participation_token}`,
-          invitation_sent_at: participant.invitation_sent_at,
-          reminder_sent_at: participant.reminder_sent_at,
-          reminder_count: participant.reminder_count ?? 0,
-          status: participant.status,
-        };
-      }),
+  async getPendingReminderCampaigns() {
+    const campaigns = await this.campaignRepository.find({
+      where: { status: 'active' },
+      relations: {
+        company: true,
+        participants: {
+          employee: true,
+        },
+      },
+      order: { id: 'ASC' },
+    });
+
+    const appUrl = this.resolvePublicAppUrl();
+    const reminderCampaigns: ReminderCampaignPayload[] = [];
+
+    for (const campaign of campaigns) {
+      const participants = (campaign.participants ?? []).filter(
+        (participant) =>
+          participant.status !== CampaignParticipantStatus.COMPLETED &&
+          participant.invitation_sent_at &&
+          participant.employee?.deleted_at === null &&
+          Boolean(participant.employee?.email?.trim()),
+      );
+
+      if (!participants.length) {
+        continue;
+      }
+
+      await this.ensureParticipationTokens(participants);
+
+      reminderCampaigns.push({
+        campaign_id: campaign.id,
+        campaign_name: campaign.name?.trim() || `Campagne ${campaign.id}`,
+        company_name:
+          campaign.company?.name?.trim() ||
+          `Entreprise ${campaign.company?.id ?? campaign.id}`,
+        participants: participants.map((participant) =>
+          this.formatReminderParticipant(participant, campaign, appUrl),
+        ),
+      });
+    }
+
+    return {
+      campaigns: reminderCampaigns,
+      campaign_count: reminderCampaigns.length,
+      participant_count: reminderCampaigns.reduce(
+        (total, campaign) => total + campaign.participants.length,
+        0,
+      ),
+      generated_at: new Date().toISOString(),
     };
   }
 
@@ -1024,6 +1082,35 @@ export class CampaignParticipantService {
       reminder_sent_at: saved.reminder_sent_at,
       reminder_count: saved.reminder_count,
       status: saved.status,
+    };
+  }
+
+  private formatReminderParticipant(
+    participant: CampaignParticipant,
+    campaign: Campaign,
+    appUrl: string,
+  ): ReminderParticipantPayload {
+    const firstName = participant.employee.first_name?.trim() || '';
+    const lastName = participant.employee.last_name?.trim() || '';
+    const name =
+      `${firstName} ${lastName}`.trim() ||
+      participant.employee.email ||
+      `Participant ${participant.id}`;
+
+    return {
+      participant_id: participant.id,
+      campaign_id: campaign.id,
+      campaign_name: campaign.name?.trim() || `Campagne ${campaign.id}`,
+      company_name:
+        campaign.company?.name?.trim() ||
+        `Entreprise ${campaign.company?.id ?? campaign.id}`,
+      nom: name,
+      email: participant.employee.email,
+      survey_url: `${appUrl}/survey-response/${participant.participation_token}`,
+      invitation_sent_at: participant.invitation_sent_at,
+      reminder_sent_at: participant.reminder_sent_at,
+      reminder_count: participant.reminder_count ?? 0,
+      status: participant.status,
     };
   }
 

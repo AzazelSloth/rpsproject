@@ -15,22 +15,22 @@ describe('getN8nWebhookUrl', () => {
 
   it('keeps a fully configured webhook URL unchanged', () => {
     process.env.N8N_WEBHOOK_URL =
-      'http://localhost:5678/webhook/sondage-rps-solutions-tech';
+      'http://localhost:5678/webhook/rps-analysis';
     delete process.env.N8N_BASE_URL;
     delete process.env.N8N_WEBHOOK_PATH;
 
     expect(getN8nWebhookUrl()).toBe(
-      'http://localhost:5678/webhook/sondage-rps-solutions-tech',
+      'http://localhost:5678/webhook/rps-analysis',
     );
   });
 
   it('builds the webhook URL from a local base URL and path', () => {
     process.env.N8N_WEBHOOK_URL = 'http://localhost:5678';
-    process.env.N8N_WEBHOOK_PATH = '/webhook/sondage-rps-solutions-tech';
+    process.env.N8N_WEBHOOK_PATH = '/webhook/rps-analysis';
     delete process.env.N8N_BASE_URL;
 
     expect(getN8nWebhookUrl()).toBe(
-      'http://localhost:5678/webhook/sondage-rps-solutions-tech',
+      'http://localhost:5678/webhook/rps-analysis',
     );
   });
 
@@ -40,7 +40,7 @@ describe('getN8nWebhookUrl', () => {
     delete process.env.N8N_WEBHOOK_PATH;
 
     expect(getN8nWebhookUrl()).toBe(
-      'http://127.0.0.1:5678/n8n/webhook/sondage-rps-solutions-tech',
+      'http://127.0.0.1:5678/n8n/webhook/rps-analysis',
     );
   });
 });

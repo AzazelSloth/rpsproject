@@ -559,7 +559,7 @@ export class SendGridMailService {
   ): Promise<SendGridBatchResult> {
     const apiKey = this.getRequiredEnv('SENDGRID_API_KEY');
     const fromEmail = this.getRequiredEnv('SENDGRID_FROM_EMAIL');
-    const fromName = process.env.SENDGRID_FROM_NAME?.trim() || 'Laroche 360';
+    const fromName = this.getRequiredEnv('SENDGRID_FROM_NAME');
     const replyTo = process.env.SENDGRID_REPLY_TO?.trim() || fromEmail;
 
     const result: SendGridBatchResult = {
@@ -602,7 +602,7 @@ export class SendGridMailService {
   }) {
     const { apiKey, fromEmail, fromName, replyTo, recipient } = params;
     const subject = `Sondage RPS - ${recipient.campaign_name}`;
-    const text = this.buildInvitationText(recipient, replyTo);
+    const text = this.buildInvitationText(recipient, replyTo, fromName);
     const html = this.buildInvitationHtml(recipient, replyTo);
 
     const response = await fetch(this.sendGridUrl, {
@@ -640,6 +640,7 @@ export class SendGridMailService {
   private buildInvitationText(
     recipient: SurveyInvitationEmailRecipient,
     contactEmail: string,
+    fromName: string,
   ) {
     const firstName = this.getFirstName(recipient);
     const startDate = this.formatEmailDate(recipient.start_date);
@@ -657,7 +658,7 @@ export class SendGridMailService {
       'Merci de votre precieuse collaboration. Votre voix est entendue et valorisee.',
       `Contact : ${contactEmail}`,
       '',
-      'Laroche 360',
+      fromName,
     ].join('\n');
   }
 
