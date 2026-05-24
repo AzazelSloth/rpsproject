@@ -279,7 +279,7 @@ if [ -z "$APP_DOMAIN" ]; then
   APP_DOMAIN="appli.laroche360.ca"
 fi
 
-N8N_INTERNAL_BASE_URL="http://host.docker.internal:${N8N_PORT}${N8N_PATH%/}"
+N8N_INTERNAL_BASE_URL="http://n8n:${N8N_PORT}${N8N_PATH%/}"
 
 require_command git
 require_command docker
