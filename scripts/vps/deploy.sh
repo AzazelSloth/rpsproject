@@ -60,6 +60,8 @@ NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-}"
 NEXT_PUBLIC_STRAPI_URL="${NEXT_PUBLIC_STRAPI_URL:-}"
 STRAPI_API_TOKEN="${STRAPI_API_TOKEN:-}"
 APP_URL="${APP_URL:-}"
+APP_DOMAIN="${APP_DOMAIN:-}"
+N8N_DOMAIN="${N8N_DOMAIN:-}"
 SENDGRID_API_KEY="${SENDGRID_API_KEY:-}"
 SENDGRID_FROM_EMAIL="${SENDGRID_FROM_EMAIL:-}"
 SENDGRID_FROM_NAME="${SENDGRID_FROM_NAME:-Laroche 360}"
@@ -83,6 +85,16 @@ require_non_empty() {
 
 trim_trailing_slash() {
   printf '%s' "${1%/}"
+}
+
+extract_url_host() {
+  local value="${1:-}"
+
+  value="${value#*://}"
+  value="${value%%/*}"
+  value="${value%%:*}"
+
+  printf '%s' "$value"
 }
 
 ensure_leading_and_trailing_slash() {
@@ -127,6 +139,17 @@ is_local_db_host() {
   esac
 }
 
+is_internal_n8n_host() {
+  case "${1:-}" in
+    ''|n8n|localhost|127.0.0.1|::1)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 csf_rule_exists() {
   local rule="$1"
 
@@ -162,7 +185,9 @@ warn_if_csf_may_block_local_db() {
 }
 
 if [ -z "$PUBLIC_BASE_URL" ]; then
-  if [ -n "$DOMAIN_NAME" ]; then
+  if [ -n "$APP_URL" ]; then
+    PUBLIC_BASE_URL="$APP_URL"
+  elif [ -n "$DOMAIN_NAME" ]; then
     PUBLIC_BASE_URL="https://$DOMAIN_NAME"
   else
     PUBLIC_BASE_URL="http://$VPS_HOST"
@@ -186,17 +211,51 @@ if [ -z "$APP_URL" ]; then
   APP_URL="$NEXT_PUBLIC_APP_URL"
 fi
 
+if [ -z "$APP_DOMAIN" ]; then
+  APP_DOMAIN="$(extract_url_host "$APP_URL")"
+fi
+if [ -z "$APP_DOMAIN" ]; then
+  APP_DOMAIN="$(extract_url_host "$PUBLIC_BASE_URL")"
+fi
+
 if [ -z "$NEXT_PUBLIC_API_URL" ]; then
   NEXT_PUBLIC_API_URL="$PUBLIC_BASE_URL/api"
 fi
 
 if [ -z "$N8N_EDITOR_BASE_URL" ]; then
-  N8N_EDITOR_BASE_URL="$PUBLIC_BASE_URL${N8N_PATH}"
+  if is_internal_n8n_host "$N8N_HOST"; then
+    N8N_EDITOR_BASE_URL="$PUBLIC_BASE_URL${N8N_PATH}"
+  else
+    N8N_EDITOR_BASE_URL="$N8N_PROTOCOL://$N8N_HOST${N8N_PATH}"
+  fi
 fi
 
 if [ -z "$WEBHOOK_URL" ]; then
-  WEBHOOK_URL="$PUBLIC_BASE_URL${N8N_PATH}"
+  if is_internal_n8n_host "$N8N_HOST"; then
+    WEBHOOK_URL="$PUBLIC_BASE_URL${N8N_PATH}"
+  else
+    WEBHOOK_URL="$N8N_PROTOCOL://$N8N_HOST${N8N_PATH}"
+  fi
 fi
+
+if [ -z "$N8N_DOMAIN" ]; then
+  N8N_DOMAIN="$(extract_url_host "$N8N_EDITOR_BASE_URL")"
+fi
+if [ -z "$N8N_DOMAIN" ]; then
+  N8N_DOMAIN="$(extract_url_host "$WEBHOOK_URL")"
+fi
+if [ -z "$N8N_DOMAIN" ] && ! is_internal_n8n_host "$N8N_HOST"; then
+  N8N_DOMAIN="$N8N_HOST"
+fi
+if [ -z "$N8N_DOMAIN" ]; then
+  N8N_DOMAIN="automation.laroche360.ca"
+fi
+
+if [ -z "$APP_DOMAIN" ]; then
+  APP_DOMAIN="appli.laroche360.ca"
+fi
+
+N8N_INTERNAL_BASE_URL="http://n8n:5678${N8N_PATH%/}"
 
 require_command git
 require_command docker
@@ -269,6 +328,7 @@ NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 NEXT_PUBLIC_STRAPI_URL=$NEXT_PUBLIC_STRAPI_URL
 STRAPI_API_TOKEN=$STRAPI_API_TOKEN
 APP_URL=$APP_URL
+APP_DOMAIN=$APP_DOMAIN
 SENDGRID_API_KEY=$SENDGRID_API_KEY
 SENDGRID_FROM_EMAIL=$SENDGRID_FROM_EMAIL
 SENDGRID_FROM_NAME=$SENDGRID_FROM_NAME
@@ -283,6 +343,7 @@ N8N_PORT=$N8N_PORT
 N8N_PROTOCOL=$N8N_PROTOCOL
 N8N_SECURE_COOKIE=$N8N_SECURE_COOKIE
 N8N_PATH=$N8N_PATH
+N8N_DOMAIN=$N8N_DOMAIN
 N8N_LISTEN_ADDRESS=$N8N_LISTEN_ADDRESS
 TZ=$TZ
 GENERIC_TIMEZONE=$GENERIC_TIMEZONE
@@ -293,8 +354,8 @@ DB_POSTGRESDB_PORT=$DB_PORT
 DB_POSTGRESDB_DATABASE=$DB_NAME_N8N
 DB_POSTGRESDB_USER=$DB_USER
 DB_POSTGRESDB_PASSWORD=$DB_PASSWORD
-N8N_BASE_URL=$N8N_PROTOCOL://$N8N_HOST:$N8N_PORT${N8N_PATH%/}
-N8N_WEBHOOK_URL=$N8N_PROTOCOL://$N8N_HOST:$N8N_PORT${N8N_PATH%/}
+N8N_BASE_URL=$N8N_INTERNAL_BASE_URL
+N8N_WEBHOOK_URL=$N8N_INTERNAL_BASE_URL
 N8N_WEBHOOK_PATH=$N8N_WEBHOOK_PATH
 N8N_HEALTH_REQUIRED=$N8N_HEALTH_REQUIRED
 N8N_EDITOR_BASE_URL=$N8N_EDITOR_BASE_URL
