@@ -452,8 +452,8 @@ pm2 save
 #### 8. Configuration Nginx
 
 ```bash
-# Copier la configuration
-sudo cp scripts/vps/nginx.rps.conf /etc/nginx/sites-available/rps.conf
+# Copier la configuration du Nginx hôte local
+sudo cp scripts/vps/nginx.host.conf /etc/nginx/sites-available/rps.conf
 
 # Activer le site
 sudo ln -s /etc/nginx/sites-available/rps.conf /etc/nginx/sites-enabled/

@@ -452,13 +452,8 @@ if command -v pm2 >/dev/null 2>&1; then
 fi
 
 if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet nginx; then
-  if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
-    echo "Stopping host nginx to free ports 80/443 for Docker..."
-    sudo -n systemctl stop nginx || true
-    sudo -n systemctl disable nginx || true
-  else
-    echo "Host nginx is active but passwordless sudo is unavailable; skipping host nginx shutdown."
-  fi
+  echo "Host nginx is active and expected in this topology."
+  echo "Make sure it listens on 127.0.0.1:8786 and proxies both domains to http://127.0.0.1:8787."
 fi
 
 cd "$COMPOSE_DIR"
