@@ -590,6 +590,26 @@ wait_for_nginx_path() {
   return 1
 }
 
+wait_for_nginx_host_path() {
+  local name="$1"
+  local host="$2"
+  local path="$3"
+  local retries="$4"
+  local interval="$5"
+
+  for i in $(seq 1 "$retries"); do
+    echo "Checking ${name} through nginx for host ${host}... (attempt $i/$retries)"
+    if docker compose exec -T nginx sh -lc "wget -qO- --header='Host: ${host}' http://127.0.0.1:8786${path} >/dev/null"; then
+      echo "$name is ready through nginx for host ${host}."
+      return 0
+    fi
+    sleep "$interval"
+  done
+
+  echo "ERROR: ${name} did not become ready through nginx for host ${host}."
+  return 1
+}
+
 if ! wait_for_nginx_path "backend" "/api/health" 18 5; then
   echo "Backend is running but nginx could not serve /api/health."
   echo "Collecting direct container and nginx diagnostics..."
@@ -607,14 +627,14 @@ fi
 
 if [ "$N8N_BASIC_AUTH_ACTIVE" = "true" ]; then
   n8n_basic_auth_header="$(printf '%s' "${N8N_BASIC_AUTH_USER}:${N8N_BASIC_AUTH_PASSWORD}" | base64 | tr -d '\n')"
-  if ! docker compose exec -T nginx sh -lc "wget -qO- --header='Authorization: Basic ${n8n_basic_auth_header}' http://127.0.0.1:8786/n8n/ >/dev/null"; then
+  if ! docker compose exec -T nginx sh -lc "wget -qO- --header='Host: ${N8N_DOMAIN}' --header='Authorization: Basic ${n8n_basic_auth_header}' http://127.0.0.1:8786/n8n/ >/dev/null"; then
     echo "ERROR: n8n did not respond behind nginx."
     docker compose logs nginx --tail 120 || true
     (cd "$N8N_RUNTIME_DIR" && docker compose logs --tail 120) || true
     exit 1
   fi
 else
-  if ! wait_for_nginx_path "n8n" "/n8n/" 12 5; then
+  if ! wait_for_nginx_host_path "n8n" "$N8N_DOMAIN" "/n8n/" 12 5; then
     docker compose logs nginx --tail 120 || true
     (cd "$N8N_RUNTIME_DIR" && docker compose logs --tail 120) || true
     exit 1
