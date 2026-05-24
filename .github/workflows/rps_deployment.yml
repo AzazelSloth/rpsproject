@@ -143,6 +143,11 @@ jobs:
             export NEXT_PUBLIC_APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}"
             export NEXT_PUBLIC_STRAPI_URL="${{ secrets.NEXT_PUBLIC_STRAPI_URL }}"
             export STRAPI_API_TOKEN="${{ secrets.STRAPI_API_TOKEN }}"
+            export APP_URL="${{ vars.APP_URL }}"
+            export SENDGRID_API_KEY="${{ secrets.SENDGRID_API_KEY }}"
+            export SENDGRID_FROM_EMAIL="${{ vars.SENDGRID_FROM_EMAIL }}"
+            export SENDGRID_FROM_NAME="${{ vars.SENDGRID_FROM_NAME }}"
+            export SENDGRID_REPLY_TO="${{ vars.SENDGRID_REPLY_TO }}"
             export NEXT_PUBLIC_BACKEND_MODE="real"
 
             git clone --depth 1 -b "$TARGET_BRANCH" "$REPO_URL" "$TEMP_REPO_DIR"

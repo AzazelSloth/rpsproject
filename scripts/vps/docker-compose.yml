@@ -22,6 +22,11 @@ services:
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SWAGGER_PATH: ${SWAGGER_PATH:-api-docs}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_URL: ${APP_URL:-http://localhost}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL:-communications@laroche360.ca}
+      SENDGRID_FROM_NAME: ${SENDGRID_FROM_NAME:-Laroche 360}
+      SENDGRID_REPLY_TO: ${SENDGRID_REPLY_TO:-communications@laroche360.ca}
       API_KEY: ${API_KEY:-}
 
       # n8n internal access
@@ -108,9 +113,9 @@ services:
       DB_POSTGRESDB_PASSWORD: ${DB_PASSWORD:-rps_pass}
       BACKEND_API_URL: ${BACKEND_API_URL:-http://backend:3000}
       API_KEY: ${API_KEY:-}
-      FROM_NAME: ${FROM_NAME:-Laroche 360}
-      FROM_EMAIL: ${FROM_EMAIL:-communications@laroche360.ca}
-      REPLY_TO_EMAIL: ${REPLY_TO_EMAIL:-communications@laroche360.ca}
+      FROM_NAME: ${SENDGRID_FROM_NAME:-Laroche 360}
+      FROM_EMAIL: ${SENDGRID_FROM_EMAIL:-communications@laroche360.ca}
+      REPLY_TO_EMAIL: ${SENDGRID_REPLY_TO:-communications@laroche360.ca}
       REPORT_RECIPIENT_EMAIL: ${REPORT_RECIPIENT_EMAIL:-abondelire@gmail.com}
       SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
       GOOGLE_DRIVE_FOLDER: ${GOOGLE_DRIVE_FOLDER:-RPS Reports}
