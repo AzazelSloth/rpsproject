@@ -167,7 +167,6 @@ export function CampaignReportsTable({
                     ? "success"
                     : "warning";
                 const hasReport = !!campaign.report;
-                const canOpenReport = canOpenReportForStatus(campaign.status);
                 const canAnalyze = hasCampaignEnded(campaign.end_date);
                 const disabledReason = "Analyse disponible apres la date de fin du sondage.";
 
@@ -186,7 +185,7 @@ export function CampaignReportsTable({
                       {formatShortDate(campaign.start_date)}
                     </td>
                     <td className="px-6 py-4">
-                      {hasReport && canOpenReport ? (
+                      {hasReport ? (
                         <a
                           href={campaign.report!.report_path}
                           target="_blank"
@@ -195,13 +194,6 @@ export function CampaignReportsTable({
                         >
                           📄 Voir rapport
                         </a>
-                      ) : hasReport ? (
-                        <span
-                          aria-disabled="true"
-                          className="inline-flex cursor-not-allowed items-center gap-1 text-sm font-medium text-slate-400"
-                        >
-                          📄 Voir rapport
-                        </span>
                       ) : (
                         <span className="text-xs text-slate-400">Aucun rapport</span>
                       )}
@@ -262,8 +254,4 @@ function formatStatusLabel(status: string) {
     archived: "Archivé",
   };
   return labels[status] || status;
-}
-
-function canOpenReportForStatus(status: string) {
-  return status === "terminated" || status === "archived";
 }

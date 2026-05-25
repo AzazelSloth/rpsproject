@@ -7,10 +7,9 @@ import type { SurveyOption } from "@/lib/repositories/rps-repository";
 
 const STATUS_FILTERS = [
   { value: "all", label: "Tous les statuts" },
-  { value: "active", label: "active" },
-  { value: "draft", label: "brouillon" },
-  { value: "terminated", label: "termine" },
-  { value: "archived", label: "archive" },
+  { value: "active", label: "Activé" },
+  { value: "draft", label: "Brouillon" },
+  { value: "archived", label: "Archivé" },
 ];
 
 export function SurveyListTable({
@@ -22,19 +21,19 @@ export function SurveyListTable({
 }) {
   const [statusFilter, setStatusFilter] = useState("all");
   // Recherche mise en pause pour le moment.
-  // const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredSurveys = useMemo(() => {
     // Recherche mise en pause pour le moment.
-    // const normalizedQuery = searchQuery.trim().toLowerCase();
+     const normalizedQuery = searchQuery.trim().toLowerCase();
 
     return surveys.filter((survey) => {
       const matchesStatus = statusFilter === "all" || survey.status === statusFilter;
       // Recherche mise en pause pour le moment.
-      // const matchesSearch =
-      //   !normalizedQuery ||
-      //   survey.companyName.toLowerCase().includes(normalizedQuery) ||
-      //   survey.title.toLowerCase().includes(normalizedQuery);
+      const matchesSearch =
+        !normalizedQuery ||
+        survey.companyName.toLowerCase().includes(normalizedQuery) ||
+        survey.title.toLowerCase().includes(normalizedQuery);
 
       return matchesStatus;
     });
@@ -43,14 +42,14 @@ export function SurveyListTable({
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 sm:flex-row sm:justify-end">
-        {/* Barre de recherche mise en commentaire pour une demande future du client.
+       
         <input
           placeholder="recherche le nom de l'entreprise"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
         />
-        */}
+         
         <select
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
@@ -70,10 +69,10 @@ export function SurveyListTable({
             <tr>
               <th className="px-6 py-4">Entreprise</th>
               <th className="px-6 py-4">Statut</th>
-              <th className="px-6 py-4">Taux de completion</th>
-              <th className="px-6 py-4">Date de debut</th>
+              <th className="px-6 py-4">Taux de complétion</th>
+              <th className="px-6 py-4">Date de début</th>
               <th className="px-6 py-4">Date de fin</th>
-              <th className="px-6 py-4">Resultats</th>
+              <th className="px-6 py-4">Résultats</th>
             </tr>
           </thead>
           <tbody>
@@ -114,7 +113,7 @@ export function SurveyListTable({
                         className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
                         style={{ color: "#ffffff" }}
                       >
-                        Voir les resultats
+                        Voir les résultats
                       </Link>
                     </td>
                   </tr>
@@ -124,7 +123,7 @@ export function SurveyListTable({
               <tr className="border-t border-slate-100">
                 <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                   {surveys.length > 0
-                    ? "Aucun sondage ne correspond au statut selectionne."
+                    ? "Aucun sondage ne correspond au statut sélectionné."
                     : "Aucun sondage disponible."}
                 </td>
               </tr>
@@ -174,16 +173,15 @@ function formatShortDate(value: string | null) {
 
 function formatStatusLabel(value: string) {
   if (value === "active") {
-    return "active";
+    return "Activé";
   }
   if (value === "draft") {
-    return "brouillon";
+    return "Brouillon";
   }
-  if (value === "terminated") {
-    return "termine";
-  }
+
+  
   if (value === "archived") {
-    return "archive";
+    return "Archivé";
   }
   return value || "inconnu";
 }

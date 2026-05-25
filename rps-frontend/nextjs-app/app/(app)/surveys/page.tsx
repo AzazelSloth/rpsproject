@@ -52,7 +52,7 @@ export default async function SurveysPage({
         description={
           activeTab === "edit"
             ? "Ajuste le sondage existant, mets a jour les questions et valide la nouvelle version. L'ajout d'entreprise est bloque en mode modification."
-            : "Configure un nouveau sondage en choisissant les entreprises a sonder, les questions a poser et le calendrier de diffusion."
+            : "Configure un nouveau sondage en choisissant les entreprises à sonder, les questions à poser et le calendrier de diffusion."
         }
       />
       <SurveyBuilderDemo
@@ -66,7 +66,7 @@ export default async function SurveysPage({
       <PageErrorState
         eyebrow="Gestion des sondages"
         title="Sondages"
-        description="Cree, modifie ou consulte les sondages disponibles."
+        description="Crée, modifie ou consulté les sondages disponibles."
         message={
           error instanceof Error
             ? error.message

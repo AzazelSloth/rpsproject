@@ -117,7 +117,7 @@ export function SurveyResponseDemo({
           </div>
           <div className="rounded-[12px] border border-slate-200 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-              Prenom et nom
+              Prénoms et Nom
             </p>
             <input
               value={employeeName ?? ""}

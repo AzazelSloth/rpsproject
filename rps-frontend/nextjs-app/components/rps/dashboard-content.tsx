@@ -17,7 +17,7 @@ export function DashboardContent({
       <SectionHeader
         eyebrow="Tableau de bord"
         title="Liste des sondages"
-        description="Accède aux sondages par entreprise, avec statut, taux de complétion et acces direct aux resultats."
+        description="Accède aux sondages par entreprise, avec statut, taux de complétion et accès direct aux résultats."
         action={
           <Link href="/surveys?tab=create" className="inline-flex">
             <PrimaryButton>Créer un sondage</PrimaryButton>

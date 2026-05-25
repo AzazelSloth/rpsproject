@@ -36,7 +36,6 @@ export default async function ResultsPage({
     const { metrics, bars, analysis } = resultsData;
     const reportHref = buildReportHref(surveyBuilderData.campaignId, scenario ?? null);
     const visibleSurveys = surveys.filter((survey) => survey.status !== "draft");
-    const canOpenSelectedReport = canOpenReportForStatus(surveyBuilderData.status);
 
     return (
       <section className="space-y-6">
@@ -87,7 +86,6 @@ export default async function ResultsPage({
                       survey.status === "active"
                         ? "success"
                         : "neutral";
-                    const canOpenReport = canOpenReportForStatus(survey.status);
                     const canAnalyze = hasCampaignEnded(survey.endDate);
 
                     return (
@@ -121,21 +119,12 @@ export default async function ResultsPage({
                               campaignId={survey.id}
                               canAnalyze={canAnalyze}
                             />
-                            {canOpenReport ? (
-                              <Link
-                                href={buildReportHref(survey.id, scenario ?? null)}
-                                className="inline-flex items-center justify-center rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-[0_12px_24px_rgba(24,24,24,0.06)] transition hover:-translate-y-0.5 hover:bg-slate-50"
-                              >
-                                Rapport
-                              </Link>
-                            ) : (
-                              <span
-                                aria-disabled="true"
-                                className="inline-flex cursor-not-allowed items-center justify-center rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-400"
-                              >
-                                Rapport
-                              </span>
-                            )}
+                            <Link
+                              href={buildReportHref(survey.id, scenario ?? null)}
+                              className="inline-flex items-center justify-center rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-[0_12px_24px_rgba(24,24,24,0.06)] transition hover:-translate-y-0.5 hover:bg-slate-50"
+                            >
+                              Rapport
+                            </Link>
                           </div>
                         </td>
                       </tr>
@@ -159,13 +148,9 @@ export default async function ResultsPage({
               <h2 className="font-[family-name:var(--font-manrope)] text-2xl font-extrabold">
                 Détail du sondage
               </h2>
-              {canOpenSelectedReport ? (
-                <Link href={reportHref} className="inline-flex">
-                  <PrimaryButton>Voir le rapport</PrimaryButton>
-                </Link>
-              ) : (
-                <PrimaryButton disabled>Voir le rapport</PrimaryButton>
-              )}
+              <Link href={reportHref} className="inline-flex">
+                <PrimaryButton>Voir le rapport</PrimaryButton>
+              </Link>
             </div>
 
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -335,10 +320,6 @@ function formatStatusLabel(value: string) {
     return "Archivé";
   }
   return value || "inconnu";
-}
-
-function canOpenReportForStatus(value: string) {
-  return value === "terminated" || value === "archived";
 }
 
 function buildReportHref(campaignId: number | null, scenario?: string | null) {
