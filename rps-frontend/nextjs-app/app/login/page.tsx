@@ -3,7 +3,6 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
@@ -17,7 +16,6 @@ const secondaryButtonClassName =
   "rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.16)] transition hover:-translate-y-0.5 hover:bg-[#242424]";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -31,7 +29,7 @@ export default function LoginPage() {
     try {
       const response = await login({ email, password });
       saveAuth(response);
-      router.push("/dashboard");
+      window.location.assign("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "La connexion a échoué.");
     } finally {

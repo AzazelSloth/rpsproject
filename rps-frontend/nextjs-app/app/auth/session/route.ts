@@ -34,17 +34,27 @@ function clearSessionCookies(response: NextResponse, secure: boolean) {
   });
 }
 
+function preventAuthResponseCaching(response: NextResponse) {
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  response.headers.set("Pragma", "no-cache");
+  response.headers.set("Expires", "0");
+}
+
 export async function GET(request: Request) {
   const cookieStore = await cookies();
   const token = cookieStore.get("auth_token")?.value?.trim();
 
   if (!token) {
-    return NextResponse.json({ user: null }, { status: 401 });
+    const response = NextResponse.json({ user: null }, { status: 401 });
+    preventAuthResponseCaching(response);
+    return response;
   }
 
   try {
     const user = await getBackendItem<User>("/auth/me", token);
-    return NextResponse.json({ user });
+    const response = NextResponse.json({ user });
+    preventAuthResponseCaching(response);
+    return response;
   } catch (error) {
     const response = NextResponse.json(
       {
@@ -53,6 +63,7 @@ export async function GET(request: Request) {
       { status: 401 },
     );
     clearSessionCookies(response, isSecureRequest(request));
+    preventAuthResponseCaching(response);
     return response;
   }
 }

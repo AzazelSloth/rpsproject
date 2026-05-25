@@ -52,6 +52,12 @@ function clearSessionCookies(response: NextResponse, secure: boolean) {
   });
 }
 
+function preventAuthResponseCaching(response: NextResponse) {
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  response.headers.set("Pragma", "no-cache");
+  response.headers.set("Expires", "0");
+}
+
 export async function POST(request: Request) {
   const secure = isSecureRequest(request);
 
@@ -61,6 +67,7 @@ export async function POST(request: Request) {
     const nextResponse = NextResponse.json(response);
 
     setSessionCookies(nextResponse, response.token, secure);
+    preventAuthResponseCaching(nextResponse);
     return nextResponse;
   } catch (error) {
     const response = NextResponse.json(
@@ -70,6 +77,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
     clearSessionCookies(response, secure);
+    preventAuthResponseCaching(response);
     return response;
   }
 }

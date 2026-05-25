@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 const publicRoutes = ["/login", "/signup", "/forgot-password", "/survey-response"];
 
+function noStorePageResponse() {
+  const response = NextResponse.next();
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  response.headers.set("Pragma", "no-cache");
+  response.headers.set("Expires", "0");
+  return response;
+}
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -10,7 +18,7 @@ export function proxy(request: NextRequest) {
   );
 
   if (isPublicRoute) {
-    return NextResponse.next();
+    return noStorePageResponse();
   }
 
   if (
@@ -38,7 +46,7 @@ export function proxy(request: NextRequest) {
 
   const authToken = request.cookies.get("auth_token")?.value;
   if (authToken) {
-    return NextResponse.next();
+    return noStorePageResponse();
   }
 
   const loginUrl = new URL("/login", request.url);

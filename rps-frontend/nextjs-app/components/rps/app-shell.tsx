@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, LogOut } from "lucide-react";
 import { BrandLogo } from "@/components/rps/brand-logo";
@@ -22,7 +22,6 @@ export function AppShell({
   initialUser: AuthUser;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<AuthUser | null>(initialUser);
   const activeSurveyTab = searchParams.get("tab") ?? "create";
@@ -63,7 +62,7 @@ export function AppShell({
 
   async function handleLogout() {
     await logout();
-    router.push("/login");
+    window.location.assign("/login");
   }
 
   return (
