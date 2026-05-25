@@ -7,6 +7,13 @@
 
 Plateforme de gestion des Risques Psychosociaux (RPS) pour LaRoche Consulting. Cette application permet de créer, gérer et analyser les campagnes d'évaluation des risques psychosociaux en entreprise.
 
+## Documentation de passation
+
+Pour la prise en main par Abondelire / LaRoche et le guide des modifications
+possibles cote client, consulter :
+
+- [Guide de passation et de modification](docs/GUIDE_PASSATION_ET_MODIFICATIONS.md)
+
 ---
 
 ## Table des Matières

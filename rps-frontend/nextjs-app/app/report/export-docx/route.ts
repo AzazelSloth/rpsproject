@@ -9,8 +9,11 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const scenario = url.searchParams.get("scenario");
+    const campaignIdParam = url.searchParams.get("campaignId");
+    const campaignId = campaignIdParam ? Number(campaignIdParam) : null;
     const report = await getServerTrpcCaller().data.report({
       scenario: scenario ?? null,
+      campaignId: campaignId && Number.isFinite(campaignId) ? campaignId : null,
     });
     const buffer = await buildReportDocx(report);
     const fileName = `${slugify(report.title)}.docx`;

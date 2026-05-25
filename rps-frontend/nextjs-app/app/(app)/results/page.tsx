@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageErrorState } from "@/components/rps/page-error-state";
 import { Card, Pill, PrimaryButton, SectionHeader } from "@/components/rps/ui";
+import { hasCampaignEnded } from "@/lib/campaigns/dates";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
 import { ResultsAnalyzeButton } from "./ResultsAnalyzeButton";
 
@@ -87,6 +88,7 @@ export default async function ResultsPage({
                         ? "success"
                         : "neutral";
                     const canOpenReport = canOpenReportForStatus(survey.status);
+                    const canAnalyze = hasCampaignEnded(survey.endDate);
 
                     return (
                       <tr key={survey.id} className="border-t border-slate-100 align-top">
@@ -115,7 +117,10 @@ export default async function ResultsPage({
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-2">
-                            <ResultsAnalyzeButton campaignId={survey.id} />
+                            <ResultsAnalyzeButton
+                              campaignId={survey.id}
+                              canAnalyze={canAnalyze}
+                            />
                             {canOpenReport ? (
                               <Link
                                 href={buildReportHref(survey.id, scenario ?? null)}

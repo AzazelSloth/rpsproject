@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { Card, Pill, PrimaryButton } from "@/components/rps/ui";
+import { hasCampaignEnded } from "@/lib/campaigns/dates";
 import { getTrpcClient, formatTrpcError } from "@/lib/trpc/client";
 import type { BackendCampaign, BackendReport, BackendCompany } from "@/lib/backend/types";
 
@@ -167,6 +168,8 @@ export function CampaignReportsTable({
                     : "warning";
                 const hasReport = !!campaign.report;
                 const canOpenReport = canOpenReportForStatus(campaign.status);
+                const canAnalyze = hasCampaignEnded(campaign.end_date);
+                const disabledReason = "Analyse disponible apres la date de fin du sondage.";
 
                 return (
                   <tr key={campaign.id} className="border-t border-slate-100 align-top">
@@ -209,13 +212,19 @@ export function CampaignReportsTable({
                           ✅ Complété
                         </span>
                       ) : (
-                        <PrimaryButton
-                          onClick={() => handleAnalyze(campaign.id)}
-                          disabled={analyzingId !== null}
-                          className="!py-2 !px-4 !text-xs"
-                        >
-                          {analyzingId === campaign.id ? "Lancement..." : "Analyser"}
-                        </PrimaryButton>
+                        <div className="flex max-w-[13rem] flex-col gap-1">
+                          <PrimaryButton
+                            onClick={() => handleAnalyze(campaign.id)}
+                            disabled={analyzingId !== null || !canAnalyze}
+                            title={!canAnalyze ? disabledReason : undefined}
+                            className="!py-2 !px-4 !text-xs disabled:cursor-not-allowed"
+                          >
+                            {analyzingId === campaign.id ? "Lancement..." : "Analyser"}
+                          </PrimaryButton>
+                          {!canAnalyze ? (
+                            <p className="text-xs leading-5 text-slate-500">{disabledReason}</p>
+                          ) : null}
+                        </div>
                       )}
                     </td>
                   </tr>

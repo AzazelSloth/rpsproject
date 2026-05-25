@@ -12,12 +12,26 @@ import { CampaignService } from './campaign.service';
 
 describe('CampaignService', () => {
   let service: CampaignService;
+  let campaignRepository: {
+    create: jest.Mock;
+    save: jest.Mock;
+    find: jest.Mock;
+    findOne: jest.Mock;
+    remove: jest.Mock;
+  };
   let responseRepository: { find: jest.Mock };
   const originalN8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
   const originalFetch = global.fetch;
 
   beforeEach(async () => {
     process.env.N8N_WEBHOOK_URL = 'http://n8n.test/webhook/rps';
+    campaignRepository = {
+      create: jest.fn(),
+      save: jest.fn(),
+      find: jest.fn(),
+      findOne: jest.fn(),
+      remove: jest.fn(),
+    };
     responseRepository = {
       find: jest.fn(),
     };
@@ -27,13 +41,7 @@ describe('CampaignService', () => {
         CampaignService,
         {
           provide: getRepositoryToken(Campaign),
-          useValue: {
-            create: jest.fn(),
-            save: jest.fn(),
-            find: jest.fn(),
-            findOne: jest.fn(),
-            remove: jest.fn(),
-          },
+          useValue: campaignRepository,
         },
         {
           provide: getRepositoryToken(Company),
@@ -132,6 +140,58 @@ describe('CampaignService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects campaign analysis until the campaign end date has passed', async () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    campaignRepository.findOne.mockResolvedValue({
+      id: 4,
+      name: 'Campagne active',
+      end_date: tomorrow,
+      company: { id: 1, name: 'Entreprise Test' },
+      questions: [],
+      reports: [],
+    });
+    const triggerSpy = jest.spyOn(service as any, 'triggerAnalysis');
+
+    await expect(service.analyze(4, 'client@example.com')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+
+    expect(triggerSpy).not.toHaveBeenCalled();
+    expect(responseRepository.find).not.toHaveBeenCalled();
+  });
+
+  it('allows campaign analysis after the campaign end date has passed', async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    campaignRepository.findOne.mockResolvedValue({
+      id: 4,
+      name: 'Campagne terminee',
+      end_date: yesterday,
+      company: { id: 1, name: 'Entreprise Test' },
+      questions: [],
+      reports: [],
+    });
+    const result = {
+      success: true,
+      message: 'ok',
+    };
+    const triggerSpy = jest
+      .spyOn(service as any, 'triggerAnalysis')
+      .mockResolvedValue(result);
+
+    await expect(service.analyze(4, 'client@example.com')).resolves.toEqual(
+      result,
+    );
+
+    expect(triggerSpy).toHaveBeenCalledWith(
+      4,
+      'Campagne terminee',
+      'Entreprise Test',
+      'client@example.com',
+    );
   });
 
   it('posts the expected local analysis payload to n8n', async () => {

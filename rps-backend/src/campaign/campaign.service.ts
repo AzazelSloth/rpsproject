@@ -175,6 +175,7 @@ export class CampaignService {
 
   async analyze(campaignId: number, userEmail: string) {
     const campaign = await this.findOne(campaignId);
+    this.ensureCampaignEnded(campaign.end_date);
     const companyName = campaign.company?.name || 'Entreprise';
 
     return this.triggerAnalysis(
@@ -191,6 +192,7 @@ export class CampaignService {
     companyName?: string,
   ) {
     const campaign = await this.findOne(campaignId);
+    this.ensureCampaignEnded(campaign.end_date);
     const finalCompanyName =
       companyName || campaign.company?.name || 'Entreprise';
 
@@ -342,6 +344,62 @@ export class CampaignService {
         'Campaign end date must be greater than or equal to start date',
       );
     }
+  }
+
+  private ensureCampaignEnded(endDate?: Date | string | null) {
+    const campaignEndDate = this.parseCampaignEndOfDay(endDate);
+
+    if (!campaignEndDate) {
+      throw new BadRequestException(
+        "L'analyse requiert une date de fin de sondage.",
+      );
+    }
+
+    if (Date.now() <= campaignEndDate.getTime()) {
+      throw new BadRequestException(
+        "L'analyse sera disponible apres la date de fin du sondage.",
+      );
+    }
+  }
+
+  private parseCampaignEndOfDay(value?: Date | string | null) {
+    if (!value) {
+      return null;
+    }
+
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) {
+        return null;
+      }
+
+      const endDate = new Date(value);
+      endDate.setHours(23, 59, 59, 999);
+      return endDate;
+    }
+
+    const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      return new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        23,
+        59,
+        59,
+        999,
+      );
+    }
+
+    const parsedDate = new Date(value);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return null;
+    }
+
+    parsedDate.setHours(23, 59, 59, 999);
+    return parsedDate;
   }
 
   private normalizeCampaignForRead(campaign: Campaign) {
