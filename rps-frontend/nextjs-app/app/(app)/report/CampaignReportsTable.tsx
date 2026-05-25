@@ -97,7 +97,7 @@ export function CampaignReportsTable({
   return (
     <div className="space-y-4">
       {/* Filter */}
-      <Card className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
+      {/* <Card className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <label htmlFor="company-filter" className="text-sm font-semibold text-slate-700">
             Filtrer par entreprise :
@@ -122,7 +122,7 @@ export function CampaignReportsTable({
         <p className="text-xs text-slate-500">
           {filteredCampaigns.length} campagne{filteredCampaigns.length > 1 ? "s" : ""}
         </p>
-      </Card>
+      </Card> */}
 
       {/* Message */}
       {message && (
@@ -144,7 +144,7 @@ export function CampaignReportsTable({
       )}
 
       {/* Table */}
-      <Card className="overflow-hidden">
+      {/* <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-slate-50 uppercase tracking-[0.16em] text-slate-500">
@@ -225,15 +225,15 @@ export function CampaignReportsTable({
             </tbody>
           </table>
         </div>
-      </Card>
+      </Card> */}
 
       {/* Info */}
-      <Card className="border-l-4 border-amber-400 bg-amber-50 px-5 py-4">
+      {/* <Card className="border-l-4 border-amber-400 bg-amber-50 px-5 py-4">
         <p className="text-sm text-amber-900">
           💡 <strong>Info :</strong> L&apos;analyse prend 1 à 2 minutes. Le rapport complet sera
           envoyé par email avec un lien vers Google Drive.
         </p>
-      </Card>
+      </Card> */}
     </div>
   );
 }

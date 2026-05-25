@@ -112,28 +112,7 @@ type ReportOverviewProps = {
 function ReportOverview({ report, results, exportHref }: ReportOverviewProps) {
   return (
     <div className="space-y-5">
-      <Card className="flex flex-col gap-4 p-6 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Rapport selectionne</p>
-          <h2 className="mt-1 font-[family-name:var(--font-manrope)] text-2xl font-extrabold text-slate-900">
-            {report.title}
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{report.companyName}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {report.archivedReportPath ? (
-            <a
-              href={report.archivedReportPath}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-[12px] border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-[0_12px_24px_rgba(24,24,24,0.06)] transition hover:-translate-y-0.5 hover:bg-slate-50"
-            >
-              Ouvrir le rapport archive
-            </a>
-          ) : null}
-          <DownloadReportButton href={exportHref} />
-        </div>
-      </Card>
+   
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         {[
@@ -175,10 +154,10 @@ function ReportOverview({ report, results, exportHref }: ReportOverviewProps) {
             <div>
               <p className="text-sm text-slate-500">Lecture departement par departement</p>
               <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
-                Intensite du stress percu
+                Intensité du stress perçu
               </h3>
             </div>
-            <Pill tone="warning">Priorites de restitution</Pill>
+            <Pill tone="warning">Priorités de restitution</Pill>
           </div>
 
           <div className="mt-8 space-y-5">
@@ -214,7 +193,7 @@ function ReportOverview({ report, results, exportHref }: ReportOverviewProps) {
           <Card className="p-6">
             <p className="text-sm text-slate-500">Repartition des retours</p>
             <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
-              Lecture executive
+              Lecture exécutive
             </h3>
             <div className="mt-5 space-y-4">
               <div className="rounded-[14px] border border-emerald-100 bg-emerald-50 px-4 py-4">

@@ -38,12 +38,14 @@ export default async function SurveyResponseTokenPage({
               Questionnaire attribué à {surveyData.employeeName || "ce salarié"}.
             </p>
           </div>
-          <Link
-            href="/survey-response"
-            className="rounded-[12px] border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            Changer de lien
-          </Link>
+          {!surveyData.completedAt ? (
+            <Link
+              href="/survey-response"
+              className="rounded-[12px] border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Changer de lien
+            </Link>
+          ) : null}
         </div>
 
         {surveyData.completedAt ? (
@@ -54,17 +56,19 @@ export default async function SurveyResponseTokenPage({
           </Card>
         ) : null}
 
-        <SurveyResponseDemo
-          participantToken={surveyData.participantToken}
-          employeeId={surveyData.employeeId}
-          employeeName={surveyData.employeeName}
-          employeeTitle={surveyData.employeeTitle}
-          companyName={surveyData.companyName}
-          campaignName={surveyData.campaignName}
-          status={surveyData.status}
-          completedAt={surveyData.completedAt}
-          questions={surveyData.questions}
-        />
+        {!surveyData.completedAt ? (
+          <SurveyResponseDemo
+            participantToken={surveyData.participantToken}
+            employeeId={surveyData.employeeId}
+            employeeName={surveyData.employeeName}
+            employeeTitle={surveyData.employeeTitle}
+            companyName={surveyData.companyName}
+            campaignName={surveyData.campaignName}
+            status={surveyData.status}
+            completedAt={surveyData.completedAt}
+            questions={surveyData.questions}
+          />
+        ) : null}
       </div>
     );
   } catch (error) {

@@ -11,7 +11,7 @@ const pageTitles: Record<string, string> = {
   "/surveys": "",
   "/employees": "",
   "/results": "",
-  "/report": "Synthèse",
+  "/report": "",
 };
 
 export function AppShell({

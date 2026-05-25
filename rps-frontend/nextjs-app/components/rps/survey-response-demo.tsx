@@ -30,6 +30,7 @@ export function SurveyResponseDemo({
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const isCompleted = Boolean(completedAt) || submitted;
 
   const completion = useMemo(() => {
     if (!questions.length) {
@@ -41,7 +42,7 @@ export function SurveyResponseDemo({
   }, [answers, questions]);
 
   function handleSubmit() {
-    if (completedAt) {
+    if (isCompleted) {
       return;
     }
 
@@ -76,6 +77,16 @@ export function SurveyResponseDemo({
         setSubmitError(message);
       }
     });
+  }
+
+  if (isCompleted) {
+    return (
+      <Card className="mx-auto max-w-3xl border border-emerald-200 bg-emerald-50 p-5">
+        <p className="text-sm font-semibold text-emerald-800">
+          Ce sondage a dÃ©jÃ  Ã©tÃ© complÃ©tÃ©.
+        </p>
+      </Card>
+    );
   }
 
   return (
@@ -208,7 +219,7 @@ export function SurveyResponseDemo({
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <PrimaryButton
           className="sm:w-auto"
-          disabled={isPending || Boolean(completedAt) || !questions.length}
+          disabled={isPending || !questions.length}
           onClick={handleSubmit}
         >
           {completedAt

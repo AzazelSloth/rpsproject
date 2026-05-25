@@ -120,6 +120,7 @@ export type SurveyBuilderData = {
   endDate: string;
   questions: SurveyQuestion[];
   participantCount: number;
+  importedParticipants: CampaignParticipantRecord[];
 };
 
 export type ReportTemplateData = {
@@ -314,6 +315,7 @@ export async function getSurveyBuilderData(
         endDate: mappedCampaign.endDate ?? "",
         questions: mappedCampaign.questions,
         participantCount: progress?.total_participants ?? 0,
+        importedParticipants: progress?.participants.map(mapCampaignParticipantRecord) ?? [],
       };
     }
 
@@ -329,6 +331,7 @@ export async function getSurveyBuilderData(
       endDate: "",
       questions: [],
       participantCount: 0,
+      importedParticipants: [],
     };
   } catch (error) {
     throw toRepositoryError("Impossible de charger le builder de sondage.", error);
@@ -373,21 +376,7 @@ export async function getEmployeeManagementData(
       completedParticipants: progress.completed_participants,
       pendingParticipants: progress.pending_participants,
       remindedParticipants: progress.reminded_participants,
-      participants: progress.participants.map((participant) => ({
-          id: participant.id,
-          employeeId: participant.employee.id,
-          name: `${participant.employee.first_name} ${participant.employee.last_name}`.trim(),
-          email: participant.employee.email,
-          department: participant.employee.department ?? "Non renseigne",
-          status: participant.status,
-          responseStatus:
-            participant.status === "completed" ? "Responded" : "Not responded",
-          invitationSentAt: participant.invitation_sent_at,
-          reminderSentAt: participant.reminder_sent_at,
-          completedAt: participant.completed_at,
-          participationToken: participant.participation_token,
-          surveyUrl: `/survey-response/${participant.participation_token}`,
-        })),
+      participants: progress.participants.map(mapCampaignParticipantRecord),
     };
   } catch (error) {
     throw toRepositoryError("Impossible de charger les participants du sondage.", error);
@@ -559,6 +548,25 @@ function buildEmptyEmployeeManagementData(): EmployeeManagementData {
     pendingParticipants: 0,
     remindedParticipants: 0,
     participants: [],
+  };
+}
+
+function mapCampaignParticipantRecord(
+  participant: BackendCampaignProgress["participants"][number],
+): CampaignParticipantRecord {
+  return {
+    id: participant.id,
+    employeeId: participant.employee.id,
+    name: `${participant.employee.first_name} ${participant.employee.last_name}`.trim(),
+    email: participant.employee.email,
+    department: participant.employee.department ?? "Non renseigne",
+    status: participant.status,
+    responseStatus: participant.status === "completed" ? "Responded" : "Not responded",
+    invitationSentAt: participant.invitation_sent_at,
+    reminderSentAt: participant.reminder_sent_at,
+    completedAt: participant.completed_at,
+    participationToken: participant.participation_token,
+    surveyUrl: `/survey-response/${participant.participation_token}`,
   };
 }
 

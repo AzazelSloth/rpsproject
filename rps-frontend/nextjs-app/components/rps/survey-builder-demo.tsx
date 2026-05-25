@@ -4,7 +4,10 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, GripHorizontal } from "lucide-react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
-import type { SurveyBuilderData } from "@/lib/repositories/rps-repository";
+import type {
+  CampaignParticipantRecord,
+  SurveyBuilderData,
+} from "@/lib/repositories/rps-repository";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
 import { getTrpcClient } from "@/lib/trpc/client";
 
@@ -42,6 +45,14 @@ type SendInvitationsResponse = {
   failed_count?: number;
   skipped_count?: number;
   message?: string;
+};
+
+type ImportedParticipantView = {
+  name: string;
+  email: string;
+  department?: string;
+  status?: string;
+  link: string;
 };
 
 type SurveyQuestionType = "scale" | "choice" | "text" | "section";
@@ -134,8 +145,11 @@ export function SurveyBuilderDemo({
   const [importValidationErrors, setImportValidationErrors] = useState<string[]>([]);
   const [importSuccess, setImportSuccess] = useState<{
     count: number;
-    participants: Array<{ name: string; email: string; link: string }>;
+    participants: ImportedParticipantView[];
   } | null>(null);
+  const [importedParticipants, setImportedParticipants] = useState<ImportedParticipantView[]>(
+    () => initialData.importedParticipants.map(mapImportedParticipant),
+  );
   const [hasDownloadedLinks, setHasDownloadedLinks] = useState(false);
   const [hasSentInvitations, setHasSentInvitations] = useState(false);
   const [isSendingInvitations, setIsSendingInvitations] = useState(false);
@@ -166,8 +180,12 @@ export function SurveyBuilderDemo({
   );
   const hasImportedEmployees = Boolean(
     participantCount > 0 ||
+      importedParticipants.length > 0 ||
       (importSuccess && (importSuccess.count > 0 || importSuccess.participants.length > 0)),
   );
+  const displayedImportedParticipants = importSuccess?.participants.length
+    ? importSuccess.participants
+    : importedParticipants;
   const canActivateCampaign = Boolean(campaignId && questions.length > 0);
   const isAllStepsComplete = Boolean(
     campaignId && status === "active" && questions.length > 0 && hasImportedEmployees,
@@ -199,6 +217,9 @@ export function SurveyBuilderDemo({
     setImportError(null);
     setImportValidationErrors([]);
     setImportSuccess(null);
+    setImportedParticipants(
+      mode === "create" ? [] : initialData.importedParticipants.map(mapImportedParticipant),
+    );
     setHasDownloadedLinks(false);
     setHasSentInvitations(false);
     setSelectedFileName(null);
@@ -293,6 +314,7 @@ export function SurveyBuilderDemo({
         setStatus("draft");
         setQuestions([]);
         setImportSuccess(null);
+        setImportedParticipants([]);
         setHasDownloadedLinks(false);
         setHasSentInvitations(false);
         setParticipantCount(0);
@@ -334,6 +356,7 @@ export function SurveyBuilderDemo({
       setStatus("draft");
       setQuestions([]);
       setImportSuccess(null);
+      setImportedParticipants([]);
       setHasDownloadedLinks(false);
       setHasSentInvitations(false);
       setParticipantCount(0);
@@ -357,6 +380,7 @@ export function SurveyBuilderDemo({
     setEndDate("");
     setQuestions([]);
     setImportSuccess(null);
+    setImportedParticipants([]);
     setHasDownloadedLinks(false);
     setHasSentInvitations(false);
     setParticipantCount(0);
@@ -384,6 +408,7 @@ export function SurveyBuilderDemo({
         .map(ensureQuestionOptions),
     );
     setImportSuccess(null);
+    setImportedParticipants([]);
     setHasDownloadedLinks(false);
     setHasSentInvitations(false);
     setParticipantCount(0);
@@ -754,11 +779,13 @@ export function SurveyBuilderDemo({
   }
 
   function copyAllLinks() {
-    if (!importSuccess) {
+    if (!displayedImportedParticipants.length) {
       return;
     }
 
-    const links = importSuccess.participants.map((participant) => `${participant.name}: ${participant.link}`).join("\n");
+    const links = displayedImportedParticipants
+      .map((participant) => `${participant.name}: ${toAbsoluteSurveyUrl(participant.link)}`)
+      .join("\n");
     copyToClipboard(links).then((copied) => {
       setImportFeedback(
         copied
@@ -769,14 +796,20 @@ export function SurveyBuilderDemo({
   }
 
   function downloadLinksList() {
-    if (!importSuccess) {
+    if (!displayedImportedParticipants.length) {
       return;
     }
 
     const headers = ["Nom", "Prénom", "Email", "Fonction", "Lien sondage unique"];
-    const rows = importSuccess.participants.map((participant) => {
+    const rows = displayedImportedParticipants.map((participant) => {
       const parts = participant.name.split(" ");
-      return [parts.slice(1).join(" "), parts[0] ?? "", participant.email, "", participant.link];
+      return [
+        parts.slice(1).join(" "),
+        parts[0] ?? "",
+        participant.email,
+        participant.department ?? "",
+        toAbsoluteSurveyUrl(participant.link),
+      ];
     });
     const csvContent = [headers, ...rows]
       .map((row) => row.map((cell) => `"${cell}"`).join(","))
@@ -874,6 +907,7 @@ export function SurveyBuilderDemo({
           count: result.imported_employees || participants.length,
           participants,
         });
+        setImportedParticipants(participants);
         setParticipantCount(result.imported_employees || participants.length);
         setHasDownloadedLinks(false);
         setHasSentInvitations(false);
@@ -1236,7 +1270,7 @@ export function SurveyBuilderDemo({
             >
               {isSendingInvitations ? "Envoi..." : invitationActionLabel}
             </button>
-            {importSuccess ? (
+            {displayedImportedParticipants.length > 0 ? (
               <button
                 type="button"
                 onClick={downloadLinksList}
@@ -1936,16 +1970,18 @@ export function SurveyBuilderDemo({
                 </div>
               </Card>
 
-              {importSuccess ? (
+              {displayedImportedParticipants.length > 0 ? (
                 <Card className="p-4 sm:p-5">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
                     Liste des employés et liens
                   </p>
                   <h4 className="mt-2 text-base sm:text-lg font-bold text-slate-900">
-                    {importSuccess.count} employé(s) importé(s)
+                    {importSuccess?.count ?? displayedImportedParticipants.length} employé(s) importé(s)
                   </h4>
                   <p className="mt-2 text-sm text-slate-600">
-                    L&apos;import est terminé. Vous pouvez maintenant télécharger la liste des liens.
+                    {importSuccess
+                      ? "L'import est terminé. Vous pouvez maintenant télécharger la liste des liens."
+                      : "Ces employés sont déjà importés pour ce sondage. Les liens restent valides."}
                   </p>
                   <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
                     <PrimaryButton onClick={downloadLinksList} className="w-full sm:w-auto">
@@ -1954,7 +1990,7 @@ export function SurveyBuilderDemo({
                     <SecondaryButton onClick={copyAllLinks} className="w-full sm:w-auto">Copier tous les liens</SecondaryButton>
                   </div>
                   <div className="mt-4 sm:mt-5 max-h-60 sm:max-h-72 space-y-2 sm:space-y-3 overflow-y-auto">
-                    {importSuccess.participants.map((participant, index) => (
+                    {displayedImportedParticipants.map((participant, index) => (
                       <div
                         key={`participant-link-${index}`}
                         className="flex flex-col gap-2 sm:gap-3 rounded-[12px] border border-slate-200 bg-slate-50 p-3 sm:p-4"
@@ -1962,6 +1998,13 @@ export function SurveyBuilderDemo({
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-slate-900">{participant.name}</p>
                           <p className="text-xs text-slate-500">{participant.email}</p>
+                          {participant.department || participant.status ? (
+                            <p className="mt-1 text-xs text-slate-500">
+                              {[participant.department, formatParticipantStatus(participant.status)]
+                                .filter(Boolean)
+                                .join(" - ")}
+                            </p>
+                          ) : null}
                         </div>
                         <code className="block flex-1 truncate text-xs text-slate-600">
                           {participant.link}
@@ -1969,7 +2012,7 @@ export function SurveyBuilderDemo({
                         <SecondaryButton
                           className="w-full sm:w-auto px-3 sm:px-4 py-2"
                           onClick={() =>
-                            copyToClipboard(participant.link).then((copied) => {
+                            copyToClipboard(toAbsoluteSurveyUrl(participant.link)).then((copied) => {
                               setImportFeedback(
                                 copied
                                   ? `Lien copie pour ${participant.name}.`
@@ -1999,6 +2042,46 @@ function getInitialCompanyId(initialData: SurveyBuilderData, mode: SurveyBuilder
   }
 
   return initialData.companyId;
+}
+
+function mapImportedParticipant(participant: CampaignParticipantRecord): ImportedParticipantView {
+  return {
+    name: participant.name || "Employé",
+    email: participant.email,
+    department: participant.department,
+    status: participant.status,
+    link: participant.surveyUrl,
+  };
+}
+
+function toAbsoluteSurveyUrl(value: string) {
+  if (!value) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  if (typeof window === "undefined") {
+    return value;
+  }
+
+  return `${window.location.origin}${value.startsWith("/") ? "" : "/"}${value}`;
+}
+
+function formatParticipantStatus(status?: string) {
+  if (status === "completed") {
+    return "Complété";
+  }
+  if (status === "reminded") {
+    return "Relancé";
+  }
+  if (status === "pending") {
+    return "En attente";
+  }
+
+  return status ?? "";
 }
 
 function sanitizeOptions(options?: string[]) {
