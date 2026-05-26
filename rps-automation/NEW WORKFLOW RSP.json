@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "jsCode": "// Les données viennent déjà formatées du nœud simulation\nconst input = $input.first().json;\n\nreturn [{\n  json: {\n    campaignInfo: input.campaignInfo,\n    openAnswers: input.openAnswers,\n    formattedForAI: input.formattedForAI\n  }\n}];"
+        "jsCode": "const input = $input.first().json;\nconst webhookBody = input.body && typeof input.body === 'object' ? input.body : {};\nconst nestedBody = webhookBody.body && typeof webhookBody.body === 'object' && !Array.isArray(webhookBody.body)\n  ? webhookBody.body\n  : {};\nconst responses = Array.isArray(nestedBody.body)\n  ? nestedBody.body\n  : Array.isArray(webhookBody.body)\n    ? webhookBody.body\n    : Array.isArray(input.body)\n      ? input.body\n      : Array.isArray(input.results)\n        ? input.results\n        : [];\n\nconst campaignId = nestedBody.campaign_id || webhookBody.campaign_id || input.campaign_id || input.campaignId || '';\nconst companyName = webhookBody.company_name || nestedBody.company_name || input.company_name || responses[0]?.Employeur || responses[0]?.employer || 'Entreprise';\nconst campaignName = webhookBody.campaign_name || nestedBody.campaign_name || input.campaign_name || (campaignId ? `Campagne ${campaignId}` : 'Campagne RPS');\nconst clientEmail = nestedBody.client_email || webhookBody.client_email || webhookBody.user_email || input.user_email || input.client_email || input.clientEmail || '';\n\nconst questionKeys = [...new Set(responses.flatMap((row) => Object.keys(row || {}).filter((key) => /^Q\\d+$/.test(key))))]\n  .sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));\n\nconst formattedForAI = responses.length > 0\n  ? responses.map((row, index) => {\n      const identity = row['Nom et Prenom'] || row['Nom et Pr\\u00e9nom(s)'] || row.nom || row.name || `Repondant ${index + 1}`;\n      const header = [`Repondant ${index + 1}`, identity, row.Fonction || row.fonction, row.Email || row.email].filter(Boolean).join(' - ');\n      const answers = questionKeys.map((key) => `${key}: ${row[key] ?? ''}`).join('\\n');\n      return `${header}\\n${answers}`;\n    }).join('\\n\\n---\\n\\n')\n  : 'Aucune reponse exploitable recue.';\n\nreturn [{\n  json: {\n    campaignInfo: {\n      entreprise: companyName,\n      campagne: campaignName,\n      total_repondants: responses.length,\n      campaign_id: campaignId,\n      client_email: clientEmail\n    },\n    openAnswers: responses,\n    formattedForAI\n  }\n}];"
       },
       "id": "b22a0b72-b8f9-48d7-8487-35dac5d7691f",
       "name": "Formater les données",
@@ -32,7 +32,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Analyse les résultats RPS  ",
+        "text": "=Analyse les resultats RPS pour {{ $json.campaignInfo.entreprise }} - {{ $json.campaignInfo.campagne }}.\n\nNombre de repondants: {{ $json.campaignInfo.total_repondants }}\n\nDonnees a analyser:\n{{ $json.formattedForAI }}",
         "options": {
           "systemMessage": "=Tu es un Expert Senior en Psychologie du Travail. Tu analyses les résultats du sondage RPS de \n\nMéthodologie d'analyse :\nLes employés ont répondu avec l'échelle suivante. Tu dois les interpréter ainsi :\n\n    \"Tout à fait d'accord\" ou \"Plutôt d'accord\" : Score 4-5 (Facteur de protection / Satisfaction).\n\n    \"Ni d'accord, ni pas d'accord\" : Score 3 (Zone neutre).\n\n    \"Plutôt pas d'accord\" ou \"Pas du tout d'accord\" : Score 1-2 (Alerte / Risque psychosocial).\n\nNote : Analyse l'ensemble des réponses pour dégager des moyennes et des tendances de groupe, peu importe le nombre de répondants.\n\nConsignes de formatage :\n\n    AUCUN formatage Markdown (pas de #, pas de *, pas de **).\n\n    Utilise uniquement les titres de sections ci-dessous.\n\n\nStructure du Rapport :\n\nCharge de travail\n(Analyse la quantité, le rythme et la complexité perçue).\n\nOrganisation & Étique\n(Analyse la clarté des rôles et le respect des valeurs).\n\nAutonomie et Développement\n(Analyse la liberté de décision et l'utilisation des compétences).\n\nReconnaissance & condition\n(Analyse le sentiment de justice et la valorisation du travail).\n\nRelation et Soutien\n(Analyse l'ambiance d'équipe et le soutien managérial).\n\nDemandes Émotionnelles & Valeurs\n(Analyse la charge mentale liée au public et les conflits d'éthique).\n\nConséquence sur la santé et Équilibre\n(Analyse l'impact sur le bien-être et la vie personnelle).\n\nAvis pour améliorer le bien être au travail\n(Propose 3 actions concrètes et adaptées à Solutions Tech Québec)."
         }
@@ -225,7 +225,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "a4a937ee-ce22-475a-b226-b7ff55c56e10",
+        "path": "rps-analysis",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
@@ -567,7 +567,7 @@
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "Formater les données",
             "type": "main",
             "index": 0
           }
@@ -607,22 +607,6 @@
         ]
       ]
     },
-    "HTTP Request": {
-      "main": [
-        [
-          {
-            "node": "Formater les données",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Split Out",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "HTTP Request1": {
       "main": [
         [
@@ -635,7 +619,7 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "availableInMCP": false

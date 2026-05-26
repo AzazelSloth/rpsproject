@@ -9,10 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import bcryptModule from 'bcrypt';
 import { Repository } from 'typeorm';
-import {
-  getAllowedAdminEmails,
-  isRegistrationAllowed,
-} from './admin-access.config';
+import { isAdminEmailAllowed } from './admin-access.config';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { User } from './user.entity';
 
@@ -29,6 +26,9 @@ function hasUsablePasswordHash(password: string | null | undefined) {
   return typeof password === 'string' && /^\$2[aby]\$\d{2}\$/.test(password);
 }
 
+const UNAUTHORIZED_ADMIN_MESSAGE =
+  "Ce compte n'est pas autorise a acceder a l'administration.";
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -41,12 +41,9 @@ export class AuthService {
   async register(registerDto: RegisterDto) {
     const normalizedEmail = normalizeEmail(registerDto.email);
 
-    // Check if registration is allowed for this email
-    const allowedAdminEmails = getAllowedAdminEmails();
-    const isExplicitlyAllowed = allowedAdminEmails.includes(normalizedEmail);
-    const isDomainAllowed = isRegistrationAllowed(normalizedEmail);
+    const isExplicitlyAllowed = isAdminEmailAllowed(normalizedEmail);
 
-    if (!isExplicitlyAllowed && !isDomainAllowed) {
+    if (!isExplicitlyAllowed) {
       throw new ForbiddenException(
         "L'inscription est réservée aux administrateurs autorisés.",
       );
@@ -102,6 +99,10 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const normalizedEmail = normalizeEmail(loginDto.email);
 
+    if (!isAdminEmailAllowed(normalizedEmail)) {
+      throw new ForbiddenException(UNAUTHORIZED_ADMIN_MESSAGE);
+    }
+
     const user = await this.userRepository?.findOne({
       where: { email: normalizedEmail },
     });
@@ -141,6 +142,10 @@ export class AuthService {
 
     if (!user) {
       throw new UnauthorizedException('User not found');
+    }
+
+    if (!isAdminEmailAllowed(user.email ?? '')) {
+      throw new ForbiddenException(UNAUTHORIZED_ADMIN_MESSAGE);
     }
 
     if (

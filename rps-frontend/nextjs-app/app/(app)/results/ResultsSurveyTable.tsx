@@ -1,27 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { Card, Pill } from "@/components/rps/ui";
+import { hasCampaignEnded } from "@/lib/campaigns/dates";
 import type { SurveyOption } from "@/lib/repositories/rps-repository";
+import { ResultsAnalyzeButton } from "./ResultsAnalyzeButton";
 
 const STATUS_FILTERS = [
   { value: "all", label: "Tous les statuts" },
   { value: "active", label: "Activé" },
   { value: "terminated", label: "Complété" },
-  { value: "draft", label: "Brouillon" },
   { value: "archived", label: "Archivé" },
 ];
 
-export function SurveyListTable({
+export function ResultsSurveyTable({
   surveys,
   scenario,
 }: {
   surveys: SurveyOption[];
   scenario?: string | null;
 }) {
-  const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const filteredSurveys = useMemo(() => {
     const normalizedQuery = normalizeSearchText(searchQuery);
@@ -39,27 +40,36 @@ export function SurveyListTable({
 
   return (
     <Card className="overflow-hidden">
-      <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 sm:flex-row sm:justify-end">
-       
-        <input
-          aria-label="Rechercher un sondage"
-          placeholder="Rechercher par entreprise ou sondage"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-        />
-         
-        <select
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
-          className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
-        >
-          {STATUS_FILTERS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+      <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h3 className="font-[family-name:var(--font-manrope)] text-xl font-bold">
+            Tableau des sondages
+          </h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Retrouve rapidement un sondage pour acceder aux resultats ou au rapport.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <input
+            aria-label="Rechercher un sondage"
+            placeholder="Rechercher par entreprise ou sondage"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+          />
+          <select
+            aria-label="Filtrer les sondages par statut"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+          >
+            {STATUS_FILTERS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -71,13 +81,13 @@ export function SurveyListTable({
               <th className="px-6 py-4">Taux de complétion</th>
               <th className="px-6 py-4">Date de début</th>
               <th className="px-6 py-4">Date de fin</th>
-              <th className="px-6 py-4">Résultats</th>
+              <th className="px-6 py-4">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredSurveys.length > 0 ? (
               filteredSurveys.map((survey) => {
-                const resultsHref = buildResultsHref(survey.id, scenario ?? null);
+                const canAnalyze = hasCampaignEnded(survey.endDate);
 
                 return (
                   <tr key={survey.id} className="border-t border-slate-100 align-top">
@@ -107,13 +117,15 @@ export function SurveyListTable({
                       {formatShortDate(survey.endDate)}
                     </td>
                     <td className="px-6 py-4">
-                      <Link
-                        href={resultsHref}
-                        className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
-                        style={{ color: "#ffffff" }}
-                      >
-                        Voir les résultats
-                      </Link>
+                      <div className="flex flex-wrap gap-2">
+                        <ResultsAnalyzeButton campaignId={survey.id} canAnalyze={canAnalyze} />
+                        <Link
+                          href={buildReportHref(survey.id, scenario ?? null)}
+                          className="inline-flex items-center justify-center rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-[0_12px_24px_rgba(24,24,24,0.06)] transition hover:-translate-y-0.5 hover:bg-slate-50"
+                        >
+                          Rapport
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -134,29 +146,9 @@ export function SurveyListTable({
   );
 }
 
-function buildResultsHref(campaignId: number, scenario?: string | null) {
-  const params = new URLSearchParams();
-  params.set("view", "detail");
-  params.set("campaignId", String(campaignId));
-
-  if (scenario) {
-    params.set("scenario", scenario);
-  }
-
-  return `/results?${params.toString()}`;
-}
-
 function getStatusTone(status: string) {
-  if (status === "active") {
+  if (status === "active" || status === "terminated") {
     return "success";
-  }
-
-  if (status === "terminated") {
-    return "success";
-  }
-
-  if (status === "draft") {
-    return "warning";
   }
 
   return "neutral";
@@ -178,18 +170,28 @@ function formatStatusLabel(value: string) {
   if (value === "active") {
     return "Activé";
   }
-  if (value === "draft") {
-    return "Brouillon";
-  }
   if (value === "terminated") {
     return "Complété";
   }
-
-  
   if (value === "archived") {
     return "Archivé";
   }
   return value || "inconnu";
+}
+
+function buildReportHref(campaignId: number | null, scenario?: string | null) {
+  const params = new URLSearchParams();
+
+  if (campaignId) {
+    params.set("campaignId", String(campaignId));
+  }
+
+  if (scenario) {
+    params.set("scenario", scenario);
+  }
+
+  const query = params.toString();
+  return query ? `/report?${query}` : "/report";
 }
 
 function normalizeSearchText(value: string) {

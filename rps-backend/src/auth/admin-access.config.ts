@@ -16,6 +16,11 @@ export function getAllowedAdminEmails() {
   return parseEmailList(process.env.ADMIN_ALLOWED_EMAILS);
 }
 
+export function isAdminEmailAllowed(email: string): boolean {
+  const normalizedEmail = email.trim().toLowerCase();
+  return getAllowedAdminEmails().includes(normalizedEmail);
+}
+
 export function getBootstrapAdminEmails() {
   const bootstrapEmails = parseEmailList(process.env.ADMIN_BOOTSTRAP_EMAILS);
   return bootstrapEmails.length ? bootstrapEmails : getAllowedAdminEmails();
