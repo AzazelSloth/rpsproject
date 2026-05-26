@@ -34,7 +34,7 @@
         "promptType": "define",
         "text": "=Analyse les resultats RPS pour {{ $json.campaignInfo.entreprise }} - {{ $json.campaignInfo.campagne }}.\n\nNombre de repondants: {{ $json.campaignInfo.total_repondants }}\n\nDonnees a analyser:\n{{ $json.formattedForAI }}",
         "options": {
-          "systemMessage": "=Tu es un Expert Senior en Psychologie du Travail. Tu analyses les résultats du sondage RPS de \n\nMéthodologie d'analyse :\nLes employés ont répondu avec l'échelle suivante. Tu dois les interpréter ainsi :\n\n    \"Tout à fait d'accord\" ou \"Plutôt d'accord\" : Score 4-5 (Facteur de protection / Satisfaction).\n\n    \"Ni d'accord, ni pas d'accord\" : Score 3 (Zone neutre).\n\n    \"Plutôt pas d'accord\" ou \"Pas du tout d'accord\" : Score 1-2 (Alerte / Risque psychosocial).\n\nNote : Analyse l'ensemble des réponses pour dégager des moyennes et des tendances de groupe, peu importe le nombre de répondants.\n\nConsignes de formatage :\n\n    AUCUN formatage Markdown (pas de #, pas de *, pas de **).\n\n    Utilise uniquement les titres de sections ci-dessous.\n\n\nStructure du Rapport :\n\nCharge de travail\n(Analyse la quantité, le rythme et la complexité perçue).\n\nOrganisation & Étique\n(Analyse la clarté des rôles et le respect des valeurs).\n\nAutonomie et Développement\n(Analyse la liberté de décision et l'utilisation des compétences).\n\nReconnaissance & condition\n(Analyse le sentiment de justice et la valorisation du travail).\n\nRelation et Soutien\n(Analyse l'ambiance d'équipe et le soutien managérial).\n\nDemandes Émotionnelles & Valeurs\n(Analyse la charge mentale liée au public et les conflits d'éthique).\n\nConséquence sur la santé et Équilibre\n(Analyse l'impact sur le bien-être et la vie personnelle).\n\nAvis pour améliorer le bien être au travail\n(Propose 3 actions concrètes et adaptées à Solutions Tech Québec)."
+          "systemMessage": "=Tu es un Expert Senior en Psychologie du Travail. Tu analyses les résultats du sondage RPS de l'entreprise fournie dans les données.\n\nMéthodologie d'analyse :\nLes employés ont répondu avec l'échelle suivante. Tu dois les interpréter ainsi :\n\n    \"Tout à fait d'accord\" ou \"Plutôt d'accord\" : Score 4-5 (Facteur de protection / Satisfaction).\n\n    \"Ni d'accord, ni pas d'accord\" : Score 3 (Zone neutre).\n\n    \"Plutôt pas d'accord\" ou \"Pas du tout d'accord\" : Score 1-2 (Alerte / Risque psychosocial).\n\nNote : Analyse l'ensemble des réponses pour dégager des moyennes et des tendances de groupe, peu importe le nombre de répondants.\n\nConsignes de formatage :\n\n    AUCUN formatage Markdown (pas de #, pas de *, pas de **).\n\n    Utilise uniquement les titres de sections ci-dessous.\n\n\nStructure du Rapport :\n\nCharge de travail\n(Analyse la quantité, le rythme et la complexité perçue).\n\nOrganisation & Étique\n(Analyse la clarté des rôles et le respect des valeurs).\n\nAutonomie et Développement\n(Analyse la liberté de décision et l'utilisation des compétences).\n\nReconnaissance & condition\n(Analyse le sentiment de justice et la valorisation du travail).\n\nRelation et Soutien\n(Analyse l'ambiance d'équipe et le soutien managérial).\n\nDemandes Émotionnelles & Valeurs\n(Analyse la charge mentale liée au public et les conflits d'éthique).\n\nConséquence sur la santé et Équilibre\n(Analyse l'impact sur le bien-être et la vie personnelle).\n\nAvis pour améliorer le bien être au travail\n(Propose 3 actions concrètes et adaptées à l'entreprise analysée)."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -386,8 +386,8 @@
     {
       "parameters": {
         "resource": "mail",
-        "fromEmail": "anaiarandria62@gmail.com",
-        "toEmail": "={{ $('Webhook').first().json.body?.body?.client_email || $('Webhook').first().json.body?.client_email || $('Webhook').first().json.user_email || $('Webhook').first().json.body?.user_email }}",
+        "fromEmail": "={{ $env.SENDGRID_FROM_EMAIL || $env.FROM_EMAIL }}",
+        "toEmail": "={{ $('Formater les données').first().json.campaignInfo.client_email || $env.REPORT_RECIPIENT_EMAIL }}",
         "subject": "=Rapport d'analyse RPS - {{ $now.format('') }}",
         "contentValue": "Bonjour, vous trouverez ci-joint l'analyse des risques psychosociaux pour votre entreprise  . Le rapport complet a également été déposé sur le Drive  ",
         "additionalFields": {
@@ -412,10 +412,10 @@
     {
       "parameters": {
         "resource": "mail",
-        "fromEmail": "anaiarandria62@gmail.com",
+        "fromEmail": "={{ $env.SENDGRID_FROM_EMAIL || $env.FROM_EMAIL }}",
         "toEmail": "={{ $json.email }}",
         "subject": "=Rappel : Votre participation au sondage RPS est attendue",
-        "contentValue": "Bonjour {{ $json.nom }}  Nous vous contactons car votre diagnostic sur les Risques Psychosociaux (RPS) est toujours en attente de finalisation.  Votre participation est essentielle pour garantir une analyse de qualité et améliorer les conditions de travail au sein de votre organisation. Ce questionnaire est rapide et vos réponses restent confidentielles.  Nous vous remercions par avance pour votre contribution.  Cordialement, L'équipe Solutions Tech",
+        "contentValue": "Bonjour {{ $json.nom }}  Nous vous contactons car votre diagnostic sur les Risques Psychosociaux (RPS) est toujours en attente de finalisation.  Votre participation est essentielle pour garantir une analyse de qualité et améliorer les conditions de travail au sein de votre organisation. Ce questionnaire est rapide et vos réponses restent confidentielles.  Nous vous remercions par avance pour votre contribution.  Cordialement, {{ $env.SENDGRID_FROM_NAME || $env.FROM_NAME || 'l equipe RPS' }}",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.sendGrid",
