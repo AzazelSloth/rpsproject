@@ -1,4 +1,4 @@
-import { Controller, Get, Logger } from '@nestjs/common';
+import { Controller, Get, Logger, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 type HealthStatus = 'healthy' | 'unhealthy' | 'unavailable' | 'not-configured';
@@ -15,7 +15,7 @@ interface HealthCheck {
 @Controller('health')
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(@Optional() private readonly dataSource?: DataSource) {}
 
   @Get()
   async getHealth(): Promise<HealthCheck> {
@@ -29,12 +29,16 @@ export class HealthController {
     };
 
     // Check database connectivity
-    try {
-      await this.dataSource.query('SELECT 1');
-      health.checks.database = 'healthy';
-    } catch (error) {
-      this.logger.error('Database health check failed', error);
-      health.checks.database = 'unhealthy';
+    if (!this.dataSource) {
+      health.checks.database = 'not-configured';
+    } else {
+      try {
+        await this.dataSource.query('SELECT 1');
+        health.checks.database = 'healthy';
+      } catch (error) {
+        this.logger.error('Database health check failed', error);
+        health.checks.database = 'unhealthy';
+      }
     }
 
     // Check n8n webhook endpoint (if configured)
@@ -66,7 +70,8 @@ export class HealthController {
 
     const n8nHealthRequired = process.env.N8N_HEALTH_REQUIRED === 'true';
     const overallHealthy =
-      health.checks.database === 'healthy' &&
+      (health.checks.database === 'healthy' ||
+        health.checks.database === 'not-configured') &&
       (!n8nHealthRequired ||
         health.checks.n8n === 'healthy' ||
         health.checks.n8n === 'not-configured');
