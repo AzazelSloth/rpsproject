@@ -719,6 +719,9 @@ export class CampaignParticipantService {
             })
           : [];
 
+      await this.ensureParticipationTokens(participantRecords);
+      const appUrl = this.resolvePublicAppUrl();
+
       this.logger.log(
         `[Import] Company names extracted: ${uniqueCompanyNames.join(', ') || 'none'}`,
       );
@@ -726,33 +729,39 @@ export class CampaignParticipantService {
       const result = {
         imported_employees: employees.length,
         participants: participantRecords.map((p) => {
-          let emp: Employee | undefined;
-
-          if (p.employee) {
-            emp = p.employee;
-          }
+          const emp = p.employee;
+          const token = p.participation_token ?? '';
+          const surveyUrl = token ? `${appUrl}/survey-response/${token}` : '';
 
           if (!emp) {
             console.warn(
               `[Import] No employee data found for participant ${p.participation_token}`,
             );
             return {
+              participant_id: p.id,
               participation_token: p.participation_token,
+              status: p.status,
+              survey_url: surveyUrl,
               employee: {
                 first_name: 'N/A',
                 last_name: 'N/A',
                 email: '',
+                department: '',
                 company_name: '',
               },
             };
           }
 
           return {
-            participation_token: p.participation_token,
+            participant_id: p.id,
+            participation_token: token,
+            status: p.status,
+            survey_url: surveyUrl,
             employee: {
               first_name: emp.first_name || 'N/A',
               last_name: emp.last_name || 'N/A',
               email: emp.email || '',
+              department: emp.department || '',
               company_name:
                 (emp.email &&
                   companyNameByEmail.get(emp.email.toLowerCase())) ||
@@ -1182,7 +1191,10 @@ export class CampaignParticipantService {
         const email = (
           row.email ??
           row.adresse_courriel ??
+          row.adresse_email ??
           row.courriel ??
+          row.e_mail ??
+          row.mail ??
           ''
         ).trim();
 
@@ -1193,10 +1205,34 @@ export class CampaignParticipantService {
           continue;
         }
 
+        const fullName = (
+          row.nom_et_prenom ??
+          row.nom_prenom ??
+          row.nom_complet ??
+          row.full_name ??
+          ''
+        ).trim();
+        const [derivedFirstName, ...derivedLastNameParts] = fullName
+          .split(/\s+/)
+          .filter(Boolean);
+        const derivedLastName = derivedLastNameParts.join(' ');
+
         rows.push({
           email,
-          first_name: (row.first_name ?? row.prenom ?? '').trim() || undefined,
-          last_name: (row.last_name ?? row.nom ?? '').trim() || undefined,
+          first_name:
+            (
+              row.first_name ??
+              row.prenom ??
+              derivedFirstName ??
+              ''
+            ).trim() || undefined,
+          last_name:
+            (
+              row.last_name ??
+              row.nom ??
+              derivedLastName ??
+              ''
+            ).trim() || undefined,
           phone: (row.phone ?? '').trim() || undefined,
           status: (row.status ?? row.statut ?? '').trim() || undefined,
           department:

@@ -25,11 +25,16 @@ type ImportedParticipantPayload = {
     first_name?: string;
     last_name?: string;
     email?: string;
+    department?: string;
     company_name?: string;
   };
+  participant_id?: number;
   first_name?: string;
   last_name?: string;
   email?: string;
+  department?: string;
+  status?: string;
+  survey_url?: string;
   company_name?: string;
   participation_token?: string;
   token?: string;
@@ -49,6 +54,8 @@ type SendInvitationsResponse = {
 
 type ImportedParticipantView = {
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   department?: string;
   status?: string;
@@ -671,30 +678,42 @@ export function SurveyBuilderDemo({
       // NOTE: Company name is NOT in Excel - it comes from the selected campaign
       const normalizedData = jsonData.map((row) => {
         const keys = Object.keys(row);
+        const normalizeColumnLabel = (value: string) =>
+          value
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim();
+        const normalizedKeyMap = keys.map((key) => ({
+          key,
+          normalized: normalizeColumnLabel(key),
+        }));
         
         console.log("[Excel Import] Processing row with keys:", keys);
 
         // Flexible column mapping - exact match first, then partial match
         const findColumn = (aliases: string[]): string => {
+          const normalizedAliases = aliases.map(normalizeColumnLabel);
+
           // Try exact match first (case-insensitive)
-          for (const alias of aliases) {
-            const exactMatch = keys.find(
-              (key) => key.toLowerCase().trim() === alias.toLowerCase().trim()
+          for (const alias of normalizedAliases) {
+            const exactMatch = normalizedKeyMap.find(
+              (entry) => entry.normalized === alias,
             );
             if (exactMatch) {
-              console.log(`[Excel Import] Exact match for "${alias}": "${exactMatch}"`);
-              return row[exactMatch];
+              console.log(`[Excel Import] Exact match for "${alias}": "${exactMatch.key}"`);
+              return row[exactMatch.key];
             }
           }
           
           // Then try partial match
-          for (const alias of aliases) {
-            const partialMatch = keys.find(
-              (key) => key.toLowerCase().trim().includes(alias.toLowerCase().trim())
+          for (const alias of normalizedAliases) {
+            const partialMatch = normalizedKeyMap.find(
+              (entry) => entry.normalized.includes(alias),
             );
             if (partialMatch) {
-              console.log(`[Excel Import] Partial match for "${alias}": "${partialMatch}"`);
-              return row[partialMatch];
+              console.log(`[Excel Import] Partial match for "${alias}": "${partialMatch.key}"`);
+              return row[partialMatch.key];
             }
           }
           
@@ -802,10 +821,12 @@ export function SurveyBuilderDemo({
 
     const headers = ["Nom", "Prénom", "Email", "Fonction", "Lien sondage unique"];
     const rows = displayedImportedParticipants.map((participant) => {
-      const parts = participant.name.split(" ");
+      const firstName = participant.firstName ?? participant.name.split(" ")[0] ?? "";
+      const lastName =
+        participant.lastName ?? participant.name.split(" ").slice(1).join(" ");
       return [
-        parts.slice(1).join(" "),
-        parts[0] ?? "",
+        lastName,
+        firstName,
         participant.email,
         participant.department ?? "",
         toAbsoluteSurveyUrl(participant.link),
@@ -891,13 +912,20 @@ export function SurveyBuilderDemo({
           const lastName = participant.employee?.last_name || participant.last_name || "";
           const email = participant.employee?.email || participant.email || "";
           const token = participant.participation_token || participant.token || "";
+          const surveyUrl = participant.survey_url || (token ? `/survey-response/${token}` : "");
+          const department = participant.employee?.department || participant.department || "";
+          const status = participant.status || "pending";
 
-          console.log("Processing participant:", { firstName, lastName, email, token });
+          console.log("Processing participant:", { firstName, lastName, email, token, surveyUrl });
 
           return {
             name: `${firstName} ${lastName}`.trim() || "Employé",
             email,
-            link: `${window.location.origin}/survey-response/${token}`,
+            firstName: firstName || undefined,
+            lastName: lastName || undefined,
+            department: department || undefined,
+            status,
+            link: surveyUrl ? toAbsoluteSurveyUrl(surveyUrl) : "",
           };
         });
 
@@ -2045,8 +2073,11 @@ function getInitialCompanyId(initialData: SurveyBuilderData, mode: SurveyBuilder
 }
 
 function mapImportedParticipant(participant: CampaignParticipantRecord): ImportedParticipantView {
+  const [firstName = "", ...lastNameParts] = participant.name.split(" ");
   return {
     name: participant.name || "Employé",
+    firstName: firstName || undefined,
+    lastName: lastNameParts.join(" ") || undefined,
     email: participant.email,
     department: participant.department,
     status: participant.status,
@@ -2173,7 +2204,14 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
     return result;
   };
 
-  const headers = parseCsvLine(lines[0]).map((header) => header.trim().toLowerCase().replace(/^["']|["']$/g, ""));
+  const normalizeHeaderLabel = (value: string) =>
+    value
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/^["']|["']$/g, "");
+  const headers = parseCsvLine(lines[0]).map(normalizeHeaderLabel);
   console.log("[CSV Validation] Detected headers:", headers);
   
   // Required columns with flexible matching (backend is flexible, so frontend should be too)
@@ -2188,10 +2226,10 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
   );
   
   const missingHeaders = [];
-  if (!hasNameColumn) missingHeaders.push("nom/name");
-  if (!hasFirstNameColumn) missingHeaders.push("prenom/first name");
+  if (false && !hasNameColumn) missingHeaders.push("nom/name");
+  if (false && !hasFirstNameColumn) missingHeaders.push("prenom/first name");
   if (!hasEmailColumn) missingHeaders.push("email/courriel");
-  if (!hasFunctionColumn) missingHeaders.push("fonction/role");
+  if (false && !hasFunctionColumn) missingHeaders.push("fonction/role");
 
   if (missingHeaders.length > 0) {
     errors.push(`Colonnes manquantes : ${missingHeaders.join(", ")}. Colonnes détectées : ${headers.join(", ")}`);
