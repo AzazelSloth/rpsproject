@@ -18,7 +18,7 @@ REPO_URL="${REPO_URL:-git@github.com:AzazelSloth/rpsproject.git}"
 VPS_HOST="${VPS_HOST:-127.0.0.1}"
 DOMAIN_NAME="${DOMAIN_NAME:-}"
 PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-}"
-BACKEND_API_URL="${BACKEND_API_URL:-http://host.docker.internal:3000}"
+BACKEND_API_URL="${BACKEND_API_URL:-}"
 
 DB_HOST="${DB_HOST:-postgres}"
 SOURCE_DB_HOST="$DB_HOST"
