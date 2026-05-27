@@ -1,634 +1,662 @@
-{
-  "name": "NEW WORKFLOW RSP",
-  "nodes": [
-    {
-      "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst webhookBody = input.body && typeof input.body === 'object' ? input.body : {};\nconst nestedBody = webhookBody.body && typeof webhookBody.body === 'object' && !Array.isArray(webhookBody.body)\n  ? webhookBody.body\n  : {};\nconst responses = Array.isArray(nestedBody.body)\n  ? nestedBody.body\n  : Array.isArray(webhookBody.body)\n    ? webhookBody.body\n    : Array.isArray(input.body)\n      ? input.body\n      : Array.isArray(input.results)\n        ? input.results\n        : [];\n\nconst campaignId = nestedBody.campaign_id || webhookBody.campaign_id || input.campaign_id || input.campaignId || '';\nconst companyName = webhookBody.company_name || nestedBody.company_name || input.company_name || responses[0]?.Employeur || responses[0]?.employer || 'Entreprise';\nconst campaignName = webhookBody.campaign_name || nestedBody.campaign_name || input.campaign_name || (campaignId ? `Campagne ${campaignId}` : 'Campagne RPS');\nconst clientEmail = nestedBody.client_email || webhookBody.client_email || webhookBody.user_email || input.user_email || input.client_email || input.clientEmail || '';\n\nconst questionKeys = [...new Set(responses.flatMap((row) => Object.keys(row || {}).filter((key) => /^Q\\d+$/.test(key))))]\n  .sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));\n\nconst formattedForAI = responses.length > 0\n  ? responses.map((row, index) => {\n      const identity = row['Nom et Prenom'] || row['Nom et Pr\\u00e9nom(s)'] || row.nom || row.name || `Repondant ${index + 1}`;\n      const header = [`Repondant ${index + 1}`, identity, row.Fonction || row.fonction, row.Email || row.email].filter(Boolean).join(' - ');\n      const answers = questionKeys.map((key) => `${key}: ${row[key] ?? ''}`).join('\\n');\n      return `${header}\\n${answers}`;\n    }).join('\\n\\n---\\n\\n')\n  : 'Aucune reponse exploitable recue.';\n\nreturn [{\n  json: {\n    campaignInfo: {\n      entreprise: companyName,\n      campagne: campaignName,\n      total_repondants: responses.length,\n      campaign_id: campaignId,\n      client_email: clientEmail\n    },\n    openAnswers: responses,\n    formattedForAI\n  }\n}];"
-      },
-      "id": "b22a0b72-b8f9-48d7-8487-35dac5d7691f",
-      "name": "Formater les données",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -640,
-        112
-      ],
-      "notes": "Nettoie et formate les réponses ouvertes pour l'analyse IA. Adapter les noms de champs selon votre API."
-    },
-    {
-      "parameters": {
-        "jsCode": "// Construire le rapport final formaté\nconst analysis = $input.first().json.output || $input.first().json.text || $input.first().json.response || Object.values($input.first().json)[0];const campaignInfo = $('Formater les données').first().json.campaignInfo;\n\nconst now = new Date();\nconst dateStr = now.toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' });\n\nconst rapport = `\n=================================================\nRAPPORT D'ANALYSE RPS\n=================================================\nEntreprise    : ${campaignInfo.entreprise}\nCampagne      : ${campaignInfo.campagne}\nDate d'analyse: ${dateStr}\nRépondants    : ${campaignInfo.total_repondants}\n=================================================\n\n${analysis}\n\n=================================================\nRapport généré automatiquement par la plateforme RPS\nConfidentiel - Usage interne uniquement\n=================================================\n`.trim();\n\nreturn [{\n  json: {\n    rapport,\n    campaignInfo,\n    subject: `Rapport RPS -  - ${campaignInfo.campagne}`,\n    filename: `Rapport_RPS.replace(/\\s+/g, '_')}_${now.toISOString().split('T')[0]}.txt`\n  }\n}];"
-      },
-      "id": "8de640ff-9760-4ce9-826e-a5ebc5ae8cbd",
-      "name": "Construire le rapport",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        64,
-        112
-      ],
-      "notes": "Formate le rapport final avec en-tête et pied de page."
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "=Analyse les resultats RPS pour {{ $json.campaignInfo.entreprise }} - {{ $json.campaignInfo.campagne }}.\n\nNombre de repondants: {{ $json.campaignInfo.total_repondants }}\n\nDonnees a analyser:\n{{ $json.formattedForAI }}",
-        "options": {
-          "systemMessage": "=Tu es un Expert Senior en Psychologie du Travail. Tu analyses les résultats du sondage RPS de l'entreprise fournie dans les données.\n\nMéthodologie d'analyse :\nLes employés ont répondu avec l'échelle suivante. Tu dois les interpréter ainsi :\n\n    \"Tout à fait d'accord\" ou \"Plutôt d'accord\" : Score 4-5 (Facteur de protection / Satisfaction).\n\n    \"Ni d'accord, ni pas d'accord\" : Score 3 (Zone neutre).\n\n    \"Plutôt pas d'accord\" ou \"Pas du tout d'accord\" : Score 1-2 (Alerte / Risque psychosocial).\n\nNote : Analyse l'ensemble des réponses pour dégager des moyennes et des tendances de groupe, peu importe le nombre de répondants.\n\nConsignes de formatage :\n\n    AUCUN formatage Markdown (pas de #, pas de *, pas de **).\n\n    Utilise uniquement les titres de sections ci-dessous.\n\n\nStructure du Rapport :\n\nCharge de travail\n(Analyse la quantité, le rythme et la complexité perçue).\n\nOrganisation & Étique\n(Analyse la clarté des rôles et le respect des valeurs).\n\nAutonomie et Développement\n(Analyse la liberté de décision et l'utilisation des compétences).\n\nReconnaissance & condition\n(Analyse le sentiment de justice et la valorisation du travail).\n\nRelation et Soutien\n(Analyse l'ambiance d'équipe et le soutien managérial).\n\nDemandes Émotionnelles & Valeurs\n(Analyse la charge mentale liée au public et les conflits d'éthique).\n\nConséquence sur la santé et Équilibre\n(Analyse l'impact sur le bien-être et la vie personnelle).\n\nAvis pour améliorer le bien être au travail\n(Propose 3 actions concrètes et adaptées à l'entreprise analysée)."
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 3.1,
-      "position": [
-        -336,
-        112
-      ],
-      "id": "8d6501d3-aa5d-4d7d-b239-48d54cd2edb4",
-      "name": "AI Agent1"
-    },
-    {
-      "parameters": {
-        "model": "mistral-large-latest",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
-      "typeVersion": 1,
-      "position": [
-        -480,
-        240
-      ],
-      "id": "e9605e0c-5dae-42a8-98d7-04db7bcf23f6",
-      "name": "Mistral Cloud Chat Model1",
-      "credentials": {
-        "mistralCloudApi": {
-          "id": "Y0rfVxWOlowuCOem",
-          "name": "Mistral Cloud account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "createFromText",
-        "content": "={{ $json.rapport }}",
-        "name": "=Rapport_Synthese_Global_RPS_{{ $now.format('dd-MM-yyyy') }}.docx",
-        "driveId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "My Drive"
-        },
-        "folderId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "root",
-          "cachedResultName": "/ (Root folder)"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 3,
-      "position": [
-        304,
-        112
-      ],
-      "id": "610baf99-762f-4aa8-8fb2-efaf58a83f8b",
-      "name": "Enregistrement du rapport dans drive",
-      "credentials": {
-        "googleDriveOAuth2Api": {
-          "id": "6DA5X6C0c9NRlrLH",
-          "name": "Google Drive account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "download",
-        "fileId": {
-          "__rl": true,
-          "value": "={{ $node[\"Enregistrement du rapport dans drive\"].json[\"id\"] }}",
-          "mode": "id"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 3,
-      "position": [
-        512,
-        112
-      ],
-      "id": "bc59befb-41b2-4826-b126-b76484b382d6",
-      "name": "Téléchargement du fichier pour l'email",
-      "credentials": {
-        "googleDriveOAuth2Api": {
-          "id": "6DA5X6C0c9NRlrLH",
-          "name": "Google Drive account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "triggerAtHour": 8
-            }
-          ]
-        }
-      },
-      "id": "a2f2e2f9-6324-4b5c-b9d9-4614cc51cbf5",
-      "name": "Déclencheur",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.1,
-      "position": [
-        -1312,
-        528
-      ],
-      "notes": "Se déclenche chaque matin à 8h pour vérifier les non-répondants"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "filter_statut",
-              "leftValue": "={{ $json.statut }}",
-              "rightValue": "non_complete",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "20368852-4422-47f3-9d51-6559735c29ce",
-      "name": "Filtrer non complétés",
-      "type": "n8n-nodes-base.filter",
-      "typeVersion": 2.2,
-      "position": [
-        -640,
-        528
-      ],
-      "notes": "Garde uniquement les employés avec statut == non_complete"
-    },
-    {
-      "parameters": {
-        "jsCode": "const items = $input.all();\nconst result = [];\n\nfor (const item of items) {\n  const employe = item.json;\n  const dateEnvoi = new Date(employe.date_envoi);\n  const aujourdhui = new Date();\n  const diffJours = Math.floor((aujourdhui - dateEnvoi) / (1000 * 60 * 60 * 24));\n\n  if (diffJours >= 6) {\n    result.push({\n      json: {\n        ...employe,\n        jours_depuis_envoi: diffJours,\n        eligible_relance: true\n      }\n    });\n  }\n}\n\nreturn result;"
-      },
-      "id": "679d5bc3-5ed1-4aeb-90df-1e3e5f593bcc",
-      "name": "Calculer 6 jours",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -368,
-        528
-      ],
-      "executeOnce": false,
-      "alwaysOutputData": false,
-      "notes": "Calcule si l'envoi initial date de 6 jours ou plus. Si non, l'employé est ignoré."
-    },
-    {
-      "parameters": {
-        "jsCode": "const employe = $input.first().json;\nconsole.log(`✅ Relance envoyée à ${employe.nom} (${employe.email}) — ${employe.jours_depuis_envoi} jours depuis l'envoi`);\n\nreturn [{\n  json: {\n    status: 'relance_envoyee',\n    nom: employe.nom,\n    email: employe.email,\n    jours_depuis_envoi: employe.jours_depuis_envoi,\n    timestamp: new Date().toISOString()\n  }\n}];"
-      },
-      "id": "703ff7fb-1652-40d4-a0d3-93aafb12e58d",
-      "name": "Log relance",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        192,
-        528
-      ],
-      "notes": "Log de confirmation par employé relancé"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Log de confirmation\nconst info = $('Construire le rapport').first().json.campaignInfo;\nconsole.log(`✅ Rapport RPS généré et envoyé pour ${info.entreprise} - ${info.campagne}`);\nreturn [{ json: { status: 'success', message: `Rapport envoyé pour ${info.entreprise}`, timestamp: new Date().toISOString() } }];"
-      },
-      "id": "ace42c15-b7f9-48e7-9404-a053052339bc",
-      "name": " Log succès",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        992,
-        112
-      ],
-      "notes": "Log de confirmation — peut être remplacé par une notification Slack ou autre."
-    },
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "rps-analysis",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
-      "position": [
-        -1312,
-        112
-      ],
-      "id": "f628ea0d-0389-4a5f-94bc-d2e3c98a229e",
-      "name": "Webhook",
-      "webhookId": "a4a937ee-ce22-475a-b226-b7ff55c56e10"
-    },
-    {
-      "parameters": {
-        "operation": "appendOrUpdate",
-        "documentId": {
-          "__rl": true,
-          "value": "1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig",
-          "mode": "list",
-          "cachedResultName": "Suivi Campagne RPS.",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig/edit?usp=drivesdk"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "gid=0",
-          "mode": "list",
-          "cachedResultName": "Feuille 1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig/edit#gid=0"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "Entreprise": "={{ $json.entreprise }}",
-            "Nom": "={{ $json.nom }}",
-            "Prenom": "={{ $json.prenom }}",
-            "Email": "={{ $json.email }}",
-            "Poste": "={{ $json.poste }}"
-          },
-          "matchingColumns": [
-            "Email"
-          ],
-          "schema": [
-            {
-              "id": "Entreprise",
-              "displayName": "Entreprise",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "Nom",
-              "displayName": "Nom",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "Prenom",
-              "displayName": "Prenom",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "Email",
-              "displayName": "Email",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "Poste",
-              "displayName": "Poste",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        -656,
-        -96
-      ],
-      "id": "bb198a56-847c-46bd-9795-f36082b08243",
-      "name": "Append or update row in sheet",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "4pk7H53CBEHznX1l",
-          "name": "Google Sheets account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "fieldToSplitOut": "openAnswers",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.splitOut",
-      "typeVersion": 1,
-      "position": [
-        -928,
-        -96
-      ],
-      "id": "1a9e8f6a-8f15-4340-a58e-dfb15f2a07a4",
-      "name": "Split Out"
-    },
-    {
-      "parameters": {
-        "content": "ANALYSE\n",
-        "height": 640,
-        "width": 2656
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -1392,
-        -240
-      ],
-      "id": "db442563-739f-4c49-ac86-fbf69cee9168",
-      "name": "Sticky Note"
-    },
-    {
-      "parameters": {
-        "content": "RELANCE\n",
-        "height": 304,
-        "width": 1808
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -1408,
-        432
-      ],
-      "id": "c55c6d2b-a22a-47b0-b39c-26a421b7d377",
-      "name": "Sticky Note1"
-    },
-    {
-      "parameters": {
-        "resource": "mail",
-        "fromEmail": "={{ $env.SENDGRID_FROM_EMAIL || $env.FROM_EMAIL }}",
-        "toEmail": "={{ $('Formater les données').first().json.campaignInfo.client_email || $env.REPORT_RECIPIENT_EMAIL }}",
-        "subject": "=Rapport d'analyse RPS - {{ $now.format('') }}",
-        "contentValue": "Bonjour, vous trouverez ci-joint l'analyse des risques psychosociaux pour votre entreprise  . Le rapport complet a également été déposé sur le Drive  ",
-        "additionalFields": {
-          "attachments": ""
-        }
-      },
-      "type": "n8n-nodes-base.sendGrid",
-      "typeVersion": 1,
-      "position": [
-        768,
-        112
-      ],
-      "id": "20c0718f-b00a-48e3-861d-b7fbb9adbb62",
-      "name": "Send an email",
-      "credentials": {
-        "sendGridApi": {
-          "id": "TKoPbDKPYJMzYnFw",
-          "name": "SendGrid account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "resource": "mail",
-        "fromEmail": "={{ $env.SENDGRID_FROM_EMAIL || $env.FROM_EMAIL }}",
-        "toEmail": "={{ $json.email }}",
-        "subject": "=Rappel : Votre participation au sondage RPS est attendue",
-        "contentValue": "Bonjour {{ $json.nom }}  Nous vous contactons car votre diagnostic sur les Risques Psychosociaux (RPS) est toujours en attente de finalisation.  Votre participation est essentielle pour garantir une analyse de qualité et améliorer les conditions de travail au sein de votre organisation. Ce questionnaire est rapide et vos réponses restent confidentielles.  Nous vous remercions par avance pour votre contribution.  Cordialement, {{ $env.SENDGRID_FROM_NAME || $env.FROM_NAME || 'l equipe RPS' }}",
-        "additionalFields": {}
-      },
-      "type": "n8n-nodes-base.sendGrid",
-      "typeVersion": 1,
-      "position": [
-        -96,
-        528
-      ],
-      "id": "1fd9e745-11c9-48d8-9214-a83a233a98a3",
-      "name": "Send an email1",
-      "credentials": {
-        "sendGridApi": {
-          "id": "TKoPbDKPYJMzYnFw",
-          "name": "SendGrid account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "url": "={{ $json.config.app_base_url }}/campagne/{{ $json.campaign_id }}/reponses",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -1040,
-        112
-      ],
-      "id": "b6cd326d-05ce-49b1-8445-c07c4acaf427",
-      "name": "HTTP Request"
-    },
-    {
-      "parameters": {
-        "url": "={{ $json.config.app_base_url }}/campagne/{{ $json.campaign_id }}/employes",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -992,
-        528
-      ],
-      "id": "d3cb741b-f166-4065-bee6-b65cb09586e7",
-      "name": "HTTP Request1"
-    }
-  ],
-  "pinData": {},
-  "connections": {
-    "Formater les données": {
-      "main": [
-        [
-          {
-            "node": "AI Agent1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Construire le rapport": {
-      "main": [
-        [
-          {
-            "node": "Enregistrement du rapport dans drive",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mistral Cloud Chat Model1": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "AI Agent1",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI Agent1": {
-      "main": [
-        [
-          {
-            "node": "Construire le rapport",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Enregistrement du rapport dans drive": {
-      "main": [
-        [
-          {
-            "node": "Téléchargement du fichier pour l'email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Téléchargement du fichier pour l'email": {
-      "main": [
-        [
-          {
-            "node": "Send an email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Déclencheur": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filtrer non complétés": {
-      "main": [
-        [
-          {
-            "node": "Calculer 6 jours",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Calculer 6 jours": {
-      "main": [
-        [
-          {
-            "node": "Send an email1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Webhook": {
-      "main": [
-        [
-          {
-            "node": "Formater les données",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Split Out": {
-      "main": [
-        [
-          {
-            "node": "Append or update row in sheet",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send an email": {
-      "main": [
-        [
-          {
-            "node": " Log succès",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send an email1": {
-      "main": [
-        [
-          {
-            "node": "Log relance",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request1": {
-      "main": [
-        [
-          {
-            "node": "Filtrer non complétés",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  },
-  "active": true,
-  "settings": {
-    "executionOrder": "v1",
-    "availableInMCP": false
-  },
-  "versionId": "3fb81d24-caad-4daf-aa97-0ba88521cbb7",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "e13e6ceb71ea035352efd36881a07478385b706e1a6ef8688b92d999ba345118"
-  },
-  "id": "_SkWPCcTKtNjNGCoqh0IP",
-  "tags": []
+﻿{
+    "name":  "NEW WORKFLOW RSP",
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const input = $input.first().json;\nconst webhookBody = input.body \u0026\u0026 typeof input.body === \u0027object\u0027 ? input.body : {};\nconst nestedBody = webhookBody.body \u0026\u0026 typeof webhookBody.body === \u0027object\u0027 \u0026\u0026 !Array.isArray(webhookBody.body)\n  ? webhookBody.body\n  : {};\nconst responses = Array.isArray(nestedBody.body)\n  ? nestedBody.body\n  : Array.isArray(webhookBody.body)\n    ? webhookBody.body\n    : Array.isArray(input.body)\n      ? input.body\n      : Array.isArray(input.results)\n        ? input.results\n        : [];\n\nconst campaignId = nestedBody.campaign_id || webhookBody.campaign_id || input.campaign_id || input.campaignId || \u0027\u0027;\nconst companyName = webhookBody.company_name || nestedBody.company_name || input.company_name || responses[0]?.Employeur || responses[0]?.employer || \u0027Entreprise\u0027;\nconst campaignName = webhookBody.campaign_name || nestedBody.campaign_name || input.campaign_name || (campaignId ? `Campagne ${campaignId}` : \u0027Campagne RPS\u0027);\nconst clientEmail = nestedBody.client_email || webhookBody.client_email || webhookBody.user_email || input.user_email || input.client_email || input.clientEmail || \u0027\u0027;\n\nconst questionKeys = [...new Set(responses.flatMap((row) =\u003e Object.keys(row || {}).filter((key) =\u003e /^Q\\d+$/.test(key))))]\n  .sort((a, b) =\u003e Number(a.slice(1)) - Number(b.slice(1)));\n\nconst formattedForAI = responses.length \u003e 0\n  ? responses.map((row, index) =\u003e {\n      const identity = row[\u0027Nom et Prenom\u0027] || row[\u0027Nom et Pr\\u00e9nom(s)\u0027] || row.nom || row.name || `Repondant ${index + 1}`;\n      const header = [`Repondant ${index + 1}`, identity, row.Fonction || row.fonction, row.Email || row.email].filter(Boolean).join(\u0027 - \u0027);\n      const answers = questionKeys.map((key) =\u003e `${key}: ${row[key] ?? \u0027\u0027}`).join(\u0027\\n\u0027);\n      return `${header}\\n${answers}`;\n    }).join(\u0027\\n\\n---\\n\\n\u0027)\n  : \u0027Aucune reponse exploitable recue.\u0027;\n\nreturn [{\n  json: {\n    campaignInfo: {\n      entreprise: companyName,\n      campagne: campaignName,\n      total_repondants: responses.length,\n      campaign_id: campaignId,\n      client_email: clientEmail\n    },\n    openAnswers: responses,\n    formattedForAI\n  }\n}];"
+                                     },
+                      "id":  "80c5d5c1-34b3-4ede-a5a5-4dc2bbdcc38d",
+                      "name":  "Formater les donnees",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       592,
+                                       320
+                                   ],
+                      "notes":  "Nettoie et formate les rÃ©ponses ouvertes pour l\u0027analyse IA. Adapter les noms de champs selon votre API."
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Construire le rapport final formatÃ©\nconst analysis = $input.first().json.output || $input.first().json.text || $input.first().json.response || Object.values($input.first().json)[0];const campaignInfo = $(\u0027Formater les donnees\u0027).first().json.campaignInfo;\n\nconst now = new Date();\nconst dateStr = now.toLocaleDateString(\u0027fr-CA\u0027, { year: \u0027numeric\u0027, month: \u0027long\u0027, day: \u0027numeric\u0027 });\n\nconst rapport = `\n=================================================\nRAPPORT D\u0027ANALYSE RPS\n=================================================\nEntreprise    : ${campaignInfo.entreprise}\nCampagne      : ${campaignInfo.campagne}\nDate d\u0027analyse: ${dateStr}\nRÃ©pondants    : ${campaignInfo.total_repondants}\n=================================================\n\n${analysis}\n\n=================================================\nRapport gÃ©nÃ©rÃ© automatiquement par la plateforme RPS\nConfidentiel - Usage interne uniquement\n=================================================\n`.trim();\n\nreturn [{\n  json: {\n    rapport,\n    campaignInfo,\n    subject: `Rapport RPS -  - ${campaignInfo.campagne}`,\n    filename: `Rapport_RPS.replace(/\\s+/g, \u0027_\u0027)}_${now.toISOString().split(\u0027T\u0027)[0]}.txt`\n  }\n}];"
+                                     },
+                      "id":  "54d12601-98c2-4eaf-8e4b-3340b1c3bfa0",
+                      "name":  "Construire le rapport",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       1296,
+                                       320
+                                   ],
+                      "notes":  "Formate le rapport final avec en-tÃªte et pied de page."
+                  },
+                  {
+                      "parameters":  {
+                                         "promptType":  "define",
+                                         "text":  "=Analyse les resultats RPS pour {{ $json.campaignInfo.entreprise }} - {{ $json.campaignInfo.campagne }}.\n\nNombre de repondants: {{ $json.campaignInfo.total_repondants }}\n\nDonnees a analyser:\n{{ $json.formattedForAI }}",
+                                         "options":  {
+                                                         "systemMessage":  "=Tu es un Expert Senior en Psychologie du Travail. Tu analyses les rÃ©sultats du sondage RPS de l\u0027entreprise fournie dans les donnÃ©es.\n\nMÃ©thodologie d\u0027analyse :\nLes employÃ©s ont rÃ©pondu avec l\u0027Ã©chelle suivante. Tu dois les interprÃ©ter ainsi :\n\n    \"Tout Ã  fait d\u0027accord\" ou \"PlutÃ´t d\u0027accord\" : Score 4-5 (Facteur de protection / Satisfaction).\n\n    \"Ni d\u0027accord, ni pas d\u0027accord\" : Score 3 (Zone neutre).\n\n    \"PlutÃ´t pas d\u0027accord\" ou \"Pas du tout d\u0027accord\" : Score 1-2 (Alerte / Risque psychosocial).\n\nNote : Analyse l\u0027ensemble des rÃ©ponses pour dÃ©gager des moyennes et des tendances de groupe, peu importe le nombre de rÃ©pondants.\n\nConsignes de formatage :\n\n    AUCUN formatage Markdown (pas de #, pas de *, pas de **).\n\n    Utilise uniquement les titres de sections ci-dessous.\n\n\nStructure du Rapport :\n\nCharge de travail\n(Analyse la quantitÃ©, le rythme et la complexitÃ© perÃ§ue).\n\nOrganisation \u0026 Ã‰tique\n(Analyse la clartÃ© des rÃ´les et le respect des valeurs).\n\nAutonomie et DÃ©veloppement\n(Analyse la libertÃ© de dÃ©cision et l\u0027utilisation des compÃ©tences).\n\nReconnaissance \u0026 condition\n(Analyse le sentiment de justice et la valorisation du travail).\n\nRelation et Soutien\n(Analyse l\u0027ambiance d\u0027Ã©quipe et le soutien managÃ©rial).\n\nDemandes Ã‰motionnelles \u0026 Valeurs\n(Analyse la charge mentale liÃ©e au public et les conflits d\u0027Ã©thique).\n\nConsÃ©quence sur la santÃ© et Ã‰quilibre\n(Analyse l\u0027impact sur le bien-Ãªtre et la vie personnelle).\n\nAvis pour amÃ©liorer le bien Ãªtre au travail\n(Propose 3 actions concrÃ¨tes et adaptÃ©es Ã  l\u0027entreprise analysÃ©e)."
+                                                     }
+                                     },
+                      "type":  "@n8n/n8n-nodes-langchain.agent",
+                      "typeVersion":  3.1,
+                      "position":  [
+                                       896,
+                                       320
+                                   ],
+                      "id":  "754dbc26-93d9-4e98-a337-7f6cd954a7d3",
+                      "name":  "AI Agent1"
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "createFromText",
+                                         "content":  "={{ $json.rapport }}",
+                                         "name":  "=Rapport_Synthese_Global_RPS_{{ $now.format(\u0027dd-MM-yyyy\u0027) }}.docx",
+                                         "driveId":  {
+                                                         "__rl":  true,
+                                                         "mode":  "list",
+                                                         "value":  "My Drive"
+                                                     },
+                                         "folderId":  {
+                                                          "__rl":  true,
+                                                          "mode":  "list",
+                                                          "value":  "root",
+                                                          "cachedResultName":  "/ (Root folder)"
+                                                      },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.googleDrive",
+                      "typeVersion":  3,
+                      "position":  [
+                                       1536,
+                                       320
+                                   ],
+                      "id":  "da78fe49-2a80-459a-a408-b9488d49d3a1",
+                      "name":  "Enregistrement du rapport dans drive",
+                      "credentials":  {
+                                          "googleDriveOAuth2Api":  {
+                                                                       "id":  "e7Bs31aKgGanb2uk",
+                                                                       "name":  "Google Drive account"
+                                                                   }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "download",
+                                         "fileId":  {
+                                                        "__rl":  true,
+                                                        "value":  "={{ $node[\"Enregistrement du rapport dans drive\"].json[\"id\"] }}",
+                                                        "mode":  "id"
+                                                    },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.googleDrive",
+                      "typeVersion":  3,
+                      "position":  [
+                                       1744,
+                                       320
+                                   ],
+                      "id":  "731674a8-0932-45c5-ac77-f3316018bae0",
+                      "name":  "Telechargement du fichier pour l\u0027email",
+                      "credentials":  {
+                                          "googleDriveOAuth2Api":  {
+                                                                       "id":  "e7Bs31aKgGanb2uk",
+                                                                       "name":  "Google Drive account"
+                                                                   }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "rule":  {
+                                                      "interval":  [
+                                                                       {
+                                                                           "triggerAtHour":  8
+                                                                       }
+                                                                   ]
+                                                  }
+                                     },
+                      "id":  "f9514819-95c1-4714-a129-37ec38838d02",
+                      "name":  "Declencheur",
+                      "type":  "n8n-nodes-base.scheduleTrigger",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       -80,
+                                       736
+                                   ],
+                      "notes":  "Se dÃ©clenche chaque matin Ã  8h pour vÃ©rifier les non-rÃ©pondants"
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict",
+                                                                            "version":  2
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "filter_statut",
+                                                                                   "leftValue":  "={{ $json.statut }}",
+                                                                                   "rightValue":  "non_complete",
+                                                                                   "operator":  {
+                                                                                                    "type":  "string",
+                                                                                                    "operation":  "equals"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "b23bd2bc-2b88-46ed-bc8e-2071fbfba2bb",
+                      "name":  "Filtrer non completes",
+                      "type":  "n8n-nodes-base.filter",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       592,
+                                       736
+                                   ],
+                      "notes":  "Garde uniquement les employÃ©s avec statut == non_complete"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const items = $input.all();\nconst result = [];\n\nfor (const item of items) {\n  const employe = item.json;\n  const dateEnvoi = new Date(employe.date_envoi);\n  const aujourdhui = new Date();\n  const diffJours = Math.floor((aujourdhui - dateEnvoi) / (1000 * 60 * 60 * 24));\n\n  if (diffJours \u003e= 6) {\n    result.push({\n      json: {\n        ...employe,\n        jours_depuis_envoi: diffJours,\n        eligible_relance: true\n      }\n    });\n  }\n}\n\nreturn result;"
+                                     },
+                      "id":  "89e8d7b3-f8f8-4a32-8f0b-8d6681e3aae4",
+                      "name":  "Calculer 6 jours",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       864,
+                                       736
+                                   ],
+                      "executeOnce":  false,
+                      "alwaysOutputData":  false,
+                      "notes":  "Calcule si l\u0027envoi initial date de 6 jours ou plus. Si non, l\u0027employÃ© est ignorÃ©."
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const employe = $input.first().json;\nconsole.log(`âœ… Relance envoyÃ©e Ã  ${employe.nom} (${employe.email}) â€” ${employe.jours_depuis_envoi} jours depuis l\u0027envoi`);\n\nreturn [{\n  json: {\n    status: \u0027relance_envoyee\u0027,\n    nom: employe.nom,\n    email: employe.email,\n    jours_depuis_envoi: employe.jours_depuis_envoi,\n    timestamp: new Date().toISOString()\n  }\n}];"
+                                     },
+                      "id":  "9978f349-e07f-4dab-b3c4-17cd06bb40c3",
+                      "name":  "Log relance",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       1424,
+                                       736
+                                   ],
+                      "notes":  "Log de confirmation par employÃ© relancÃ©"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Log de confirmation\nconst info = $(\u0027Construire le rapport\u0027).first().json.campaignInfo;\nconsole.log(`âœ… Rapport RPS gÃ©nÃ©rÃ© et envoyÃ© pour ${info.entreprise} - ${info.campagne}`);\nreturn [{ json: { status: \u0027success\u0027, message: `Rapport envoyÃ© pour ${info.entreprise}`, timestamp: new Date().toISOString() } }];"
+                                     },
+                      "id":  "b3eba9b5-689b-4b5e-a3cd-f56e29e30e3b",
+                      "name":  "Log succes",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       2224,
+                                       320
+                                   ],
+                      "notes":  "Log de confirmation â€” peut Ãªtre remplacÃ© par une notification Slack ou autre."
+                  },
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "rps-analysis",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2.1,
+                      "position":  [
+                                       -80,
+                                       320
+                                   ],
+                      "id":  "2bf132a9-36da-4827-a071-c344649d2213",
+                      "name":  "Webhook",
+                      "webhookId":  "a4a937ee-ce22-475a-b226-b7ff55c56e10"
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "appendOrUpdate",
+                                         "documentId":  {
+                                                            "__rl":  true,
+                                                            "value":  "1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig",
+                                                            "mode":  "list",
+                                                            "cachedResultName":  "Suivi Campagne RPS.",
+                                                            "cachedResultUrl":  "https://docs.google.com/spreadsheets/d/1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig/edit?usp=drivesdk"
+                                                        },
+                                         "sheetName":  {
+                                                           "__rl":  true,
+                                                           "value":  "gid=0",
+                                                           "mode":  "list",
+                                                           "cachedResultName":  "Feuille 1",
+                                                           "cachedResultUrl":  "https://docs.google.com/spreadsheets/d/1f15ABY4cIq5z-KQngmYPJZcu0-redCIgD4ofBLTxeig/edit#gid=0"
+                                                       },
+                                         "columns":  {
+                                                         "mappingMode":  "defineBelow",
+                                                         "value":  {
+                                                                       "Entreprise":  "={{ $json.entreprise }}",
+                                                                       "Nom":  "={{ $json.nom }}",
+                                                                       "Prenom":  "={{ $json.prenom }}",
+                                                                       "Email":  "={{ $json.email }}",
+                                                                       "Poste":  "={{ $json.poste }}"
+                                                                   },
+                                                         "matchingColumns":  [
+                                                                                 "Email"
+                                                                             ],
+                                                         "schema":  [
+                                                                        {
+                                                                            "id":  "Entreprise",
+                                                                            "displayName":  "Entreprise",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Nom",
+                                                                            "displayName":  "Nom",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Prenom",
+                                                                            "displayName":  "Prenom",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Email",
+                                                                            "displayName":  "Email",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "id":  "Poste",
+                                                                            "displayName":  "Poste",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        }
+                                                                    ],
+                                                         "attemptToConvertTypes":  false,
+                                                         "convertFieldsToString":  false
+                                                     },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.googleSheets",
+                      "typeVersion":  4.7,
+                      "position":  [
+                                       576,
+                                       112
+                                   ],
+                      "id":  "d5627cc7-d95a-4ddc-923a-3a5f01b75391",
+                      "name":  "Append or update row in sheet",
+                      "credentials":  {
+                                          "googleSheetsOAuth2Api":  {
+                                                                        "id":  "SaA6KDnpWYAZ5NuV",
+                                                                        "name":  "Google Sheets account"
+                                                                    }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "fieldToSplitOut":  "openAnswers",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.splitOut",
+                      "typeVersion":  1,
+                      "position":  [
+                                       304,
+                                       112
+                                   ],
+                      "id":  "6e3497c5-1394-4c3b-8d5d-7f5582c76af7",
+                      "name":  "Split Out"
+                  },
+                  {
+                      "parameters":  {
+                                         "content":  "ANALYSE\n",
+                                         "height":  640,
+                                         "width":  2656
+                                     },
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "typeVersion":  1,
+                      "position":  [
+                                       -160,
+                                       -32
+                                   ],
+                      "id":  "6d915262-1566-42a7-b83b-30c4526a2785",
+                      "name":  "Sticky Note"
+                  },
+                  {
+                      "parameters":  {
+                                         "content":  "RELANCE\n",
+                                         "height":  304,
+                                         "width":  1808
+                                     },
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "typeVersion":  1,
+                      "position":  [
+                                       -176,
+                                       640
+                                   ],
+                      "id":  "fe149dca-d457-43a6-8426-d564defa6ffc",
+                      "name":  "Sticky Note1"
+                  },
+                  {
+                      "parameters":  {
+                                         "resource":  "mail",
+                                         "fromEmail":  "={{ $env.SENDGRID_FROM_EMAIL || $env.FROM_EMAIL }}",
+                                         "toEmail":  "={{ $json.campaignInfo.client_email || $env.REPORT_RECIPIENT_EMAIL }}",
+                                         "subject":  "=Rapport d\u0027analyse RPS - {{ $now.format(\u0027yyyy-MM-dd HH:mm\u0027) }}",
+                                         "contentValue":  "=Bonjour,\n\nVoici le rapport d\u0027analyse RPS.\n\n{{ $json.rapport }}\n\nCordialement,\n{{ $env.SENDGRID_FROM_NAME || \u0027Equipe RPS\u0027 }}",
+                                         "additionalFields":  {
+
+                                                              }
+                                     },
+                      "type":  "n8n-nodes-base.sendGrid",
+                      "typeVersion":  1,
+                      "position":  [
+                                       2000,
+                                       320
+                                   ],
+                      "id":  "7d8eb6b6-004d-486d-911f-e713902b5d5a",
+                      "name":  "Send an email",
+                      "credentials":  {
+                                          "sendGridApi":  {
+                                                              "id":  "tZTdtQobKeQYnDqy",
+                                                              "name":  "SendGrid account"
+                                                          }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "resource":  "mail",
+                                         "fromEmail":  "={{ $env.SENDGRID_FROM_EMAIL || $env.FROM_EMAIL }}",
+                                         "toEmail":  "={{ $json.email }}",
+                                         "subject":  "=Rappel : Votre participation au sondage RPS est attendue",
+                                         "contentValue":  "Bonjour {{ $json.nom }}  Nous vous contactons car votre diagnostic sur les Risques Psychosociaux (RPS) est toujours en attente de finalisation.  Votre participation est essentielle pour garantir une analyse de qualitÃ© et amÃ©liorer les conditions de travail au sein de votre organisation. Ce questionnaire est rapide et vos rÃ©ponses restent confidentielles.  Nous vous remercions par avance pour votre contribution.  Cordialement, {{ $env.SENDGRID_FROM_NAME || $env.FROM_NAME || \u0027l equipe RPS\u0027 }}",
+                                         "additionalFields":  {
+
+                                                              }
+                                     },
+                      "type":  "n8n-nodes-base.sendGrid",
+                      "typeVersion":  1,
+                      "position":  [
+                                       1136,
+                                       736
+                                   ],
+                      "id":  "842ac1e9-2aa0-4168-851c-86cceb39d09d",
+                      "name":  "Send an email1",
+                      "credentials":  {
+                                          "sendGridApi":  {
+                                                              "id":  "tZTdtQobKeQYnDqy",
+                                                              "name":  "SendGrid account"
+                                                          }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "url":  "={{ $json.config.app_base_url }}/campagne/{{ $json.campaign_id }}/reponses",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.3,
+                      "position":  [
+                                       192,
+                                       320
+                                   ],
+                      "id":  "1efcf765-a978-471c-b89c-c61cf9d655c7",
+                      "name":  "HTTP Request"
+                  },
+                  {
+                      "parameters":  {
+                                         "url":  "={{ $json.config.app_base_url }}/campagne/{{ $json.campaign_id }}/employes",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.3,
+                      "position":  [
+                                       240,
+                                       736
+                                   ],
+                      "id":  "d5b0225f-bb7c-4b4f-8665-c95417dd4a65",
+                      "name":  "HTTP Request1"
+                  },
+                  {
+                      "parameters":  {
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       752,
+                                       448
+                                   ],
+                      "id":  "beac8c25-65aa-4a0b-8dd0-a9df0be0ec89",
+                      "name":  "Google Gemini Chat Model",
+                      "credentials":  {
+                                          "googlePalmApi":  {
+                                                                "id":  "5XcordMqcNXwJ7lx",
+                                                                "name":  "Google Gemini(PaLM) Api account 2"
+                                                            }
+                                      }
+                  }
+              ],
+    "pinData":  {
+
+                },
+    "connections":  {
+                        "Formater les donnees":  {
+                                                     "main":  [
+                                                                  [
+                                                                      {
+                                                                          "node":  "AI Agent1",
+                                                                          "type":  "main",
+                                                                          "index":  0
+                                                                      }
+                                                                  ]
+                                                              ]
+                                                 },
+                        "Construire le rapport":  {
+                                                      "main":  [
+                                                                   [
+                                                                       {
+                                                                           "node":  "Send an email",
+                                                                           "type":  "main",
+                                                                           "index":  0
+                                                                       },
+                                                                       {
+                                                                           "node":  "Enregistrement du rapport dans drive",
+                                                                           "type":  "main",
+                                                                           "index":  0
+                                                                       }
+                                                                   ]
+                                                               ]
+                                                  },
+                        "AI Agent1":  {
+                                          "main":  [
+                                                       [
+                                                           {
+                                                               "node":  "Construire le rapport",
+                                                               "type":  "main",
+                                                               "index":  0
+                                                           }
+                                                       ]
+                                                   ]
+                                      },
+                        "Enregistrement du rapport dans drive":  {
+                                                                     "main":  [
+                                                                                  [
+                                                                                      {
+                                                                                          "node":  "Telechargement du fichier pour l\u0027email",
+                                                                                          "type":  "main",
+                                                                                          "index":  0
+                                                                                      }
+                                                                                  ]
+                                                                              ]
+                                                                 },
+                        "Telechargement du fichier pour l\u0027email":  {
+                                                                            "main":  [
+                                                                                         [
+                                                                                             {
+                                                                                                 "node":  "Log succes",
+                                                                                                 "type":  "main",
+                                                                                                 "index":  0
+                                                                                             }
+                                                                                         ]
+                                                                                     ]
+                                                                        },
+                        "Declencheur":  {
+                                            "main":  [
+                                                         [
+                                                             {
+                                                                 "node":  "HTTP Request1",
+                                                                 "type":  "main",
+                                                                 "index":  0
+                                                             }
+                                                         ]
+                                                     ]
+                                        },
+                        "Filtrer non completes":  {
+                                                      "main":  [
+                                                                   [
+                                                                       {
+                                                                           "node":  "Calculer 6 jours",
+                                                                           "type":  "main",
+                                                                           "index":  0
+                                                                       }
+                                                                   ]
+                                                               ]
+                                                  },
+                        "Calculer 6 jours":  {
+                                                 "main":  [
+                                                              [
+                                                                  {
+                                                                      "node":  "Send an email1",
+                                                                      "type":  "main",
+                                                                      "index":  0
+                                                                  }
+                                                              ]
+                                                          ]
+                                             },
+                        "Webhook":  {
+                                        "main":  [
+                                                     [
+                                                         {
+                                                             "node":  "Formater les donnees",
+                                                             "type":  "main",
+                                                             "index":  0
+                                                         }
+                                                     ]
+                                                 ]
+                                    },
+                        "Split Out":  {
+                                          "main":  [
+                                                       [
+                                                           {
+                                                               "node":  "Append or update row in sheet",
+                                                               "type":  "main",
+                                                               "index":  0
+                                                           }
+                                                       ]
+                                                   ]
+                                      },
+                        "Send an email":  {
+                                              "main":  [
+                                                           [
+                                                               {
+                                                                   "node":  "Log succes",
+                                                                   "type":  "main",
+                                                                   "index":  0
+                                                               }
+                                                           ]
+                                                       ]
+                                          },
+                        "Send an email1":  {
+                                               "main":  [
+                                                            [
+                                                                {
+                                                                    "node":  "Log relance",
+                                                                    "type":  "main",
+                                                                    "index":  0
+                                                                }
+                                                            ]
+                                                        ]
+                                           },
+                        "HTTP Request1":  {
+                                              "main":  [
+                                                           [
+                                                               {
+                                                                   "node":  "Filtrer non completes",
+                                                                   "type":  "main",
+                                                                   "index":  0
+                                                               }
+                                                           ]
+                                                       ]
+                                          },
+                        "Google Gemini Chat Model":  {
+                                                         "ai_languageModel":  [
+                                                                                  [
+                                                                                      {
+                                                                                          "node":  "AI Agent1",
+                                                                                          "type":  "ai_languageModel",
+                                                                                          "index":  0
+                                                                                      }
+                                                                                  ]
+                                                                              ]
+                                                     }
+                    },
+    "active":  true,
+    "settings":  {
+                     "executionOrder":  "v1",
+                     "binaryMode":  "separate"
+                 },
+    "versionId":  "263cfd87-4bf3-4fe5-a4cb-e018056e84da",
+    "meta":  {
+                 "templateCredsSetupCompleted":  true,
+                 "instanceId":  "cac5ec5e2c6d46143700919509af35b019553a77230a6aee31f315409349fd75"
+             },
+    "id":  "Tj5GxDqXzzPS0WSP",
+    "tags":  [
+
+             ]
 }

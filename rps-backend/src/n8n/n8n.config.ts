@@ -1,4 +1,4 @@
-const DEFAULT_N8N_BASE_URL = 'http://127.0.0.1:5678/n8n';
+const DEFAULT_N8N_BASE_URL = 'https://automation.laroche360.ca';
 const DEFAULT_N8N_WEBHOOK_PATH = '/webhook/rps-analysis';
 const WEBHOOK_SUFFIX_PATTERN = /\/webhook(?:-test|-waiting)?\/.+$/i;
 
@@ -18,6 +18,11 @@ function getConfiguredN8nUrl() {
   );
 }
 
+export function getN8nBaseUrl() {
+  const configuredUrl = trimTrailingSlash(getConfiguredN8nUrl());
+  return trimTrailingSlash(configuredUrl.replace(WEBHOOK_SUFFIX_PATTERN, ''));
+}
+
 export function getN8nWebhookUrl() {
   const configuredUrl = trimTrailingSlash(getConfiguredN8nUrl());
 
@@ -25,7 +30,8 @@ export function getN8nWebhookUrl() {
     return configuredUrl;
   }
 
+  const baseUrl = getN8nBaseUrl();
   const webhookPath =
     process.env.N8N_WEBHOOK_PATH?.trim() || DEFAULT_N8N_WEBHOOK_PATH;
-  return `${configuredUrl}${ensureLeadingSlash(webhookPath)}`;
+  return `${baseUrl}${ensureLeadingSlash(webhookPath)}`;
 }

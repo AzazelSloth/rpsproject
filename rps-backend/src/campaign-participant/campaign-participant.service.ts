@@ -433,7 +433,7 @@ export class CampaignParticipantService {
 
   private async ensureParticipationTokens(participants: CampaignParticipant[]) {
     const missingTokens = participants.filter(
-      (participant) => !participant.participation_token,
+      (participant) => !participant.participation_token?.trim(),
     );
 
     if (!missingTokens.length) {
@@ -505,6 +505,7 @@ export class CampaignParticipantService {
       }
 
       const employeesByEmail = new Map<string, Employee>();
+      const crossCompanyConflicts = new Set<string>();
       const BATCH_SIZE = 50;
 
       for (let i = 0; i < normalizedRows.length; i += BATCH_SIZE) {
@@ -544,6 +545,7 @@ export class CampaignParticipantService {
               existingEmployee &&
               existingEmployee.company.id !== payload.company_id
             ) {
+              crossCompanyConflicts.add(email);
               this.logger.warn(
                 `[Import] Employee ${email} already exists for different company. Skipping.`,
               );
@@ -612,6 +614,14 @@ export class CampaignParticipantService {
       }
 
       const employees = Array.from(employeesByEmail.values());
+
+      if (employees.length === 0 && crossCompanyConflicts.size > 0) {
+        const conflictList = Array.from(crossCompanyConflicts);
+        const preview = conflictList.slice(0, 5).join(', ');
+        throw new BadRequestException(
+          `Import impossible: ${conflictList.length} adresse(s) email existe(nt) deja dans une autre entreprise (${preview}${conflictList.length > 5 ? ', ...' : ''}). Utilisez une autre adresse email ou la bonne entreprise.`,
+        );
+      }
 
       this.logger.log(
         `[Import] Successfully imported ${employees.length} unique employees`,
@@ -719,6 +729,9 @@ export class CampaignParticipantService {
             })
           : [];
 
+      await this.ensureParticipationTokens(participantRecords);
+      const appUrl = this.resolvePublicAppUrl();
+
       this.logger.log(
         `[Import] Company names extracted: ${uniqueCompanyNames.join(', ') || 'none'}`,
       );
@@ -726,33 +739,39 @@ export class CampaignParticipantService {
       const result = {
         imported_employees: employees.length,
         participants: participantRecords.map((p) => {
-          let emp: Employee | undefined;
-
-          if (p.employee) {
-            emp = p.employee;
-          }
+          const emp = p.employee;
+          const token = p.participation_token ?? '';
+          const surveyUrl = token ? `${appUrl}/survey-response/${token}` : '';
 
           if (!emp) {
             console.warn(
               `[Import] No employee data found for participant ${p.participation_token}`,
             );
             return {
+              participant_id: p.id,
               participation_token: p.participation_token,
+              status: p.status,
+              survey_url: surveyUrl,
               employee: {
                 first_name: 'N/A',
                 last_name: 'N/A',
                 email: '',
+                department: '',
                 company_name: '',
               },
             };
           }
 
           return {
-            participation_token: p.participation_token,
+            participant_id: p.id,
+            participation_token: token,
+            status: p.status,
+            survey_url: surveyUrl,
             employee: {
               first_name: emp.first_name || 'N/A',
               last_name: emp.last_name || 'N/A',
               email: emp.email || '',
+              department: emp.department || '',
               company_name:
                 (emp.email &&
                   companyNameByEmail.get(emp.email.toLowerCase())) ||
@@ -762,6 +781,8 @@ export class CampaignParticipantService {
         }),
         company_names: uniqueCompanyNames,
         analysis_status: 'manual_trigger_required',
+        skipped_conflicts: Array.from(crossCompanyConflicts),
+        skipped_conflicts_count: crossCompanyConflicts.size,
       };
 
       return result;
@@ -1182,7 +1203,10 @@ export class CampaignParticipantService {
         const email = (
           row.email ??
           row.adresse_courriel ??
+          row.adresse_email ??
           row.courriel ??
+          row.e_mail ??
+          row.mail ??
           ''
         ).trim();
 
@@ -1193,10 +1217,34 @@ export class CampaignParticipantService {
           continue;
         }
 
+        const fullName = (
+          row.nom_et_prenom ??
+          row.nom_prenom ??
+          row.nom_complet ??
+          row.full_name ??
+          ''
+        ).trim();
+        const [derivedFirstName, ...derivedLastNameParts] = fullName
+          .split(/\s+/)
+          .filter(Boolean);
+        const derivedLastName = derivedLastNameParts.join(' ');
+
         rows.push({
           email,
-          first_name: (row.first_name ?? row.prenom ?? '').trim() || undefined,
-          last_name: (row.last_name ?? row.nom ?? '').trim() || undefined,
+          first_name:
+            (
+              row.first_name ??
+              row.prenom ??
+              derivedFirstName ??
+              ''
+            ).trim() || undefined,
+          last_name:
+            (
+              row.last_name ??
+              row.nom ??
+              derivedLastName ??
+              ''
+            ).trim() || undefined,
           phone: (row.phone ?? '').trim() || undefined,
           status: (row.status ?? row.statut ?? '').trim() || undefined,
           department:
