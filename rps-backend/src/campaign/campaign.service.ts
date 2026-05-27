@@ -325,11 +325,17 @@ export class CampaignService {
       }
 
       if (!response.ok) {
+        const responseBody = await this.getWebhookResponsePreview(response);
         this.logger.error(
-          `n8n webhook failed (${requestUrl}): ${response.status} ${response.statusText}`,
+          [
+            `n8n webhook failed (${requestUrl}): ${response.status} ${response.statusText}`,
+            responseBody ? `response: ${responseBody}` : null,
+          ]
+            .filter(Boolean)
+            .join(' - '),
         );
         throw new InternalServerErrorException(
-          "Erreur lors de l'envoi de l'analyse a n8n",
+          this.getWebhookDeliveryErrorMessage(response, requestUrl),
         );
       }
 
@@ -359,6 +365,23 @@ export class CampaignService {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+  }
+
+  private async getWebhookResponsePreview(response: Response) {
+    try {
+      const body = await response.text();
+      return body.replace(/\s+/g, ' ').trim().slice(0, 500);
+    } catch {
+      return '';
+    }
+  }
+
+  private getWebhookDeliveryErrorMessage(response: Response, requestUrl: string) {
+    if (response.status === 404) {
+      return `n8n a repondu 404 pour ${requestUrl}. Verifiez que le workflow est actif et que N8N_WEBHOOK_PATH pointe vers /webhook/rps-analysis.`;
+    }
+
+    return `n8n a repondu ${response.status} ${response.statusText || ''}. Consultez les logs du workflow n8n.`;
   }
 
   private getAnalysisWebhookFallbackUrl(webhookUrl: string) {

@@ -2,15 +2,17 @@
 
 ![RPS Platform](https://img.shields.io/badge/Version-1.0.0-blue)
 ![NestJS](https://img.shields.io/badge/Backend-NestJS_11-green)
-![Next.js](https://img.shields.io/badge/Frontend-Next.js_16-green)
+![Next.js](https://img.shields.io/badge/Frontend-Next.js_15-green)
 ![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-blue)
 
-Plateforme de gestion des Risques Psychosociaux (RPS) pour LaRoche Consulting. Cette application permet de créer, gérer et analyser les campagnes d'évaluation des risques psychosociaux en entreprise.
+Plateforme de gestion des Risques Psychosociaux (RPS) pour LaRoche Consulting.
+L'application permet de créer, gérer et analyser des campagnes d'évaluation RPS
+en entreprise.
 
 ## Documentation de passation
 
 Pour la prise en main par Abondelire / LaRoche et le guide des modifications
-possibles cote client, consulter :
+possibles côté client, consulter :
 
 - [Guide de passation et de modification](docs/GUIDE_PASSATION_ET_MODIFICATIONS.md)
 
@@ -28,66 +30,75 @@ possibles cote client, consulter :
 8. [Déploiement CI/CD](#déploiement-cicd)
 9. [Déploiement VPS Manuel](#déploiement-vps-manuel)
 10. [Préparations Nécessaires au Déploiement](#préparations-nécessaires-au-déploiement)
+11. [Dépannage](#dépannage)
 
 ---
 
 ## Description du Projet
 
-La plateforme RPS (Risques Psychosociaux) est une solution complète pour :
+La plateforme RPS est une solution complète pour :
 
-- **Gestion des campagnes** : Création et suivi des campagnes d'évaluation RPS
-- **Questionnaires** : Questionnaire standardisé sur les risques psychosociaux
-- **Suivi des participants** : Gestion et relance des employés participants
-- **Génération de rapports** : Création de rapports détaillés au format Word (.docx)
-- **Dashboard analytique** : Visualisation des données et statistiques
+- **Gestion des campagnes** : création et suivi des campagnes d'évaluation RPS.
+- **Questionnaires** : questionnaires standardisés sur les risques psychosociaux.
+- **Suivi des participants** : gestion des employés, invitations et relances.
+- **Rapports** : génération de rapports détaillés au format Word (`.docx`).
+- **Dashboard analytique** : visualisation des données et statistiques.
+- **Automatisations** : intégration n8n pour les relances et analyses.
 
 ### Fonctionnalités Principales
 
 | Module | Fonctionnalités |
 |--------|-----------------|
-| **Authentification** | Login/Logout, JWT tokens, Protection des routes |
-| **Dashboard** | Vue d'ensemble des campagnes, Taux de participation, Scores de stress |
-| **Campagnes** | Création de campagnes, Gestion des questions RPS, Suivi des participants |
-| **Employés** | Liste des employés, Statut de participation, Relances automatiques |
-| **Rapports** | Génération de rapports, Export Word (.docx), Analyse par département |
+| **Authentification** | Login/Logout, JWT, protection des routes |
+| **Dashboard** | Vue d'ensemble des campagnes, participation, scores |
+| **Campagnes** | Création, configuration des questions, activation |
+| **Employés** | Import CSV/XLSX, suivi des statuts, relances |
+| **Rapports** | Export Word, analyse par département/fonction |
+| **n8n** | Automatisations et workflows d'analyse |
 
 ---
 
 ## Architecture Technique
 
 ```text
-+-----------------------------------------------------------------+
-é                        RPS PLATFORM                             é
-+-----------------------------------------------------------------é
-é                                                                 é
-é   +-------------+           +-------------+                   é
-é   é   Frontend  é           é   Backend   é                   é
-é   é  Next.js 16 é?---------?é  NestJS 11  é                   é
-é   é  React 19   é   HTTP    é  TypeORM    é                   é
-é   é  Tailwind   é           é    JWT      é                   é
-é   +-------------+           +-------------+                   é
-é         é                         é                             é
-é         é Port 3001              é Port 3000                   é
-é         ?                         ?                             é
-é   +-----------------------------------------+                  é
-é   é              NGINX (Reverse Proxy)     é                  é
-é   é              Port 80                    é                  é
-é   +-----------------------------------------+                  é
-é                                                 é              é
-é                                                 ?              é
-é                                    +---------------------+    é
-é                                    é   PostgreSQL 14+    é    é
-é                                    é   Port 5432         é    é
-é                                    +---------------------+    é
-é                                                                 é
-+-----------------------------------------------------------------+
++----------------------+        +----------------------+
+|      Navigateur      |        |      n8n public      |
++----------+-----------+        +----------+-----------+
+           |                               |
+           v                               v
++-----------------------------------------------------+
+| Nginx hôte / terminaison HTTPS / proxy public       |
+| scripts/vps/nginx.host.conf                         |
+| écoute locale: 127.0.0.1:8786                       |
++---------------------------+-------------------------+
+                            |
+                            v
++-----------------------------------------------------+
+| Nginx Docker                                        |
+| scripts/vps/nginx.rps.conf                          |
+| conteneur: 8786, publié VPS: 8787                   |
++-------------+--------------------+------------------+
+              |                    |
+              v                    v
++----------------------+  +----------------------+
+| Frontend Next.js     |  | Backend NestJS       |
+| port conteneur 3001  |  | port conteneur 3000  |
++----------+-----------+  +----------+-----------+
+                                      |
+                                      v
+                         +----------------------+
+                         | PostgreSQL 14+       |
+                         +----------------------+
 ```
+
+Le déploiement courant utilise Docker Compose. PM2 n'est plus utilisé par les
+scripts de production.
 
 ### Stack Technologique
 
 | Composant | Technologie | Version |
 |-----------|-------------|---------|
-| **Frontend** | Next.js | 16.1.6 |
+| **Frontend** | Next.js | 15.1.7 |
 | | React | 19.2.3 |
 | | TypeScript | 5.x |
 | | Tailwind CSS | 4.x |
@@ -96,29 +107,33 @@ La plateforme RPS (Risques Psychosociaux) est une solution complète pour :
 | | JWT | 11.0.0 |
 | | bcrypt | 6.0.0 |
 | **Base de données** | PostgreSQL | 14+ |
-| **Serveur** | PM2 | - |
-| **Proxy** | Nginx | - |
+| **Automatisation** | n8n | image Docker `n8nio/n8n:latest` |
+| **Runtime** | Node.js | 24 en CI/Docker |
+| **Déploiement** | Docker Compose | plugin Docker Compose |
+| **Proxy** | Nginx | hôte + conteneur |
 
 ---
 
 ## Prérequis
 
-### Logiciels Requis
+### Développement local
 
 | Logiciel | Version Minimum | Usage |
-|----------|----------------|-------|
-| **Node.js** | 22.x | Runtime JavaScript |
+|----------|-----------------|-------|
+| **Node.js** | 24.x recommandé | Runtime JavaScript |
 | **npm** | 10.x | Gestionnaire de paquets |
 | **PostgreSQL** | 14.x | Base de données |
-| **Git** | 2.x | Contréle de version |
+| **Git** | 2.x | Contrôle de version |
 
-### Outils Optionnels
+### Déploiement VPS
 
-| Outil | Usage |
-|-------|-------|
-| **PM2** | Gestion des processus en production |
-| **Nginx** | Reverse proxy et serveur web |
-| **Certbot** | Certification SSL (HTTPS) |
+| Logiciel | Usage |
+|----------|-------|
+| **Docker Engine** | Construction et exécution des conteneurs |
+| **Docker Compose plugin** | Orchestration backend/frontend/nginx/n8n |
+| **PostgreSQL** | Base de données applicative et n8n |
+| **Nginx** | Proxy hôte si une terminaison HTTPS locale est utilisée |
+| **Certbot ou proxy HTTPS externe** | Certificats SSL |
 
 ---
 
@@ -128,172 +143,207 @@ La plateforme RPS (Risques Psychosociaux) est une solution complète pour :
 
 ```bash
 git clone <repository-url>
-cd rpsproject
+cd rps-project
 ```
 
-### 2. Configuration de la Base de Données
-
-#### Création de la base de données
+### 2. Préparer PostgreSQL
 
 ```bash
-# Se connecter é PostgreSQL
 psql -U postgres
-
-# Créer la base de données
 CREATE DATABASE rps_platform;
-
-# Quitter psql
 \q
 ```
 
-#### Initialisation du schéma
-
-Le chemin supporté par l'application est basé sur les migrations TypeORM du backend.
-Les références `rps-database/*.sql` encore présentes dans cette documentation sont historiques et ne correspondent pas au workflow réellement utilisé par le projet.
+### 3. Configurer le Backend
 
 ```bash
-# Naviguer vers le backend
 cd rps-backend
+npm install
+```
 
-# Appliquer les migrations TypeORM
+Créer `rps-backend/.env` :
+
+```env
+NODE_ENV=development
+PORT=3000
+JWT_SECRET=dev-secret-change-me
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=rps_platform
+DB_SYNCHRONIZE=false
+DB_LOGGING=false
+SWAGGER_ENABLED=true
+SWAGGER_PATH=api-docs
+ADMIN_ALLOWED_EMAILS=admin@example.com
+ADMIN_BOOTSTRAP_EMAILS=admin@example.com
+ADMIN_BOOTSTRAP_PASSWORD=change-me
+ALLOWED_REGISTRATION_DOMAINS=example.com,localhost.local
+N8N_HEALTH_REQUIRED=false
+```
+
+Appliquer les migrations TypeORM et créer le compte d'amorçage si besoin :
+
+```bash
 npm run migration:run
-
-# Optionnel : créer un compte d'amoréage via le seed TS
 npm run seed
 ```
 
-### 3. Backend - Installation et Configuration
+### 4. Configurer le Frontend
 
 ```bash
-# Naviguer vers le backend
-cd rps-backend/rps-backend
-
-# Installer les dépendances
+cd ../rps-frontend/nextjs-app
 npm install
-
-# Créer le fichier .env é partir de l'exemple
-cp .env.example .env
-
-# Modifier les paramétres de connexion DB dans .env
 ```
 
-### 4. Frontend - Installation et Configuration
+Créer `rps-frontend/nextjs-app/.env.local` :
 
-```bash
-# Naviguer vers le frontend
-cd rps-frontend/nextjs-app
-
-# Installer les dépendances
-npm install
-
-# Créer le fichier .env.local é partir de l'exemple (si présent)
-# ou le créer manuellement
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+API_URL=http://localhost:3000/api
+NEXT_PUBLIC_APP_URL=http://localhost:3001
+APP_URL=http://localhost:3001
+NEXT_PUBLIC_STRAPI_URL=
+STRAPI_API_TOKEN=
+ADMIN_ALLOWED_EMAILS=admin@example.com
 ```
 
-### 5. Lancement en Mode Développement
+### 5. Lancer en Développement
 
-#### Terminal 1 - Backend
+Terminal 1 :
 
 ```bash
-cd rps-backend/rps-backend
+cd rps-backend
 npm run start:dev
 ```
 
-Le backend sera disponible sur : `http://localhost:3000`
-
-#### Terminal 2 - Frontend
+Terminal 2 :
 
 ```bash
 cd rps-frontend/nextjs-app
 npm run dev
 ```
 
-Le frontend sera disponible sur : `http://localhost:3001`
-
-### 6. Compte de Test
-
-Aprés avoir exécuté `npm run seed` :
-
-- **Email** : premiére adresse de `ADMIN_BOOTSTRAP_EMAILS`
-- **Mot de passe** : valeur de `ADMIN_BOOTSTRAP_PASSWORD`
+Le backend est disponible sur `http://localhost:3000` et le frontend sur
+`http://localhost:3001`.
 
 ---
 
 ## Structure du Projet
 
 ```text
-rpsproject/
+rps-project/
 +-- .github/
-é   +-- workflows/
-é       +-- rps_deployment.yml      # Pipeline CI/CD GitHub Actions
+|   +-- workflows/
+|       +-- rps_deployment.yml      # Pipeline CI/CD GitHub Actions
++-- docs/
+|   +-- GUIDE_PASSATION_ET_MODIFICATIONS.md
++-- rps-automation/
+|   +-- NEW WORKFLOW RSP.json       # Workflow n8n
 +-- rps-backend/
-é   +-- rps-backend/
-é       +-- src/
-é       é   +-- auth/                # Module d'authentification
-é       é   +-- campaign/            # Module des campagnes
-é       é   +-- company/             # Module des entreprises
-é       é   +-- employee/            # Module des employés
-é       é   +-- question/            # Module des questions
-é       é   +-- response/            # Module des réponses
-é       é   +-- report/              # Module des rapports
-é       +-- package.json
-é       +-- .env.example
+|   +-- src/
+|   |   +-- auth/
+|   |   +-- campaign/
+|   |   +-- campaign-participant/
+|   |   +-- company/
+|   |   +-- database/
+|   |   +-- employee/
+|   |   +-- health/
+|   |   +-- question/
+|   |   +-- report/
+|   |   +-- response/
+|   +-- Dockerfile
+|   +-- package.json
 +-- rps-frontend/
-é   +-- nextjs-app/
-é       +-- app/                     # Pages Next.js (App Router)
-é       é   +-- (app)/               # Pages authentifiées
-é       é   +-- api/                 # API routes
-é       é   +-- login/               # Page de connexion
-é       +-- components/              # Composants React
-é       +-- lib/                    # Utilitaires et API client
-é       +-- package.json
+|   +-- nextjs-app/
+|       +-- app/
+|       +-- components/
+|       +-- lib/
+|       +-- Dockerfile
+|       +-- package.json
 +-- scripts/
-    +-- vps/
-        +-- deploy.sh               # Script de déploiement VPS
-        +-- ecosystem.config.cjs   # Configuration PM2
-        +-- nginx.rps.conf          # Configuration Nginx
-        +-- setup-nginx.sh         # Script d'installation Nginx
+|   +-- vps/
+|       +-- bootstrap-server.sh
+|       +-- deploy.sh
+|       +-- docker-compose.yml
+|       +-- nginx.host.conf
+|       +-- nginx.rps.conf
+|       +-- n8n/
+|           +-- docker-compose.yml
++-- .env.n8n.example
 ```
 
 ---
 
 ## Variables d'Environnement
 
-### Backend (`.env`)
+### Backend local (`rps-backend/.env`)
+
+Variables principales :
 
 ```env
-# Port du serveur
-PORT=3000
-
-# Environnement
 NODE_ENV=development
-
-# JWT
-JWT_SECRET=votre-secret-jwt-tres-securise
-
-# Base de données
+PORT=3000
+JWT_SECRET=change-me
 DB_HOST=localhost
 DB_PORT=5432
-DB_USERNAME=postgres
+DB_USER=postgres
 DB_PASSWORD=postgres
 DB_NAME=rps_platform
-
-# Options TypeORM
-DB_SYNCHRONIZE=true
+DB_SYNCHRONIZE=false
 DB_LOGGING=false
+ADMIN_ALLOWED_EMAILS=
+ADMIN_BOOTSTRAP_EMAILS=
+ADMIN_BOOTSTRAP_PASSWORD=
+ALLOWED_REGISTRATION_DOMAINS=localhost.local
+SENDGRID_API_KEY=
+N8N_BASE_URL=https://automation.laroche360.ca
+N8N_WEBHOOK_URL=https://automation.laroche360.ca/webhook/rps-analysis
+N8N_WEBHOOK_PATH=/webhook/rps-analysis
+N8N_HEALTH_REQUIRED=false
 ```
 
-### Frontend (`.env.local`)
+### Frontend local (`rps-frontend/nextjs-app/.env.local`)
 
 ```env
-# URL de l'API backend
-NEXT_PUBLIC_API_URL=http://localhost:3000
-API_URL=http://localhost:3000
-
-# Optionnel : Configuration Strapi
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+API_URL=http://localhost:3000/api
+NEXT_PUBLIC_APP_URL=http://localhost:3001
+APP_URL=http://localhost:3001
 NEXT_PUBLIC_STRAPI_URL=
 STRAPI_API_TOKEN=
+ADMIN_ALLOWED_EMAILS=
 ```
+
+### Déploiement
+
+Le script [scripts/vps/deploy.sh](scripts/vps/deploy.sh) reçoit ses variables
+depuis GitHub Actions ou depuis l'environnement shell du VPS. Les exemples utiles
+sont dans :
+
+- [scripts/vps/.env.example](scripts/vps/.env.example)
+- [scripts/vps/.env.server.example](scripts/vps/.env.server.example)
+- [.env.n8n.example](.env.n8n.example)
+
+Variables obligatoires au minimum :
+
+| Variable | Usage |
+|----------|-------|
+| `JWT_SECRET` | Signature des tokens JWT |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Connexion PostgreSQL applicative |
+| `DB_NAME_N8N` | Base PostgreSQL utilisée par n8n |
+| `N8N_ENCRYPTION_KEY` | Chiffrement des credentials n8n |
+
+Variables publiques importantes :
+
+| Variable | Usage |
+|----------|-------|
+| `APP_URL` / `NEXT_PUBLIC_APP_URL` | URL publique de l'application |
+| `NEXT_PUBLIC_API_URL` | URL publique de l'API, généralement `https://domaine/api` |
+| `APP_DOMAIN` | Domaine de l'application, par exemple `appli.laroche360.ca` |
+| `N8N_DOMAIN` | Domaine n8n, par exemple `automation.laroche360.ca` |
+| `N8N_EDITOR_BASE_URL` / `WEBHOOK_URL` | URLs publiques n8n |
 
 ---
 
@@ -302,204 +352,137 @@ STRAPI_API_TOKEN=
 ### Backend
 
 ```bash
-# Développement (avec hot-reload)
+cd rps-backend
 npm run start:dev
-
-# Build production
 npm run build
-
-# Démarrage production (aprés build)
 npm run start:prod
-
-# Tests unitaires
 npm run test
-
-# Tests avec couverture
 npm run test:cov
-
-# Tests e2e
 npm run test:e2e
+npm run migration:run
+npm run seed
 ```
 
 ### Frontend
 
 ```bash
-# Développement
+cd rps-frontend/nextjs-app
 npm run dev
-
-# Build production
 npm run build
-
-# Démarrage production
 npm run start
-
-# Linting
 npm run lint
+```
+
+### Docker Compose
+
+À utiliser depuis `scripts/vps` avec un environnement de déploiement chargé ou
+un fichier `.env` déjà généré par `deploy.sh` :
+
+```bash
+cd scripts/vps
+docker compose config
+docker compose build backend frontend
+docker compose up -d
+docker compose ps
+docker compose logs -f nginx backend frontend
 ```
 
 ---
 
 ## Déploiement CI/CD
 
-Le projet utilise GitHub Actions pour le déploiement automatique sur VPS.
+Le projet utilise GitHub Actions pour tester, builder et déployer sur VPS.
 
-### Workflow CI/CD
+Le pipeline [.github/workflows/rps_deployment.yml](.github/workflows/rps_deployment.yml)
+exécute :
 
-Le pipeline [`.github/workflows/rps_deployment.yml`](.github/workflows/rps_deployment.yml) exécute :
-
-1. **Backend CI** : Installation des dépendances, tests unitaires, build
-2. **Frontend CI** : Installation des dépendances, build
-3. **Deploy** : Déploiement sur VPS si les tests passent
+1. **Backend CI** : `npm ci`, tests, build.
+2. **Frontend CI** : `npm ci`, build Next.js.
+3. **Deploy** : exécution de `scripts/vps/deploy.sh` sur le VPS via SSH.
 
 ### Déclencheurs
 
-| Evénement | Branche | Action |
+| Événement | Branche | Action |
 |-----------|---------|--------|
-| Push | `main` | Build + déploiement sur `rps_dev` |
-| Push | `deploy` | Build + déploiement sur `development` |
-| Pull Request | `main` | Tests seulement |
-| Manual | - | Déploiement manuel |
+| Push | `main` | Build + déploiement sur l'environnement `rps_dev` |
+| Push | `deploy` | Build + déploiement sur l'environnement `development` |
+| Pull Request | `main` | Tests et builds seulement |
+| Manual | - | Exécution manuelle du workflow |
 
-### Configuration des Secrets GitHub
+### Secrets et Variables GitHub
 
-Pour configurer le déploiement, ajouter ces secrets dans les settings du repository :
+Secrets principaux :
 
-| Secret | Description | Exemple |
-|--------|-------------|---------|
-| `VPS_HOST` | Adresse IP du VPS | `192.168.1.100` |
-| `VPS_USER` | Utilisateur SSH | `ubuntu` |
-| `VPS_SSH_PRIVATE_KEY` | Clé privée SSH | `-----BEGIN...` |
-| `VPS_PORT` | Port SSH (optionnel) | `22` |
-| `JWT_SECRET` | Secret JWT backend | `chaine-securisee` |
-| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` | Paramétres PostgreSQL backend | `localhost`, `5432`, ... |
+| Secret | Description |
+|--------|-------------|
+| `VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_SSH_PRIVATE_KEY` | Accès SSH au VPS |
+| `JWT_SECRET` | Secret JWT backend |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | PostgreSQL applicatif |
+| `DB_NAME_N8N` | Base PostgreSQL n8n |
+| `N8N_ENCRYPTION_KEY` | Clé de chiffrement n8n |
+| `N8N_BASIC_AUTH_USER`, `N8N_BASIC_AUTH_PASSWORD` | Accès n8n si l'auth basique est active |
+| `SENDGRID_API_KEY` | Envoi des emails |
+| `API_KEY` | Accès API utilisé par les automatisations |
+
+Variables principales :
+
+| Variable | Description |
+|----------|-------------|
+| `PUBLIC_BASE_URL`, `APP_URL`, `NEXT_PUBLIC_APP_URL` | URL publique application |
+| `NEXT_PUBLIC_API_URL` | URL publique API |
+| `APP_DOMAIN`, `N8N_DOMAIN` | Domaines Nginx |
+| `N8N_EDITOR_BASE_URL`, `WEBHOOK_URL`, `N8N_WEBHOOK_PATH` | Configuration publique n8n |
+| `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `SENDGRID_REPLY_TO` | Identité email |
 
 ---
 
 ## Déploiement VPS Manuel
 
-### Prérequis VPS
+Le déploiement manuel doit suivre la même logique que GitHub Actions :
+Docker Compose + `scripts/vps/deploy.sh`. Les anciennes instructions PM2 ne sont
+plus valides.
 
-1. Serveur Ubuntu 20.04+ avec accés root
-2. PostgreSQL installé
-3. Node.js 22.x installé
-4. Nginx installé
-5. Accés SSH avec clé privée
+### 1. Préparer le VPS
 
-### Etapes de Déploiement
-
-#### 1. Connexion au VPS
+Sur Ubuntu, cloner le projet ou copier au minimum le dossier `scripts/vps`, puis
+lancer le bootstrap. Si `git` n'est pas encore installé, installez-le d'abord ou
+copiez le script par SSH.
 
 ```bash
-ssh -i votre-cle-privee user@vps-ip
+sudo apt-get update
+sudo apt-get install -y git
+git clone git@github.com:AzazelSloth/rpsproject.git rps-project
+cd rps-project
 ```
 
-#### 2. Préparation des Répertoires
+Le script de bootstrap installe Docker et le plugin Compose :
 
 ```bash
-# Créer les répertoires
-sudo mkdir -p /var/www/rps-dev /var/www/rps-prod
-
-# Définir les permissions
-sudo chown $USER:$USER /var/www/rps-dev /var/www/rps-prod
+sudo bash scripts/vps/bootstrap-server.sh
 ```
 
-#### 3. Installation de PM2
+Le bootstrap désactive Nginx si le service Nginx est activé. Si votre
+infrastructure a besoin d'un Nginx hôte, réactivez-le ensuite avec la
+configuration adaptée.
+
+### 2. Préparer PostgreSQL
+
+Créer l'utilisateur et les bases applicative/n8n :
 
 ```bash
-# Installation globale de PM2
-sudo npm install -g pm2
-
-# Configuration du démarrage automatique
-pm2 startup
-# Suivre les instructions affichées
-```
-
-#### 4. Clône du Repository
-
-```bash
-cd /var/www/rps-prod
-git clone -b main https://github.com/votre-repo/rpsproject.git .
-```
-
-#### 5. Configuration des Variables d'Environnement
-
-```bash
-# Backend
-cd rps-backend/rps-backend
-cp .env.example .env
-nano .env  # Modifier avec les valeurs de production
-
-# Frontend
-cd ../../rps-frontend/nextjs-app
-nano .env.local  # Créer avec les URLs de production
-```
-
-#### 6. Installation et Build
-
-```bash
-# Backend
-cd /var/www/rps-prod/rps-backend/rps-backend
-npm ci
-npm run build
-
-# Frontend
-cd /var/www/rps-prod/rps-frontend/nextjs-app
-npm ci
-npm run build
-```
-
-#### 7. Configuration de PM2
-
-```bash
-cd /var/www/rps-prod
-pm2 start scripts/vps/ecosystem.config.cjs
-pm2 save
-```
-
-#### 8. Configuration Nginx
-
-```bash
-# Copier la configuration du Nginx hôte local
-sudo cp scripts/vps/nginx.host.conf /etc/nginx/sites-available/rps.conf
-
-# Activer le site
-sudo ln -s /etc/nginx/sites-available/rps.conf /etc/nginx/sites-enabled/
-
-# Tester la configuration
-sudo nginx -t
-
-# Redémarrer Nginx
-sudo systemctl reload nginx
-```
-
----
-
-## Préparations Nécessaires au Déploiement
-
-Avant de déployer en production, effectuez les préparation suivantes :
-
-### 1. Configuration de la Base de Données
-
-```bash
-# Se connecter é PostgreSQL sur le VPS
 sudo -u postgres psql
-
-# Créer l'utilisateur et la base de données
-CREATE USER rpsuser WITH PASSWORD 'mot_de_passe_securise';
-CREATE DATABASE rps_platform OWNER rpsuser;
-GRANT ALL PRIVILEGES ON DATABASE rps_platform TO rpsuser;
-
-# Quitter psql
+CREATE USER rps_user WITH PASSWORD 'mot_de_passe_securise';
+CREATE DATABASE rps_db OWNER rps_user;
+CREATE DATABASE n8n_db OWNER rps_user;
+GRANT ALL PRIVILEGES ON DATABASE rps_db TO rps_user;
+GRANT ALL PRIVILEGES ON DATABASE n8n_db TO rps_user;
 \q
-
-# Modifier pg_hba.conf pour permettre l'authentification
-# Ou exécuter :
-sudo -u postgres psql -c "ALTER USER rpsuser WITH PASSWORD 'mot_de_passe_securise';"
 ```
 
-Si `DB_HOST=localhost` dans le workflow de déploiement, le script VPS remplace cette valeur par `host.docker.internal` pour les conteneurs Docker. PostgreSQL doit donc écouter au-delà de `localhost` et autoriser le sous-réseau du bridge Docker.
+Si PostgreSQL tourne sur le VPS hôte et que les conteneurs doivent y accéder,
+il doit écouter une interface joignable depuis Docker.
 
-Exemple de réglages à vérifier sur le VPS :
+Exemple à vérifier :
 
 ```conf
 # postgresql.conf
@@ -509,6 +492,7 @@ listen_addresses = '*'
 ```conf
 # pg_hba.conf
 host    all    all    172.17.0.0/16    md5
+host    all    all    172.18.0.0/16    md5
 ```
 
 Puis redémarrer PostgreSQL :
@@ -517,134 +501,173 @@ Puis redémarrer PostgreSQL :
 sudo systemctl restart postgresql
 ```
 
-### 2. Configuration des Variables d'Environnement de Production
+### 3. Exporter les Variables de Déploiement
 
-Créez les fichiers `.env` avec des valeurs sécurisées :
-
-```env
-# BACKEND - .env
-NODE_ENV=production
-PORT=3000
-JWT_SECRET=generer-une-cle-securise-avec-openssl-random
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=rpsuser
-DB_PASSWORD=mot_de_passe_securise
-DB_NAME=rps_platform
-DB_SYNCHRONIZE=false
-DB_LOGGING=false
-```
-
-```env
-# FRONTEND - .env.local
-NEXT_PUBLIC_API_URL=http://votre-ip-publique
-API_URL=http://votre-ip-publique
-```
-
-### 3. Génération de la Clé JWT
+Créer un fichier privé sur le VPS, par exemple `~/rps-deploy.env`, à partir de
+[scripts/vps/.env.server.example](scripts/vps/.env.server.example), puis charger
+les variables :
 
 ```bash
-# Générer une clé secréte sécurisée
+set -a
+. ~/rps-deploy.env
+set +a
+```
+
+Vérifier au minimum :
+
+```bash
+echo "$JWT_SECRET"
+echo "$DB_HOST:$DB_PORT/$DB_NAME"
+echo "$APP_URL"
+echo "$N8N_DOMAIN"
+```
+
+### 4. Lancer le Déploiement
+
+Depuis une copie du repo sur le VPS :
+
+```bash
+bash scripts/vps/deploy.sh main
+```
+
+Le script :
+
+- clone la branche ciblée dans un répertoire de release ;
+- écrit les fichiers `.env` Docker Compose ;
+- prépare le runtime n8n dans `N8N_RUNTIME_DIR` ;
+- construit backend/frontend ;
+- vérifie PostgreSQL ;
+- applique les migrations TypeORM ;
+- démarre backend, frontend, Nginx Docker et n8n ;
+- exécute des smoke tests.
+
+### 5. Configurer Nginx Hôte
+
+Le fichier [scripts/vps/nginx.host.conf](scripts/vps/nginx.host.conf) est prévu
+pour une couche Nginx hôte qui reçoit déjà le trafic public ou le trafic d'une
+terminaison HTTPS, puis proxy vers le Nginx Docker.
+
+Important :
+
+- `nginx.host.conf` écoute `127.0.0.1:8786`.
+- Il proxy `appli.laroche360.ca` et `automation.laroche360.ca` vers
+  `http://127.0.0.1:8787`.
+- Le conteneur Nginx publie `8787:8786`.
+- Si Nginx hôte est votre seul serveur public, adaptez les directives `listen`
+  pour `80`/`443` et ajoutez la configuration SSL.
+
+Installation type si cette topologie correspond à votre VPS :
+
+```bash
+sudo cp scripts/vps/nginx.host.conf /etc/nginx/sites-available/rps.conf
+sudo ln -sf /etc/nginx/sites-available/rps.conf /etc/nginx/sites-enabled/rps.conf
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+---
+
+## Préparations Nécessaires au Déploiement
+
+Avant une mise en production :
+
+1. Générer des secrets forts :
+
+```bash
 openssl rand -base64 32
 ```
 
-### 4. Configuration du Pare-feu (UFW)
+2. Vérifier les domaines :
+
+```text
+APP_DOMAIN=appli.laroche360.ca
+N8N_DOMAIN=automation.laroche360.ca
+APP_URL=https://appli.laroche360.ca
+NEXT_PUBLIC_APP_URL=https://appli.laroche360.ca
+NEXT_PUBLIC_API_URL=https://appli.laroche360.ca/api
+N8N_EDITOR_BASE_URL=https://automation.laroche360.ca/
+WEBHOOK_URL=https://automation.laroche360.ca/
+```
+
+3. Configurer le pare-feu :
 
 ```bash
-# Activer le pare-feu
-sudo ufw enable
-
-# Autoriser SSH
-sudo ufw allow ssh
-
-# Autoriser HTTP/HTTPS
+sudo ufw allow OpenSSH
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-
-# Vérifier le statut
+sudo ufw enable
 sudo ufw status
 ```
 
-### 5. Préparation du Déploiement GitHub Actions
-
-1. **Générer une clé SSH** pour le déploiement :
+4. Vérifier les accès Docker vers PostgreSQL :
 
 ```bash
-# Sur votre machine locale
-ssh-keygen -t ed25519 -C "github-actions@vps" -f deploy_key
-
-# Ajouter la clé publique sur le VPS
-cat deploy_key.pub >> ~/.ssh/authorized_keys
+cd scripts/vps
+docker compose config
 ```
 
-2. **Ajouter les secrets** dans GitHub :
-   - `VPS_SSH_PRIVATE_KEY` : Contenu de `deploy_key` (clé privée)
-   - `VPS_HOST` : IP publique du VPS
-   - `VPS_USER` : Nom d'utilisateur SSH
-   - `VPS_PORT` : Port SSH (22 par défaut)
-   - `JWT_SECRET` : Secret JWT du backend
-   - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` : paramétres PostgreSQL du backend
-
-### 6. Vérification Post-Déploiement
-
-Aprés le déploiement, vérifiez :
+5. Vérifier l'état après déploiement :
 
 ```bash
-# Statut des services PM2
-pm2 status
-
-# Logs du backend
-pm2 logs rps-backend
-
-# Logs du frontend
-pm2 logs rps-frontend
-
-# Test de connectivité
-curl http://localhost:3000/health
-curl http://localhost:3001
-
-# Vérification Nginx
-sudo nginx -t
-sudo systemctl status nginx
+cd <release>/scripts/vps
+docker compose ps
+docker compose logs --tail 120 nginx backend frontend
+curl -i http://127.0.0.1:8787/api/health
+curl -i -H "Host: appli.laroche360.ca" http://127.0.0.1:8787/login
+curl -i -H "Host: automation.laroche360.ca" http://127.0.0.1:8787/
 ```
 
 ---
 
 ## Dépannage
 
-### Problémes Courants
+### Problèmes Courants
 
-| Probléme | Solution |
-|----------|----------|
-| **Erreur de connexion é la DB** | Vérifier les credentials dans `.env` |
-| **Port déjé utilisé** | Vérifier que les ports 3000/3001 sont libres |
-| **Build échoue** | Nettoyer le cache : `npm run clean` ou supprimer `node_modules` |
-| **Erreur JWT** | Vérifier que `JWT_SECRET` est identique entre backend et frontend |
-| **502 Bad Gateway** | Vérifier que PM2 fonctionne et que les services sont démarrés |
+| Problème | Vérification |
+|----------|--------------|
+| **Erreur de connexion DB** | Vérifier `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `pg_hba.conf` et le pare-feu |
+| **`JWT_SECRET` vide** | Le script doit recevoir les secrets GitHub ou un env chargé sur le VPS |
+| **n8n ne démarre pas** | Vérifier `N8N_ENCRYPTION_KEY`, `DB_NAME_N8N`, `N8N_RUNTIME_DIR` et les permissions du dossier data |
+| **502 Bad Gateway** | Vérifier la chaîne Nginx hôte `127.0.0.1:8786` -> Nginx Docker `127.0.0.1:8787` -> services Docker |
+| **Frontend inaccessible** | Vérifier `docker compose ps`, les logs `frontend` et la route `/login` |
+| **API inaccessible** | Vérifier `/api/health`, les logs `backend` et les migrations |
+| **Domaine n8n redirige mal** | Vérifier `N8N_DOMAIN`, `N8N_EDITOR_BASE_URL`, `WEBHOOK_URL` et `N8N_PATH=/` pour un domaine dédié |
 
 ### Commandes de Diagnostic
 
 ```bash
-# Voir les processus PM2
-pm2 status
+cd scripts/vps
 
-# Voir les logs en temps réel
-pm2 logs
+# Valider la configuration Compose interpolée
+docker compose config
 
-# Redémarrer un service
-pm2 restart rps-backend
+# Voir les conteneurs
+docker compose ps
 
-# Nettoyer et redémarrer
-pm2 delete all
-pm2 start scripts/vps/ecosystem.config.cjs
+# Logs application
+docker compose logs --tail 120 backend frontend nginx
+
+# Logs n8n si le runtime dédié est dans /srv/n8n
+cd /srv/n8n
+docker compose ps
+docker compose logs --tail 120
+
+# Tests réseau depuis le VPS
+curl -i http://127.0.0.1:8787/api/health
+curl -i -H "Host: appli.laroche360.ca" http://127.0.0.1:8787/login
+curl -i -H "Host: automation.laroche360.ca" http://127.0.0.1:8787/
+
+# Vérification Nginx hôte
+sudo nginx -t
+sudo systemctl status nginx
 ```
 
 ---
 
 ## Support
 
-Pour toute question ou probléme, contacter l'équipe de développement.
+Pour toute question ou problème, contacter l'équipe de développement.
 
 ---
 
-Derniére mise é jour : Mars 2026
+Dernière mise à jour : Mai 2026
