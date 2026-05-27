@@ -955,7 +955,7 @@ export function SurveyBuilderDemo({
           const token = entry.participation_token?.trim() || "";
 
           return {
-            name: `${firstName} ${lastName}`.trim() || "EmployÃ©",
+            name: `${firstName} ${lastName}`.trim() || "Employé",
             firstName: firstName || undefined,
             lastName: lastName || undefined,
             email: entry.employee?.email?.trim() || "",
