@@ -30,8 +30,8 @@ services:
       API_KEY: ${API_KEY:-}
 
       # n8n internal access
-      N8N_BASE_URL: ${N8N_BASE_URL:-http://host.docker.internal:5678/n8n}
-      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://host.docker.internal:5678/n8n}
+      N8N_BASE_URL: ${N8N_BASE_URL:-http://host.docker.internal:5678}
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://host.docker.internal:5678}
       N8N_WEBHOOK_PATH: ${N8N_WEBHOOK_PATH:-/webhook/sondage-rps-solutions-tech}
       N8N_HEALTH_REQUIRED: ${N8N_HEALTH_REQUIRED:-false}
     extra_hosts:
@@ -58,8 +58,8 @@ services:
       APP_URL: ${APP_URL:-http://localhost}
       STRAPI_API_TOKEN: ${STRAPI_API_TOKEN:-}
       ADMIN_ALLOWED_EMAILS: ${ADMIN_ALLOWED_EMAILS:-}
-      N8N_BASE_URL: ${N8N_BASE_URL:-http://host.docker.internal:5678/n8n}
-      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://host.docker.internal:5678/n8n}
+      N8N_BASE_URL: ${N8N_BASE_URL:-http://host.docker.internal:5678}
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://host.docker.internal:5678}
       N8N_WEBHOOK_PATH: ${N8N_WEBHOOK_PATH:-/webhook/sondage-rps-solutions-tech}
     depends_on:
       - backend

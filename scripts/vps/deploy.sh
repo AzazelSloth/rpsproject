@@ -46,7 +46,7 @@ N8N_HOST="${N8N_HOST:-n8n}"
 N8N_PORT="${N8N_PORT:-5678}"
 N8N_PROTOCOL="${N8N_PROTOCOL:-http}"
 N8N_SECURE_COOKIE="${N8N_SECURE_COOKIE:-}"
-N8N_PATH="${N8N_PATH:-/n8n/}"
+N8N_PATH="${N8N_PATH:-/}"
 N8N_EDITOR_BASE_URL="${N8N_EDITOR_BASE_URL:-}"
 WEBHOOK_URL="${WEBHOOK_URL:-}"
 N8N_PROXY_HOPS="${N8N_PROXY_HOPS:-1}"
@@ -138,6 +138,28 @@ ensure_absolute_path_or_default() {
   fi
 
   printf '%s' "$value"
+}
+
+normalize_dedicated_n8n_url() {
+  local value="${1:-}"
+  local host="${2:-}"
+
+  if [ -z "$value" ] || [ -z "$host" ]; then
+    printf '%s' "$value"
+    return
+  fi
+
+  case "$value" in
+    "http://$host/n8n/"*|"https://$host/n8n/"*)
+      printf '%s' "${value/\/n8n\//\/}"
+      ;;
+    "http://$host/n8n"|"https://$host/n8n")
+      printf '%s/' "${value%/n8n}"
+      ;;
+    *)
+      printf '%s' "$value"
+      ;;
+  esac
 }
 
 resolve_container_db_host() {
@@ -243,12 +265,34 @@ if [ -z "$APP_DOMAIN" ]; then
   APP_DOMAIN="$(extract_url_host "$PUBLIC_BASE_URL")"
 fi
 
+if { [ -n "$N8N_DOMAIN" ] && [ "$N8N_DOMAIN" != "$APP_DOMAIN" ]; } || ! is_internal_n8n_host "$N8N_HOST"; then
+  n8n_has_dedicated_public_host=true
+else
+  n8n_has_dedicated_public_host=false
+fi
+
+if [ "$n8n_has_dedicated_public_host" = "true" ] && [ "$N8N_PATH" != "/" ]; then
+  echo "WARNING: Dedicated n8n domain detected; forcing N8N_PATH=/ to avoid editor session issues behind the reverse proxy."
+  N8N_PATH="/"
+fi
+
+if [ "$n8n_has_dedicated_public_host" = "true" ] && [ "$N8N_PROTOCOL" = "http" ]; then
+  case "$PUBLIC_BASE_URL" in
+    https://*)
+      echo "WARNING: Dedicated n8n domain detected on an HTTPS deployment; forcing N8N_PROTOCOL=https."
+      N8N_PROTOCOL="https"
+      ;;
+  esac
+fi
+
 if [ -z "$NEXT_PUBLIC_API_URL" ]; then
   NEXT_PUBLIC_API_URL="$PUBLIC_BASE_URL/api"
 fi
 
 if [ -z "$N8N_EDITOR_BASE_URL" ]; then
-  if is_internal_n8n_host "$N8N_HOST"; then
+  if [ -n "$N8N_DOMAIN" ] && [ "$N8N_DOMAIN" != "$APP_DOMAIN" ]; then
+    N8N_EDITOR_BASE_URL="$N8N_PROTOCOL://$N8N_DOMAIN${N8N_PATH}"
+  elif is_internal_n8n_host "$N8N_HOST"; then
     N8N_EDITOR_BASE_URL="$PUBLIC_BASE_URL${N8N_PATH}"
   else
     N8N_EDITOR_BASE_URL="$N8N_PROTOCOL://$N8N_HOST${N8N_PATH}"
@@ -256,7 +300,9 @@ if [ -z "$N8N_EDITOR_BASE_URL" ]; then
 fi
 
 if [ -z "$WEBHOOK_URL" ]; then
-  if is_internal_n8n_host "$N8N_HOST"; then
+  if [ -n "$N8N_DOMAIN" ] && [ "$N8N_DOMAIN" != "$APP_DOMAIN" ]; then
+    WEBHOOK_URL="$N8N_PROTOCOL://$N8N_DOMAIN${N8N_PATH}"
+  elif is_internal_n8n_host "$N8N_HOST"; then
     WEBHOOK_URL="$PUBLIC_BASE_URL${N8N_PATH}"
   else
     WEBHOOK_URL="$N8N_PROTOCOL://$N8N_HOST${N8N_PATH}"
@@ -274,6 +320,25 @@ if [ -z "$N8N_DOMAIN" ] && ! is_internal_n8n_host "$N8N_HOST"; then
 fi
 if [ -z "$N8N_DOMAIN" ]; then
   N8N_DOMAIN="automation.laroche360.ca"
+fi
+
+if [ -n "$N8N_DOMAIN" ] && [ "$N8N_DOMAIN" != "$APP_DOMAIN" ]; then
+  if [ "$N8N_PATH" != "/" ]; then
+    echo "WARNING: Dedicated n8n domain detected; forcing N8N_PATH=/ to avoid editor session issues behind the reverse proxy."
+    N8N_PATH="/"
+  fi
+
+  NORMALIZED_N8N_EDITOR_BASE_URL="$(normalize_dedicated_n8n_url "$N8N_EDITOR_BASE_URL" "$N8N_DOMAIN")"
+  if [ "$NORMALIZED_N8N_EDITOR_BASE_URL" != "$N8N_EDITOR_BASE_URL" ]; then
+    echo "WARNING: Removing /n8n from N8N_EDITOR_BASE_URL for the dedicated n8n domain."
+    N8N_EDITOR_BASE_URL="$NORMALIZED_N8N_EDITOR_BASE_URL"
+  fi
+
+  NORMALIZED_WEBHOOK_URL="$(normalize_dedicated_n8n_url "$WEBHOOK_URL" "$N8N_DOMAIN")"
+  if [ "$NORMALIZED_WEBHOOK_URL" != "$WEBHOOK_URL" ]; then
+    echo "WARNING: Removing /n8n from WEBHOOK_URL for the dedicated n8n domain."
+    WEBHOOK_URL="$NORMALIZED_WEBHOOK_URL"
+  fi
 fi
 
 if [ -z "$N8N_SECURE_COOKIE" ]; then

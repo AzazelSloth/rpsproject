@@ -36,25 +36,25 @@ describe('getN8nWebhookUrl', () => {
     expect(getN8nBaseUrl()).toBe('http://localhost:5678');
   });
 
-  it('uses the default public n8n subpath when no environment value is set', () => {
+  it('uses the default public n8n subdomain when no environment value is set', () => {
     delete process.env.N8N_WEBHOOK_URL;
     delete process.env.N8N_BASE_URL;
     delete process.env.N8N_WEBHOOK_PATH;
 
     expect(getN8nWebhookUrl()).toBe(
-      'https://automation.laroche360.ca/n8n/webhook/rps-analysis',
+      'https://automation.laroche360.ca/webhook/rps-analysis',
     );
-    expect(getN8nBaseUrl()).toBe('https://automation.laroche360.ca/n8n');
+    expect(getN8nBaseUrl()).toBe('https://automation.laroche360.ca');
   });
 
-  it('keeps n8n subpath when base URL has trailing slash', () => {
-    process.env.N8N_BASE_URL = 'https://automation.laroche360.ca/n8n/';
+  it('keeps the public n8n subdomain when base URL has trailing slash', () => {
+    process.env.N8N_BASE_URL = 'https://automation.laroche360.ca/';
     delete process.env.N8N_WEBHOOK_URL;
     delete process.env.N8N_WEBHOOK_PATH;
 
-    expect(getN8nBaseUrl()).toBe('https://automation.laroche360.ca/n8n');
+    expect(getN8nBaseUrl()).toBe('https://automation.laroche360.ca');
     expect(getN8nWebhookUrl()).toBe(
-      'https://automation.laroche360.ca/n8n/webhook/rps-analysis',
+      'https://automation.laroche360.ca/webhook/rps-analysis',
     );
   });
 
@@ -68,26 +68,26 @@ describe('getN8nWebhookUrl', () => {
     );
   });
 
-  it('normalizes a public webhook URL that misses the /n8n subpath', () => {
+  it('keeps a public webhook URL on the n8n subdomain unchanged', () => {
     process.env.N8N_WEBHOOK_URL =
       'https://automation.laroche360.ca/webhook/rps-analysis';
     delete process.env.N8N_BASE_URL;
     delete process.env.N8N_WEBHOOK_PATH;
 
     expect(getN8nWebhookUrl()).toBe(
-      'https://automation.laroche360.ca/n8n/webhook/rps-analysis',
+      'https://automation.laroche360.ca/webhook/rps-analysis',
     );
-    expect(getN8nBaseUrl()).toBe('https://automation.laroche360.ca/n8n');
+    expect(getN8nBaseUrl()).toBe('https://automation.laroche360.ca');
   });
 
-  it('normalizes a public base URL that misses the /n8n subpath', () => {
+  it('builds a public webhook URL from the n8n subdomain', () => {
     process.env.N8N_BASE_URL = 'https://automation.laroche360.ca';
     delete process.env.N8N_WEBHOOK_URL;
     delete process.env.N8N_WEBHOOK_PATH;
 
-    expect(getN8nBaseUrl()).toBe('https://automation.laroche360.ca/n8n');
+    expect(getN8nBaseUrl()).toBe('https://automation.laroche360.ca');
     expect(getN8nWebhookUrl()).toBe(
-      'https://automation.laroche360.ca/n8n/webhook/rps-analysis',
+      'https://automation.laroche360.ca/webhook/rps-analysis',
     );
   });
 });

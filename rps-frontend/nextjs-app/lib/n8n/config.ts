@@ -1,4 +1,4 @@
-const DEFAULT_N8N_BASE_URL = "https://automation.laroche360.ca/n8n";
+const DEFAULT_N8N_BASE_URL = "https://automation.laroche360.ca";
 const DEFAULT_N8N_WEBHOOK_PATH = "/webhook/rps-analysis";
 const WEBHOOK_SUFFIX_PATTERN = /\/webhook(?:-test|-waiting)?\/.+$/i;
 
