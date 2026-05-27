@@ -307,15 +307,26 @@ export class CampaignService {
     };
 
     try {
-      const response = await fetch(this.n8nWebhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const primaryWebhookUrl = this.n8nWebhookUrl;
+      let requestUrl = primaryWebhookUrl;
+      let response = await this.sendAnalysisWebhook(requestUrl, payload);
+
+      if (!response.ok && response.status === 404) {
+        const fallbackWebhookUrl =
+          this.getAnalysisWebhookFallbackUrl(primaryWebhookUrl);
+
+        if (fallbackWebhookUrl) {
+          this.logger.warn(
+            `n8n webhook not found at ${primaryWebhookUrl}. Retrying ${fallbackWebhookUrl}.`,
+          );
+          requestUrl = fallbackWebhookUrl;
+          response = await this.sendAnalysisWebhook(requestUrl, payload);
+        }
+      }
 
       if (!response.ok) {
         this.logger.error(
-          `n8n webhook failed: ${response.status} ${response.statusText}`,
+          `n8n webhook failed (${requestUrl}): ${response.status} ${response.statusText}`,
         );
         throw new InternalServerErrorException(
           "Erreur lors de l'envoi de l'analyse a n8n",
@@ -331,11 +342,35 @@ export class CampaignService {
           'Analyse lancee. Vous recevrez le rapport par email dans 1 a 2 minutes.',
       };
     } catch (error) {
-      this.logger.error('Failed to call n8n webhook', error);
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+
+      this.logger.error(`Failed to call n8n webhook (${this.n8nWebhookUrl})`, error);
       throw new InternalServerErrorException(
         "Erreur lors du lancement de l'analyse. Verifiez que n8n est demarre.",
       );
     }
+  }
+
+  private sendAnalysisWebhook(webhookUrl: string, payload: unknown) {
+    return fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  private getAnalysisWebhookFallbackUrl(webhookUrl: string) {
+    if (webhookUrl.includes('/webhook/rps-analysis')) {
+      return webhookUrl.replace('/webhook/rps-analysis', '/webhook/rps-aanalysis');
+    }
+
+    if (webhookUrl.includes('/webhook/rps-aanalysis')) {
+      return webhookUrl.replace('/webhook/rps-aanalysis', '/webhook/rps-analysis');
+    }
+
+    return null;
   }
 
   private ensureValidDateRange(startDate?: Date | null, endDate?: Date | null) {
