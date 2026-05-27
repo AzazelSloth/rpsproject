@@ -67,6 +67,29 @@ describe('getN8nWebhookUrl', () => {
       'http://localhost:5678/webhook/rps-analysis',
     );
   });
+
+  it('normalizes a public webhook URL that misses the /n8n subpath', () => {
+    process.env.N8N_WEBHOOK_URL =
+      'https://automation.laroche360.ca/webhook/rps-analysis';
+    delete process.env.N8N_BASE_URL;
+    delete process.env.N8N_WEBHOOK_PATH;
+
+    expect(getN8nWebhookUrl()).toBe(
+      'https://automation.laroche360.ca/n8n/webhook/rps-analysis',
+    );
+    expect(getN8nBaseUrl()).toBe('https://automation.laroche360.ca/n8n');
+  });
+
+  it('normalizes a public base URL that misses the /n8n subpath', () => {
+    process.env.N8N_BASE_URL = 'https://automation.laroche360.ca';
+    delete process.env.N8N_WEBHOOK_URL;
+    delete process.env.N8N_WEBHOOK_PATH;
+
+    expect(getN8nBaseUrl()).toBe('https://automation.laroche360.ca/n8n');
+    expect(getN8nWebhookUrl()).toBe(
+      'https://automation.laroche360.ca/n8n/webhook/rps-analysis',
+    );
+  });
 });
 
 function restoreEnvValue(key: string, value: string | undefined) {
