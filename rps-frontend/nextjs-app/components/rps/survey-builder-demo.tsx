@@ -43,6 +43,8 @@ type ImportedParticipantPayload = {
 type ImportEmployeesResponse = {
   imported_employees?: number;
   participants?: ImportedParticipantPayload[];
+  skipped_conflicts?: string[];
+  skipped_conflicts_count?: number;
 };
 
 type SendInvitationsResponse = {
@@ -931,15 +933,60 @@ export function SurveyBuilderDemo({
 
         console.log("Processed participants:", participants);
 
-        setImportSuccess({
-          count: result.imported_employees || participants.length,
-          participants,
+        const progressResult = (await getTrpcClient().campaignParticipants.getCampaignProgress.query({
+          campaignId,
+        })) as {
+          total_participants?: number;
+          participants?: Array<{
+            status?: string;
+            participation_token?: string | null;
+            employee?: {
+              first_name?: string;
+              last_name?: string;
+              email?: string;
+              department?: string | null;
+            };
+          }>;
+        };
+
+        const participantsFromProgress = (progressResult.participants ?? []).map((entry) => {
+          const firstName = entry.employee?.first_name?.trim() || "";
+          const lastName = entry.employee?.last_name?.trim() || "";
+          const token = entry.participation_token?.trim() || "";
+
+          return {
+            name: `${firstName} ${lastName}`.trim() || "EmployÃ©",
+            firstName: firstName || undefined,
+            lastName: lastName || undefined,
+            email: entry.employee?.email?.trim() || "",
+            department: entry.employee?.department?.trim() || undefined,
+            status: entry.status || "pending",
+            link: token ? toAbsoluteSurveyUrl(`/survey-response/${token}`) : "",
+          };
         });
-        setImportedParticipants(participants);
-        setParticipantCount(result.imported_employees || participants.length);
+
+        const finalParticipants =
+          participantsFromProgress.length > 0 ? participantsFromProgress : participants;
+        const importedCount =
+          result.imported_employees ||
+          progressResult.total_participants ||
+          finalParticipants.length;
+        const skippedConflictsCount =
+          result.skipped_conflicts_count ?? result.skipped_conflicts?.length ?? 0;
+        const feedbackMessage =
+          skippedConflictsCount > 0
+            ? `Import terminé: ${importedCount} employé(s) importé(s), ${skippedConflictsCount} ignoré(s) car déjà associé(s) à une autre entreprise.`
+            : "Import terminé. Vous pouvez maintenant télécharger la liste des employés avec leurs liens respectifs.";
+
+        setImportSuccess({
+          count: importedCount,
+          participants: finalParticipants,
+        });
+        setImportedParticipants(finalParticipants);
+        setParticipantCount(importedCount);
         setHasDownloadedLinks(false);
         setHasSentInvitations(false);
-        setImportFeedback("Import terminé. Vous pouvez maintenant télécharger la liste des employés avec leurs liens respectifs.");
+        setImportFeedback(feedbackMessage);
         if (mode === "edit") {
           router.refresh();
         }

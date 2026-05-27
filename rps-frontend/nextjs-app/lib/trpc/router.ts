@@ -274,6 +274,17 @@ const campaignParticipantsRouter = t.router({
 			});
 		}),
 
+	getCampaignProgress: t.procedure
+		.input(
+			z.object({
+				campaignId: z.number().int().positive(),
+			}),
+		)
+		.query(async ({ input }) => {
+			ensureBackendConfigured();
+			return getBackendItem(`/campaign-participants/campaign/${input.campaignId}/progress`);
+		}),
+
 	remind: t.procedure
 		.input(
 			z.object({

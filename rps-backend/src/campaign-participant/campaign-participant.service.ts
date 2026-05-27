@@ -433,7 +433,7 @@ export class CampaignParticipantService {
 
   private async ensureParticipationTokens(participants: CampaignParticipant[]) {
     const missingTokens = participants.filter(
-      (participant) => !participant.participation_token,
+      (participant) => !participant.participation_token?.trim(),
     );
 
     if (!missingTokens.length) {
@@ -505,6 +505,7 @@ export class CampaignParticipantService {
       }
 
       const employeesByEmail = new Map<string, Employee>();
+      const crossCompanyConflicts = new Set<string>();
       const BATCH_SIZE = 50;
 
       for (let i = 0; i < normalizedRows.length; i += BATCH_SIZE) {
@@ -544,6 +545,7 @@ export class CampaignParticipantService {
               existingEmployee &&
               existingEmployee.company.id !== payload.company_id
             ) {
+              crossCompanyConflicts.add(email);
               this.logger.warn(
                 `[Import] Employee ${email} already exists for different company. Skipping.`,
               );
@@ -612,6 +614,14 @@ export class CampaignParticipantService {
       }
 
       const employees = Array.from(employeesByEmail.values());
+
+      if (employees.length === 0 && crossCompanyConflicts.size > 0) {
+        const conflictList = Array.from(crossCompanyConflicts);
+        const preview = conflictList.slice(0, 5).join(', ');
+        throw new BadRequestException(
+          `Import impossible: ${conflictList.length} adresse(s) email existe(nt) deja dans une autre entreprise (${preview}${conflictList.length > 5 ? ', ...' : ''}). Utilisez une autre adresse email ou la bonne entreprise.`,
+        );
+      }
 
       this.logger.log(
         `[Import] Successfully imported ${employees.length} unique employees`,
@@ -771,6 +781,8 @@ export class CampaignParticipantService {
         }),
         company_names: uniqueCompanyNames,
         analysis_status: 'manual_trigger_required',
+        skipped_conflicts: Array.from(crossCompanyConflicts),
+        skipped_conflicts_count: crossCompanyConflicts.size,
       };
 
       return result;
