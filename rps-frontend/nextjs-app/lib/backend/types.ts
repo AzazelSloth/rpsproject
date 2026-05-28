@@ -24,6 +24,11 @@ export type BackendCampaign = {
   created_at: string;
   company: BackendCompany;
   questions: BackendQuestion[];
+  reports?: {
+    id: number;
+    report_path: string | null;
+    created_at: string;
+  }[];
 };
 
 export type BackendEmployee = {

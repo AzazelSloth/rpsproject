@@ -12,19 +12,21 @@ type AnalyzeState =
 export function ResultsAnalyzeButton({
   campaignId,
   canAnalyze,
+  hasDeliveredReport = false,
   disabledReason = "Analyse disponible apres la date de fin du sondage.",
 }: {
   campaignId: number;
   canAnalyze: boolean;
+  hasDeliveredReport?: boolean;
   disabledReason?: string;
 }) {
   const router = useRouter();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [state, setState] = useState<AnalyzeState>({ type: "idle", message: null });
-  const isDisabled = isAnalyzing || !canAnalyze;
+  const isDisabled = isAnalyzing || !canAnalyze || hasDeliveredReport;
 
   async function handleAnalyze() {
-    if (!canAnalyze) {
+    if (!canAnalyze || hasDeliveredReport) {
       return;
     }
 
@@ -35,7 +37,7 @@ export function ResultsAnalyzeButton({
       const result = await getTrpcClient().adminSurveys.analyzeCampaign.mutate({ campaignId });
       setState({
         type: "success",
-        message: result.message || "Analyse lancee. Le rapport sera envoye par email.",
+        message: result.message || "Analyse lancee. Consultez votre Drive dans quelques minutes.",
       });
       router.refresh();
     } catch (error) {
@@ -43,6 +45,14 @@ export function ResultsAnalyzeButton({
     } finally {
       setIsAnalyzing(false);
     }
+  }
+
+  if (hasDeliveredReport) {
+    return (
+      <div className="max-w-[14rem] rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold leading-5 text-emerald-800">
+        Analyse terminee. Consultez votre Drive.
+      </div>
+    );
   }
 
   return (

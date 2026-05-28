@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Card, Pill } from "@/components/rps/ui";
 import { hasCampaignEnded } from "@/lib/campaigns/dates";
@@ -16,10 +15,8 @@ const STATUS_FILTERS = [
 
 export function ResultsSurveyTable({
   surveys,
-  scenario,
 }: {
   surveys: SurveyOption[];
-  scenario?: string | null;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -46,7 +43,7 @@ export function ResultsSurveyTable({
             Tableau des sondages
           </h3>
           <p className="mt-1 text-sm text-slate-500">
-            Retrouve rapidement un sondage pour acceder aux resultats ou au rapport.
+            Retrouve rapidement un sondage pour acceder aux resultats ou lancer l'analyse Drive.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -118,13 +115,11 @@ export function ResultsSurveyTable({
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
-                        <ResultsAnalyzeButton campaignId={survey.id} canAnalyze={canAnalyze} />
-                        <Link
-                          href={buildReportHref(survey.id, scenario ?? null)}
-                          className="inline-flex items-center justify-center rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-[0_12px_24px_rgba(24,24,24,0.06)] transition hover:-translate-y-0.5 hover:bg-slate-50"
-                        >
-                          Rapport
-                        </Link>
+                        <ResultsAnalyzeButton
+                          campaignId={survey.id}
+                          canAnalyze={canAnalyze}
+                          hasDeliveredReport={survey.hasDeliveredReport}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -177,21 +172,6 @@ function formatStatusLabel(value: string) {
     return "Archivé";
   }
   return value || "inconnu";
-}
-
-function buildReportHref(campaignId: number | null, scenario?: string | null) {
-  const params = new URLSearchParams();
-
-  if (campaignId) {
-    params.set("campaignId", String(campaignId));
-  }
-
-  if (scenario) {
-    params.set("scenario", scenario);
-  }
-
-  const query = params.toString();
-  return query ? `/report?${query}` : "/report";
 }
 
 function normalizeSearchText(value: string) {

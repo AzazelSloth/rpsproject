@@ -41,10 +41,10 @@ export default async function ResultsPage({
         <SectionHeader
           eyebrow="Résultats"
           title="Résultats par sondage"
-          description="Sélectionne un sondage pour consulter les indicateurs, les analyses détaillées et le rapport."
+          description="Sélectionne un sondage pour consulter les indicateurs et les analyses détaillées."
         />
 
-        <ResultsSurveyTable surveys={visibleSurveys} scenario={scenario ?? null} />
+        <ResultsSurveyTable surveys={visibleSurveys} />
 
         {view === "detail" ? (
           <>
@@ -53,7 +53,7 @@ export default async function ResultsPage({
                 Détail du sondage
               </h2>
               <Link href={reportHref} className="inline-flex">
-                <PrimaryButton>Voir le rapport</PrimaryButton>
+                <PrimaryButton>Voir la synthese</PrimaryButton>
               </Link>
             </div>
 

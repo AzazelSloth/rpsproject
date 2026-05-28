@@ -5,7 +5,6 @@ import { getServerBackendCollection as getBackendCollection } from "@/lib/backen
 import type { BackendCampaign, BackendCompany, BackendReport } from "@/lib/backend/types";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
 import { CampaignReportsTable } from "./CampaignReportsTable";
-import DownloadReportButton from "./DownloadReportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +24,7 @@ export default async function ReportPage({
         <SectionHeader
           eyebrow="Rapports"
           title="Rapports Résultats"
-          description="Configure le backend pour lancer l'analyse IA de tes campagnes et recevoir tes rapports par email."
+          description="Configure le backend pour lancer l'analyse IA de tes campagnes et consulter les livraisons dans Drive."
         />
         <Card className="p-8 text-center">
           <p className="text-slate-500">Backend non configuré.</p>
@@ -48,17 +47,15 @@ export default async function ReportPage({
         campaignId: selectedCampaignId,
       }),
     ]);
-    const exportHref = buildExportHref(selectedCampaignId, scenario ?? null);
-
     return (
       <section className="space-y-6">
         <SectionHeader
           eyebrow="Rapports"
           title="Rapports Résultats"
-          description="Analyse des campagnes et rapports par email."
+          description="Analyse des campagnes et suivi des livraisons Drive."
         />
 
-        <ReportOverview report={reportData} results={resultsData} exportHref={exportHref} />
+        <ReportOverview report={reportData} results={resultsData} />
 
         <CampaignReportsTable
           campaigns={campaigns}
@@ -74,7 +71,7 @@ export default async function ReportPage({
       <PageErrorState
         eyebrow="Rapports"
         title="Rapports Résultats"
-        description="Analyse des campagnes et rapports par email."
+        description="Analyse des campagnes et suivi des livraisons Drive."
         message={
           error instanceof Error ? error.message : "Les rapports n'ont pas pu être chargés."
         }
@@ -106,10 +103,9 @@ type ReportOverviewProps = {
     }[];
     analysis: string[];
   };
-  exportHref: string;
 };
 
-function ReportOverview({ report, results, exportHref }: ReportOverviewProps) {
+function ReportOverview({ report, results }: ReportOverviewProps) {
   return (
     <div className="space-y-5">
    
@@ -256,19 +252,4 @@ function ReportOverview({ report, results, exportHref }: ReportOverviewProps) {
       </Card>
     </div>
   );
-}
-
-function buildExportHref(campaignId: number | null, scenario?: string | null) {
-  const params = new URLSearchParams();
-
-  if (campaignId) {
-    params.set("campaignId", String(campaignId));
-  }
-
-  if (scenario) {
-    params.set("scenario", scenario);
-  }
-
-  const query = params.toString();
-  return query ? `/report/export-docx?${query}` : "/report/export-docx";
 }
