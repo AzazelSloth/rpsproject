@@ -33,6 +33,7 @@ Etat recommande pour la reprise :
 rps-project/
   rps-backend/                 API NestJS
   rps-frontend/nextjs-app/      Interface Next.js
+  rps-automation/               Base de reference du workflow n8n
   scripts/                      Scripts de deploiement
   .env.n8n.example              Exemple de configuration n8n
   README.md                     Documentation technique existante
@@ -46,7 +47,7 @@ Fichiers importants :
 - Frontend sondages : `rps-frontend/nextjs-app/components/rps/survey-builder-demo.tsx`
 - Frontend participants : `rps-frontend/nextjs-app/components/rps/employees-table-demo.tsx`
 - Template rapport Strapi : `rps-frontend/nextjs-app/STRAPI_REPORT_TEMPLATE.md`
-- Workflow n8n : configurer et maintenir directement dans l'UI n8n
+- Workflow n8n : `rps-automation/NEW WORKFLOW RSP.json` comme base de reference, puis import/configuration dans l'UI n8n
 
 ## 3. Parcours fonctionnel de l'application
 
@@ -405,8 +406,15 @@ Regle de securite :
 
 ## 9. Guide n8n
 
-Le workflow n8n actif est celui configure dans l'UI n8n. Le depot ne fournit
-plus de fichier JSON d'exemple comme source de verite.
+Le workflow n8n actif est celui configure dans l'UI n8n, mais le depot conserve
+un fichier de reference servant de base de reimport et de reconstruction :
+
+```text
+rps-automation/NEW WORKFLOW RSP.json
+```
+
+Ne pas supprimer ce fichier sans validation explicite avec la personne qui
+maintient n8n.
 
 Configuration exemple :
 
@@ -432,6 +440,7 @@ Variables importantes :
 Checklist de validation n8n :
 
 - verifier que le workflow actif dans l'UI n8n est le bon ;
+- conserver `rps-automation/NEW WORKFLOW RSP.json` comme base de reference ;
 - configurer les credentials Google / SendGrid ;
 - verifier le webhook `/webhook/rps-analysis` ;
 - verifier que n8n peut appeler le backend public ;

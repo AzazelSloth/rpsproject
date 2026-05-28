@@ -246,6 +246,15 @@ Si le workflow existe deja dans n8n :
 4. Verifier ou reconnecter les credentials Google du client dans les nodes
    Google si necessaire.
 
+Le fichier de reference du workflow est conserve dans le depot :
+
+```text
+rps-automation/NEW WORKFLOW RSP.json
+```
+
+Il sert de base de reimport ou de reconstruction si le workflow doit etre
+restaure dans n8n.
+
 ## 5. Configurer le Webhook
 
 Dans le node `Webhook` :
