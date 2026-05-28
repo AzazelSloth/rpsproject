@@ -223,22 +223,15 @@ Point de controle : si n8n est encore connecte avec ton compte personnel, les
 fichiers risquent d'etre crees avec ton compte. Il faut que les nodes Google
 utilisent les credentials du client.
 
-## 4. Importer ou ouvrir le workflow n8n
+## 4. Ouvrir le workflow n8n actif
 
 Si le workflow existe deja dans n8n :
 
 1. Ouvrir le workflow d'analyse RPS.
 2. Verifier qu'il contient un node `Webhook`.
-
-Si le workflow doit etre importe :
-
-1. Dans n8n, cliquer sur les trois points en haut a droite.
-2. Choisir `Import from File`.
-3. Importer le fichier JSON du workflow.
-4. Sauvegarder le workflow.
-
-Apres import, les credentials ne sont pas reconnectees automatiquement. Il faut
-reselectionner les credentials Google du client dans chaque node Google.
+3. Verifier que c'est bien ce workflow qui est actif en production.
+4. Verifier ou reconnecter les credentials Google du client dans les nodes
+   Google si necessaire.
 
 ## 5. Configurer le Webhook
 

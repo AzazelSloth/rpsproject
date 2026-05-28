@@ -307,22 +307,8 @@ export class CampaignService {
     };
 
     try {
-      const primaryWebhookUrl = this.n8nWebhookUrl;
-      let requestUrl = primaryWebhookUrl;
-      let response = await this.sendAnalysisWebhook(requestUrl, payload);
-
-      if (!response.ok && response.status === 404) {
-        const fallbackWebhookUrl =
-          this.getAnalysisWebhookFallbackUrl(primaryWebhookUrl);
-
-        if (fallbackWebhookUrl) {
-          this.logger.warn(
-            `n8n webhook not found at ${primaryWebhookUrl}. Retrying ${fallbackWebhookUrl}.`,
-          );
-          requestUrl = fallbackWebhookUrl;
-          response = await this.sendAnalysisWebhook(requestUrl, payload);
-        }
-      }
+      const requestUrl = this.n8nWebhookUrl;
+      const response = await this.sendAnalysisWebhook(requestUrl, payload);
 
       if (!response.ok) {
         const responseBody = await this.getWebhookResponsePreview(response);
@@ -378,22 +364,10 @@ export class CampaignService {
 
   private getWebhookDeliveryErrorMessage(response: Response, requestUrl: string) {
     if (response.status === 404) {
-      return `n8n a repondu 404 pour ${requestUrl}. Verifiez que le workflow est actif et que N8N_WEBHOOK_PATH pointe vers /webhook/rps-analysis.`;
+      return `n8n a repondu 404 pour ${requestUrl}. Verifiez que le workflow actif dans l'UI n8n utilise bien ce webhook et que N8N_WEBHOOK_URL/N8N_WEBHOOK_PATH correspondent a cette configuration.`;
     }
 
     return `n8n a repondu ${response.status} ${response.statusText || ''}. Consultez les logs du workflow n8n.`;
-  }
-
-  private getAnalysisWebhookFallbackUrl(webhookUrl: string) {
-    if (webhookUrl.includes('/webhook/rps-analysis')) {
-      return webhookUrl.replace('/webhook/rps-analysis', '/webhook/rps-aanalysis');
-    }
-
-    if (webhookUrl.includes('/webhook/rps-aanalysis')) {
-      return webhookUrl.replace('/webhook/rps-aanalysis', '/webhook/rps-analysis');
-    }
-
-    return null;
   }
 
   private ensureValidDateRange(startDate?: Date | null, endDate?: Date | null) {

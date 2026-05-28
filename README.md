@@ -238,8 +238,6 @@ rps-project/
 |       +-- rps_deployment.yml      # Pipeline CI/CD GitHub Actions
 +-- docs/
 |   +-- GUIDE_PASSATION_ET_MODIFICATIONS.md
-+-- rps-automation/
-|   +-- NEW WORKFLOW RSP.json       # Workflow n8n
 +-- rps-backend/
 |   +-- src/
 |   |   +-- auth/
