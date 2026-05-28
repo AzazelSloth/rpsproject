@@ -44,7 +44,7 @@ export default async function ResultsPage({
           description="Sélectionne un sondage pour consulter les indicateurs et les analyses détaillées."
         />
 
-        <ResultsSurveyTable surveys={visibleSurveys} />
+        <ResultsSurveyTable surveys={visibleSurveys} scenario={scenario ?? null} />
 
         {view === "detail" ? (
           <>
