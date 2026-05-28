@@ -15,6 +15,7 @@ Pour la prise en main par Abondelire / LaRoche et le guide des modifications
 possibles côté client, consulter :
 
 - [Guide de passation et de modification](docs/GUIDE_PASSATION_ET_MODIFICATIONS.md)
+- [Guide de configuration n8n client](docs/GUIDE_CONFIGURATION_N8N_CLIENT.md)
 
 ---
 

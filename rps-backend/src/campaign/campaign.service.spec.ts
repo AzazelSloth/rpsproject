@@ -220,7 +220,7 @@ describe('CampaignService', () => {
     expect(result).toEqual({
       success: true,
       message:
-        'Analyse lancee. Vous recevrez le rapport par email dans 1 a 2 minutes.',
+        'Analyse lancee. Le rapport sera disponible dans Google Drive dans quelques minutes.',
     });
     expect(fetchMock).toHaveBeenCalledWith(
       'http://n8n.test/webhook/rps',
@@ -304,7 +304,7 @@ describe('CampaignService', () => {
     ).resolves.toEqual({
       success: true,
       message:
-        'Analyse lancee. Vous recevrez le rapport par email dans 1 a 2 minutes.',
+        'Analyse lancee. Le rapport sera disponible dans Google Drive dans quelques minutes.',
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);

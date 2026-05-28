@@ -26,8 +26,7 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/admin/") ||
     pathname.startsWith("/trpc") ||
     pathname.startsWith("/webhook/") ||
-    pathname === "/survey-responses" ||
-    pathname === "/report/export-docx"
+    pathname === "/survey-responses"
   ) {
     return NextResponse.next();
   }

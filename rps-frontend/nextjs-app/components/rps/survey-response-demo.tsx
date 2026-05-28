@@ -83,7 +83,7 @@ export function SurveyResponseDemo({
     return (
       <Card className="mx-auto max-w-3xl border border-emerald-200 bg-emerald-50 p-5">
         <p className="text-sm font-semibold text-emerald-800">
-          Ce sondage a dÃ©jÃ  Ã©tÃ© complÃ©tÃ©.
+          Ce sondage a déjà  été complété.
         </p>
       </Card>
     );

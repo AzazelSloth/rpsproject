@@ -192,7 +192,7 @@ export function CampaignReportsTable({
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-sm font-medium text-[#9b7223] hover:underline"
                         >
-                          📄 Voir rapport
+                          📄 Consulter Drive
                         </a>
                       ) : (
                         <span className="text-xs text-slate-400">Aucun rapport</span>
@@ -231,7 +231,7 @@ export function CampaignReportsTable({
       {/* <Card className="border-l-4 border-amber-400 bg-amber-50 px-5 py-4">
         <p className="text-sm text-amber-900">
           💡 <strong>Info :</strong> L&apos;analyse prend 1 à 2 minutes. Le rapport complet sera
-          envoyé par email avec un lien vers Google Drive.
+          disponible dans Google Drive.
         </p>
       </Card> */}
     </div>

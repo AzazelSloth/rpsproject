@@ -229,6 +229,7 @@ export type SurveyOption = {
   participationRate: number;
   totalParticipants: number;
   completedParticipants: number;
+  hasDeliveredReport: boolean;
 };
 
 export async function getAllSurveys(scenario?: string | null): Promise<SurveyOption[]> {
@@ -603,6 +604,7 @@ function mapSurveyOption(
     participationRate: progress?.participation_rate ?? 0,
     totalParticipants: progress?.total_participants ?? 0,
     completedParticipants: progress?.completed_participants ?? 0,
+    hasDeliveredReport: Boolean(campaign.reports?.length),
   };
 }
 

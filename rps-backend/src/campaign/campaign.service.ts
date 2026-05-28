@@ -345,7 +345,7 @@ export class CampaignService {
       return {
         success: true,
         message:
-          'Analyse lancee. Vous recevrez le rapport par email dans 1 a 2 minutes.',
+          'Analyse lancee. Le rapport sera disponible dans Google Drive dans quelques minutes.',
       };
     } catch (error) {
       if (error instanceof InternalServerErrorException) {
