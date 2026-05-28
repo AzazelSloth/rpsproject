@@ -223,6 +223,19 @@ Point de controle : si n8n est encore connecte avec ton compte personnel, les
 fichiers risquent d'etre crees avec ton compte. Il faut que les nodes Google
 utilisent les credentials du client.
 
+## 3.b SendGrid dans n8n
+
+Dans ce deploiement, la variable `SENDGRID_API_KEY` est injectee dans n8n au
+demarrage via un credential overwrite. Cela permet au node `SendGrid` d'utiliser
+la cle de deploiement sans la ressaisir manuellement apres chaque redeploiement.
+
+Point de controle :
+
+1. Le workflow utilise bien un node `SendGrid`, pas un node HTTP artisanal.
+2. Le node `SendGrid` reference une credential de type `SendGrid`.
+3. Apres redeploiement, si la cle a change, recreer le conteneur n8n pour que
+   le credential overwrite soit recharge.
+
 ## 4. Ouvrir le workflow n8n actif
 
 Si le workflow existe deja dans n8n :
