@@ -21,11 +21,6 @@ export function isAdminEmailAllowed(email: string): boolean {
   return getAllowedAdminEmails().includes(normalizedEmail);
 }
 
-export function getBootstrapAdminEmails() {
-  const bootstrapEmails = parseEmailList(process.env.ADMIN_BOOTSTRAP_EMAILS);
-  return bootstrapEmails.length ? bootstrapEmails : getAllowedAdminEmails();
-}
-
 export function getAllowedRegistrationDomains(): string[] {
   return parseDomainList(process.env.ALLOWED_REGISTRATION_DOMAINS);
 }

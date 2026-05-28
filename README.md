@@ -178,13 +178,11 @@ DB_LOGGING=false
 SWAGGER_ENABLED=true
 SWAGGER_PATH=api-docs
 ADMIN_ALLOWED_EMAILS=admin@example.com
-ADMIN_BOOTSTRAP_EMAILS=admin@example.com
-ADMIN_BOOTSTRAP_PASSWORD=change-me
 ALLOWED_REGISTRATION_DOMAINS=example.com,localhost.local
 N8N_HEALTH_REQUIRED=false
 ```
 
-Appliquer les migrations TypeORM et créer le compte d'amorçage si besoin :
+Appliquer les migrations TypeORM :
 
 ```bash
 npm run migration:run
@@ -295,8 +293,6 @@ DB_NAME=rps_platform
 DB_SYNCHRONIZE=false
 DB_LOGGING=false
 ADMIN_ALLOWED_EMAILS=
-ADMIN_BOOTSTRAP_EMAILS=
-ADMIN_BOOTSTRAP_PASSWORD=
 ALLOWED_REGISTRATION_DOMAINS=localhost.local
 SENDGRID_API_KEY=
 N8N_BASE_URL=https://automation.laroche360.ca
@@ -421,7 +417,6 @@ Secrets principaux :
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | PostgreSQL applicatif |
 | `DB_NAME_N8N` | Base PostgreSQL n8n |
 | `N8N_ENCRYPTION_KEY` | Clé de chiffrement n8n |
-| `N8N_BASIC_AUTH_USER`, `N8N_BASIC_AUTH_PASSWORD` | Accès n8n si l'auth basique est active |
 | `SENDGRID_API_KEY` | Envoi des emails |
 | `API_KEY` | Accès API utilisé par les automatisations |
 
