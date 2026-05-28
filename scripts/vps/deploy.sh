@@ -14,6 +14,7 @@ fi
 
 APP_DIR="${APP_DIR:-$HOME/rps-$ENV}"
 N8N_RUNTIME_DIR="${N8N_RUNTIME_DIR:-/srv/n8n}"
+N8N_IMAGE="${N8N_IMAGE:-n8nio/n8n:2.22.5}"
 REPO_URL="${REPO_URL:-git@github.com:AzazelSloth/rpsproject.git}"
 VPS_HOST="${VPS_HOST:-127.0.0.1}"
 DOMAIN_NAME="${DOMAIN_NAME:-}"
@@ -44,7 +45,7 @@ N8N_SECURE_COOKIE="${N8N_SECURE_COOKIE:-}"
 N8N_PATH="${N8N_PATH:-/}"
 N8N_EDITOR_BASE_URL="${N8N_EDITOR_BASE_URL:-}"
 WEBHOOK_URL="${WEBHOOK_URL:-}"
-N8N_PROXY_HOPS="${N8N_PROXY_HOPS:-1}"
+N8N_PROXY_HOPS="${N8N_PROXY_HOPS:-3}"
 N8N_LISTEN_ADDRESS="${N8N_LISTEN_ADDRESS:-0.0.0.0}"
 N8N_BLOCK_ENV_ACCESS_IN_NODE="${N8N_BLOCK_ENV_ACCESS_IN_NODE:-true}"
 N8N_DIAGNOSTICS_ENABLED="${N8N_DIAGNOSTICS_ENABLED:-false}"
@@ -98,7 +99,7 @@ prepare_n8n_data_dir() {
 
   # n8n runs as the non-root `node` user in the container, so the bind mount
   # must be writable by uid/gid 1000 before startup.
-  if docker run --rm --user 0:0 -v "${data_dir}:/data" --entrypoint sh n8nio/n8n:latest -lc \
+  if docker run --rm --user 0:0 -v "${data_dir}:/data" --entrypoint sh "$N8N_IMAGE" -lc \
     "mkdir -p /data && chown -R node:node /data && chmod -R u+rwX,go-rwx /data"; then
     return 0
   fi
@@ -500,6 +501,7 @@ cp "$N8N_TEMPLATE_DIR/docker-compose.yml" "$N8N_RUNTIME_COMPOSE_FILE"
 cat > "$N8N_RUNTIME_ENV_FILE" <<EOF
 COMPOSE_PROJECT_NAME=n8n-$ENV
 APP_COMPOSE_PROJECT_NAME=$APP_COMPOSE_PROJECT_NAME
+N8N_IMAGE=$N8N_IMAGE
 N8N_ENCRYPTION_KEY=$N8N_ENCRYPTION_KEY
 N8N_USER_FOLDER=$N8N_USER_FOLDER
 N8N_HOST=$N8N_HOST
