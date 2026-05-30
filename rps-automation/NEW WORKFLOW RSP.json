@@ -1,4 +1,4 @@
-﻿{
+{
     "name":  "NEW WORKFLOW RSP",
     "nodes":  [
                   {
@@ -17,7 +17,7 @@
                   },
                   {
                       "parameters":  {
-                                         "jsCode":  "// Construire le rapport final formaté\nconst analysis = $input.first().json.output || $input.first().json.text || $input.first().json.response || Object.values($input.first().json)[0];const campaignInfo = $(\u0027Formater les donnees\u0027).first().json.campaignInfo;\n\nconst now = new Date();\nconst dateStr = now.toLocaleDateString(\u0027fr-CA\u0027, { year: \u0027numeric\u0027, month: \u0027long\u0027, day: \u0027numeric\u0027 });\n\nconst rapport = `\n=================================================\nRAPPORT D\u0027ANALYSE RPS\n=================================================\nEntreprise    : ${campaignInfo.entreprise}\nCampagne      : ${campaignInfo.campagne}\nDate d\u0027analyse: ${dateStr}\nRÃ©pondants    : ${campaignInfo.total_repondants}\n=================================================\n\n${analysis}\n\n=================================================\nRapport gÃ©nÃ©rÃ© automatiquement par la plateforme RPS\nConfidentiel - Usage interne uniquement\n=================================================\n`.trim();\n\nreturn [{\n  json: {\n    rapport,\n    campaignInfo,\n    subject: `Rapport RPS -  - ${campaignInfo.campagne}`,\n    filename: `Rapport_RPS.replace(/\\s+/g, \u0027_\u0027)}_${now.toISOString().split(\u0027T\u0027)[0]}.txt`\n  }\n}];"
+                                         "jsCode":  "const input = $input.first().json;\nconst analysis = input.output || input.text || input.response || Object.values(input)[0] || \u0027\u0027;\nconst campaignInfo = $(\u0027Formater les donnees\u0027).first().json.campaignInfo || {};\n\nconst now = new Date();\nconst dateStr = now.toLocaleDateString(\u0027fr-CA\u0027, { year: \u0027numeric\u0027, month: \u0027long\u0027, day: \u0027numeric\u0027 });\nconst fileDate = now.toISOString().split(\u0027T\u0027)[0];\nconst entreprise = campaignInfo.entreprise || \u0027Entreprise\u0027;\nconst campagne = campaignInfo.campagne || \u0027Campagne RPS\u0027;\nconst slug = `${entreprise}_${campagne}`\n  .normalize(\u0027NFD\u0027)\n  .replace(/[\\u0300-\\u036f]/g, \u0027\u0027)\n  .replace(/[^a-z0-9]+/gi, \u0027_\u0027)\n  .replace(/^_+|_+$/g, \u0027\u0027)\n  .slice(0, 80) || \u0027Rapport_RPS\u0027;\n\nconst rapport = `\n=================================================\nRAPPORT D\u0027ANALYSE RPS\n=================================================\nEntreprise    : ${entreprise}\nCampagne      : ${campagne}\nDate d\u0027analyse: ${dateStr}\nRepondants    : ${campaignInfo.total_repondants || 0}\n=================================================\n\n${analysis}\n\n=================================================\nRapport genere automatiquement par la plateforme RPS\nConfidentiel - Usage interne uniquement\n=================================================\n`.trim();\n\nreturn [{\n  json: {\n    rapport,\n    campaignInfo: {\n      ...campaignInfo,\n      entreprise,\n      campagne,\n    },\n    subject: `Rapport RPS - ${entreprise} - ${campagne}`,\n    filename: `${slug}_${fileDate}.txt`\n  }\n}];"
                                      },
                       "id":  "54d12601-98c2-4eaf-8e4b-3340b1c3bfa0",
                       "name":  "Construire le rapport",
@@ -50,7 +50,7 @@
                       "parameters":  {
                                          "operation":  "createFromText",
                                          "content":  "={{ $json.rapport }}",
-                                         "name":  "=Rapport_Synthese_Global_RPS_{{ $now.format(\u0027dd-MM-yyyy\u0027) }}.docx",
+                                         "name":  "={{ $json.filename }}",
                                          "driveId":  {
                                                          "__rl":  true,
                                                          "mode":  "list",
@@ -224,11 +224,11 @@
                                          "columns":  {
                                                          "mappingMode":  "defineBelow",
                                                          "value":  {
-                                                                       "Entreprise":  "={{ $json.entreprise }}",
-                                                                       "Nom":  "={{ $json.nom }}",
-                                                                       "Prenom":  "={{ $json.prenom }}",
-                                                                       "Email":  "={{ $json.email }}",
-                                                                       "Poste":  "={{ $json.poste }}"
+                                                                       "Entreprise":  "={{ $json.Employeur || $json.employeur || $json.entreprise || $json.company_name || $json.company || '' }}",
+                                                                       "Nom":  "={{ $json.nom || $json.last_name || (($json['Nom et Prenom'] || $json['Nom et Pr\u00e9nom(s)'] || $json.name || '').trim().split(/\\s+/).slice(1).join(' ')) || '' }}",
+                                                                       "Prenom":  "={{ $json.prenom || $json.first_name || (($json['Nom et Prenom'] || $json['Nom et Pr\u00e9nom(s)'] || $json.name || '').trim().split(/\\s+/)[0]) || '' }}",
+                                                                       "Email":  "={{ $json.Email || $json.email || '' }}",
+                                                                       "Poste":  "={{ $json.Fonction || $json.fonction || $json.department || $json.poste || '' }}"
                                                                    },
                                                          "matchingColumns":  [
                                                                                  "Email"
@@ -304,13 +304,29 @@
                                           "googleSheetsOAuth2Api":  {
                                                                         "id":  "SaA6KDnpWYAZ5NuV",
                                                                         "name":  "Google Sheets account"
-                                                                    }
+                                                                   }
                                       }
                   },
                   {
                       "parameters":  {
+                                         "fieldToSplitOut":  "openAnswers",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.splitOut",
+                      "typeVersion":  1,
+                      "position":  [
+                                       304,
+                                       112
+                                   ],
+                      "id":  "f6c17a5d-cd36-465e-b027-6eb99679c3df",
+                      "name":  "Split Out reponses pour sheet"
+                  },
+                  {
+                      "parameters":  {
                                          "method":  "PATCH",
-                                         "url":  "={{ $env.BACKEND_API_URL }}/participants/{{ $('Calculer 6 jours').item.json.participant_id }}/reminder",
+                                         "url":  "={{ (($env.BACKEND_API_URL || '').replace(/\\/$/, '').replace(/\\/api$/, '')) + '/api/participants/' + $('Calculer 6 jours').item.json.participant_id + '/reminder' }}",
                                          "sendHeaders":  true,
                                          "headerParameters":  {
                                                                  "parameters":  [
@@ -376,7 +392,7 @@
                                          "resource":  "mail",
                                          "fromEmail":  "={{ $env.SENDGRID_FROM_EMAIL || $env.FROM_EMAIL }}",
                                          "toEmail":  "={{ $json.campaignInfo.client_email || $env.REPORT_RECIPIENT_EMAIL }}",
-                                         "subject":  "=Rapport d\u0027analyse RPS - {{ $now.format(\u0027yyyy-MM-dd HH:mm\u0027) }}",
+                                         "subject":  "={{ $json.subject }}",
                                          "contentValue":  "=Bonjour,\n\nVoici le rapport d\u0027analyse RPS.\n\n{{ $json.rapport }}\n\nCordialement,\n{{ $env.SENDGRID_FROM_NAME || \u0027Equipe RPS\u0027 }}",
                                          "additionalFields":  {
 
@@ -426,7 +442,7 @@
                   {
                       "parameters":  {
                                          "method":  "POST",
-                                         "url":  "={{ $env.BACKEND_API_URL }}/reports",
+                                         "url":  "={{ (($env.BACKEND_API_URL || '').replace(/\\/$/, '').replace(/\\/api$/, '')) + '/api/reports' }}",
                                          "sendHeaders":  true,
                                          "headerParameters":  {
                                                                  "parameters":  [
@@ -443,7 +459,7 @@
                                          "sendBody":  true,
                                          "contentType":  "json",
                                          "specifyBody":  "json",
-                                         "jsonBody":  "={{ { campaign_id: Number($('Construire le rapport').first().json.campaignInfo.campaign_id), report_path: $json.webViewLink || $json.webContentLink || $json.id || 'drive' } }}",
+                                         "jsonBody":  "={{ { campaign_id: Number($('Construire le rapport').first().json.campaignInfo.campaign_id), report_path: $json.webViewLink || $json.webContentLink || ($json.id ? 'https://drive.google.com/file/d/' + $json.id + '/view' : 'drive') } }}",
                                          "options":  {
 
                                                      }
@@ -460,7 +476,7 @@
                   {
                       "parameters":  {
                                          "method":  "GET",
-                                         "url":  "={{ $env.BACKEND_API_URL }}/automation/campaigns/pending-reminders",
+                                         "url":  "={{ (($env.BACKEND_API_URL || '').replace(/\\/$/, '').replace(/\\/api$/, '')) + '/api/automation/campaigns/pending-reminders' }}",
                                          "sendHeaders":  true,
                                          "headerParameters":  {
                                                                  "parameters":  [
@@ -485,6 +501,7 @@
                   },
                   {
                       "parameters":  {
+                                         "modelName":  "models/gemini-2.5-flash",
                                          "options":  {
 
                                                      }
@@ -514,6 +531,11 @@
                                                                   [
                                                                       {
                                                                           "node":  "AI Agent1",
+                                                                          "type":  "main",
+                                                                          "index":  0
+                                                                      },
+                                                                      {
+                                                                          "node":  "Split Out reponses pour sheet",
                                                                           "type":  "main",
                                                                           "index":  0
                                                                       }
@@ -623,6 +645,17 @@
                                                        [
                                                            {
                                                                "node":  "Log relance",
+                                                               "type":  "main",
+                                                               "index":  0
+                                                           }
+                                                       ]
+                                                   ]
+                                      },
+                        "Split Out reponses pour sheet":  {
+                                          "main":  [
+                                                       [
+                                                           {
+                                                               "node":  "Append or update row in sheet",
                                                                "type":  "main",
                                                                "index":  0
                                                            }
