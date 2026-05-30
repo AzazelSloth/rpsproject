@@ -32,7 +32,7 @@
                   {
                       "parameters":  {
                                          "promptType":  "define",
-                                         "text":  "=Analyse les resultats RPS pour {{ $json.campaignInfo.entreprise }} - {{ $json.campaignInfo.campagne }}.\n\nNombre de repondants: {{ $json.campaignInfo.total_repondants }}\n\nDonnées à analyser:\n{{ $json.formattedForAI }}",
+                                         "text":  "=Analyse les résultats RPS pour {{ $json.campaignInfo.entreprise }} - {{ $json.campaignInfo.campagne }}.\n\nNombre de repondants: {{ $json.campaignInfo.total_repondants }}\n\nDonnées à analyser:\n{{ $json.formattedForAI }}",
                                          "options":  {
                                                          "systemMessage":  "=Tu es un Expert Senior en Psychologie du Travail. Tu analyses les résultats d'un sondage RPS à partir de réponses fermées et de réponses libres.\n\nMéthodologie d'analyse :\n\n1. Réponses sur échelle d'accord :\n\"Tout à fait d'accord\" ou \"Plutôt d'accord\" = score 4-5, facteur de protection ou satisfaction.\n\"Ni d'accord, ni pas d'accord\" = score 3, zone neutre ou ambivalente.\n\"Plutôt pas d'accord\" ou \"Pas du tout d'accord\" = score 1-2, alerte ou risque psychosocial.\n\n2. Réponses Oui / Partiellement / Non :\n\"Oui\" indique une présence claire du phénomène demandé. Interprète le sens selon la formulation de la question : si la question porte sur une ressource positive, c'est un facteur de protection ; si elle porte sur une difficulté, c'est un signal de risque.\n\"Partiellement\" indique une situation mitigée, fragile ou incomplète. Classe-la comme point de vigilance.\n\"Non\" indique une absence du phénomène demandé. Interprète aussi selon la formulation de la question : absence d'une ressource positive = risque ; absence d'une difficulté = protection.\nSi la formulation exacte de la question n'est pas disponible et que seule la réponse est visible, décris la tendance sans conclure trop fortement sur son sens positif ou négatif.\n\n3. Réponses libres :\nAnalyse les verbatims qualitativement. Repère les thèmes récurrents, irritants, besoins exprimés, signaux faibles, contradictions et exemples concrets. Ne cite pas les personnes, n'invente pas de verbatim et ne transforme pas une opinion isolée en tendance générale. Si un commentaire est isolé, précise qu'il s'agit d'un signal ponctuel.\n\nRègles d'analyse :\nCroise les réponses fermées et les réponses libres.\nDistingue tendance forte, tendance modérée et signal ponctuel.\nSi le nombre de répondants est faible, reste prudent dans les conclusions.\nNe pose aucun diagnostic médical.\nFormule des constats utiles pour l'entreprise, puis des actions concrètes.\n\nConsignes de formatage :\nAUCUN formatage Markdown (pas de #, pas de *, pas de **).\nUtilise uniquement les titres de sections ci-dessous.\nDans chaque section, indique les tendances principales, les facteurs de protection, les risques et les éléments qualitatifs issus des réponses libres quand ils existent.\n\nStructure du Rapport :\n\nCharge de travail\n(Analyse la quantité, le rythme et la complexité perçue).\n\nOrganisation & Éthique\n(Analyse la clarté des rôles, les procédures et le respect des valeurs).\n\nAutonomie et Développement\n(Analyse la liberté de décision, l'utilisation des compétences et les possibilités d'évolution).\n\nReconnaissance & Conditions\n(Analyse le sentiment de justice, la valorisation du travail et les conditions matérielles ou organisationnelles).\n\nRelation et Soutien\n(Analyse l'ambiance d'équipe, la coopération et le soutien managérial).\n\nDemandes Émotionnelles & Valeurs\n(Analyse la charge mentale liée au public, aux tensions relationnelles et aux conflits d'éthique).\n\nConséquence sur la santé et Équilibre\n(Analyse l'impact déclaré sur le bien-être, la fatigue, le stress et la vie personnelle).\n\nAvis pour améliorer le bien être au travail\n(Propose 3 actions concrètes, réalistes et adaptées aux tendances observées dans l'entreprise analysée)."
                                                      }
@@ -126,7 +126,7 @@
                                        -80,
                                        736
                                    ],
-                      "notes":  "Se dÃ©clenche chaque matin Ã  8h pour vÃ©rifier les non-rÃ©pondants"
+                      "notes":  "Se déclenche chaque matin 8h pour vérifier les non-répondants"
                   },
                   {
                       "parameters":  {
@@ -156,7 +156,7 @@
                                    ],
                       "executeOnce":  false,
                       "alwaysOutputData":  false,
-                      "notes":  "Calcule si l\u0027envoi initial date de 6 jours ou plus. Si non, l\u0027employÃ© est ignorÃ©."
+                      "notes":  "Calcule si l\u0027envoi initial date de 6 jours ou plus. Si non, l\u0027employé est ignoré."
                   },
                   {
                       "parameters":  {
@@ -170,11 +170,11 @@
                                        1664,
                                        736
                                    ],
-                      "notes":  "Log de confirmation par employÃ© relancÃ©"
+                      "notes":  "Log de confirmation par employé relancé"
                   },
                   {
                       "parameters":  {
-                                         "jsCode":  "// Log de confirmation\nconst info = $(\u0027Construire le rapport\u0027).first().json.campaignInfo;\nconsole.log(`âœ… Rapport RPS gÃ©nÃ©rÃ© et envoyÃ© pour ${info.entreprise} - ${info.campagne}`);\nreturn [{ json: { status: \u0027success\u0027, message: `Rapport envoyÃ© pour ${info.entreprise}`, timestamp: new Date().toISOString() } }];"
+                                         "jsCode":  "// Log de confirmation\nconst info = $(\u0027Construire le rapport\u0027).first().json.campaignInfo;\nconsole.log(`À Rapport RPS généré et envoyé pour ${info.entreprise} - ${info.campagne}`);\nreturn [{ json: { status: \u0027success\u0027, message: `Rapport envoyé pour ${info.entreprise}`, timestamp: new Date().toISOString() } }];"
                                      },
                       "id":  "b3eba9b5-689b-4b5e-a3cd-f56e29e30e3b",
                       "name":  "Log succes",
@@ -184,7 +184,7 @@
                                        2224,
                                        320
                                    ],
-                      "notes":  "Log de confirmation â€” peut Ãªtre remplacÃ© par une notification Slack ou autre."
+                      "notes":  "Log de confirmation à peut être remplacé par une notification Slack ou autre."
                   },
                   {
                       "parameters":  {
