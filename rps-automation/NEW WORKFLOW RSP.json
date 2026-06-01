@@ -1,4 +1,4 @@
-{
+﻿{
     "name":  "NEW WORKFLOW RSP",
     "nodes":  [
                   {
@@ -170,7 +170,7 @@
                                        1664,
                                        736
                                    ],
-                      "notes":  "Log de confirmation par employé relancé"
+                      "notes":  "Log de confirmation par employé relancé."
                   },
                   {
                       "parameters":  {
