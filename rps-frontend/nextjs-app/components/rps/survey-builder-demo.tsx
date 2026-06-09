@@ -53,6 +53,15 @@ type SendInvitationsResponse = {
   failed_count?: number;
   skipped_count?: number;
   message?: string;
+  sendgrid_result?: {
+    failed?: SendInvitationFailure[];
+  };
+};
+
+type SendInvitationFailure = {
+  participant_id?: number;
+  email?: string;
+  error?: string;
 };
 
 type ImportedParticipantView = {
@@ -1306,8 +1315,15 @@ export function SurveyBuilderDemo({
         const result = rawResult as SendInvitationsResponse;
         const sentCount = result.sent_count ?? 0;
         const failedCount = result.failed_count ?? 0;
+        const failureMessage = formatInvitationFailureMessage(result);
 
         setHasSentInvitations(sentCount > 0);
+
+        if (failedCount > 0 && sentCount === 0) {
+          setError(failureMessage);
+          return;
+        }
+
         setFeedback(
           failedCount > 0
             ? `Invitations ${forceResend ? "renvoyees" : "envoyees"} a ${sentCount} employe(s), ${failedCount} echec(s).`
@@ -1315,6 +1331,9 @@ export function SurveyBuilderDemo({
             ? `Invitations ${forceResend ? "renvoyees" : "envoyees"} a ${sentCount} employe(s).`
             : result.message ?? "Aucune nouvelle invitation a envoyer.",
         );
+        if (failedCount > 0) {
+          setError(`Certains envois ont echoue. ${failureMessage}`);
+        }
         if (mode === "edit") {
           router.refresh();
         }
@@ -2195,6 +2214,42 @@ function formatParticipantStatus(status?: string) {
 
 function sanitizeOptions(options?: string[]) {
   return (options ?? []).map((option) => option.trim()).filter(Boolean);
+}
+
+function formatInvitationFailureMessage(result: SendInvitationsResponse) {
+  const baseMessage =
+    result.message?.trim() || "L'envoi des invitations a echoue.";
+  const failures = result.sendgrid_result?.failed ?? [];
+  const details = failures
+    .map((failure) => {
+      const error = truncateMessage(failure.error?.trim() || "");
+
+      if (!error) {
+        return null;
+      }
+
+      return failure.email ? `${failure.email}: ${error}` : error;
+    })
+    .filter((detail): detail is string => Boolean(detail))
+    .slice(0, 3);
+
+  if (!details.length) {
+    return baseMessage;
+  }
+
+  const remainingCount = Math.max(failures.length - details.length, 0);
+  const remainingMessage =
+    remainingCount > 0 ? ` ${remainingCount} autre(s) echec(s).` : "";
+
+  return `${baseMessage} ${details.join(" ")}${remainingMessage}`;
+}
+
+function truncateMessage(value: string, maxLength = 260) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, maxLength - 1)}...`;
 }
 
 function normalizeCsv(value: string) {

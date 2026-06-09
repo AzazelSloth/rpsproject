@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Injectable,
-  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -893,10 +892,26 @@ export class CampaignParticipantService {
     const sendGridResult =
       await this.sendGridMailService.sendSurveyInvitations(recipients);
 
+    const failedInvitations = sendGridResult.failed.map((item) => ({
+      participant_id: item.recipient.participant_id,
+      email: item.recipient.email,
+      error: item.error,
+    }));
+
     if (!sendGridResult.sent.length) {
-      throw new InternalServerErrorException(
-        "Aucune invitation n'a pu etre envoyee via SendGrid.",
-      );
+      return {
+        success: false,
+        campaign_id: campaignId,
+        sent_count: 0,
+        failed_count: sendGridResult.failed.length,
+        skipped_count: skippedCount,
+        message:
+          "Aucune invitation n'a pu etre envoyee via SendGrid. Verifiez la configuration SendGrid et les adresses email.",
+        sendgrid_result: {
+          failed: failedInvitations,
+        },
+        participants: [],
+      };
     }
 
     const sentParticipantIds = new Set(
@@ -927,11 +942,7 @@ export class CampaignParticipantService {
       skipped_count: skippedCount,
       invitations_sent_at: invitationDate,
       sendgrid_result: {
-        failed: sendGridResult.failed.map((item) => ({
-          participant_id: item.recipient.participant_id,
-          email: item.recipient.email,
-          error: item.error,
-        })),
+        failed: failedInvitations,
       },
       participants: sendGridResult.sent.map((recipient) => ({
         participant_id: recipient.participant_id,

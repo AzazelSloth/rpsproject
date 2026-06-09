@@ -21,17 +21,31 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function getErrorStatusCode(error: unknown): number | null {
+  const data = (error as { data?: { httpStatus?: unknown } } | null)?.data;
+
+  if (typeof data?.httpStatus === 'number') {
+    return data.httpStatus;
+  }
+
+  if (error instanceof Error) {
+    const match = error.message.match(/\b(408|429|500|502|503|504)\b/);
+    return match ? Number(match[1]) : null;
+  }
+
+  return null;
+}
+
 function isRetryableError(error: unknown, retryableStatusCodes: number[]): boolean {
+  const statusCode = getErrorStatusCode(error);
+
+  if (statusCode) {
+    return retryableStatusCodes.includes(statusCode);
+  }
+
   if (error instanceof Error) {
     // Check if it's a fetch error (network issue)
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      return true;
-    }
-    // Check for specific error messages
-    if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
-      return true;
-    }
-    if (error.message.includes('500') || error.message.includes('Internal Server')) {
       return true;
     }
   }
@@ -56,6 +70,7 @@ export function retryHttpLink(options: RetryOptions = {}): TRPCLink<any> {
               },
               error: async (error) => {
                 if (
+                  op.type === 'query' &&
                   retryCount < (config.maxRetries || 3) &&
                   isRetryableError(error, config.retryableStatusCodes || [])
                 ) {

@@ -12,14 +12,20 @@ export interface ErrorInfo {
 export function parseApiError(error: unknown): ErrorInfo {
   // Handle tRPC errors
   if (error instanceof TRPCClientError) {
-    const statusCode = error.data?.code === 'INTERNAL_SERVER_ERROR' ? 500 : 400;
+    const statusCode =
+      getBackendStatusCode(error.message) ??
+      (typeof error.data?.httpStatus === 'number' ? error.data.httpStatus : null) ??
+      getStatusCodeFromTrpcCode(error.data?.code);
+    const isRetryable =
+      isRetryableErrorCode(statusCode) && !isNonRetryableBackendError(error.message);
+
     return {
       code: error.data?.code || 'UNKNOWN_ERROR',
       statusCode,
       message: error.message,
       userMessage: getTrpcErrorMessage(error),
-      isRetryable: isRetryableErrorCode(statusCode),
-      suggestedAction: getRetryAction(statusCode),
+      isRetryable,
+      suggestedAction: isRetryable ? getRetryAction(statusCode) : undefined,
     };
   }
 
@@ -90,17 +96,27 @@ export function parseApiError(error: unknown): ErrorInfo {
 export function getTrpcErrorMessage(error: TRPCClientError<any>): string {
   const code = error.data?.code;
   const message = error.message;
+  const backendMessage = getBackendMessage(message);
 
   switch (code) {
     case 'INTERNAL_SERVER_ERROR':
       // Check message for specific issues
+      if (isEmailConfigurationError(message)) {
+        return `${backendMessage} Verifiez SENDGRID_API_KEY, SENDGRID_FROM_EMAIL et l'expediteur valide dans SendGrid.`;
+      }
       if (message.includes('SendGrid')) {
-        return 'Erreur lors de l\'envoi des emails via SendGrid. Vérifiez la configuration SendGrid.';
+        return backendMessage || 'Erreur lors de l\'envoi des emails via SendGrid. Verifiez la configuration SendGrid.';
       }
       if (message.includes('invitation')) {
         return 'Erreur lors de la création des invitations. Veuillez réessayer.';
       }
       return 'Erreur serveur interne. Le système réessayera automatiquement.';
+    case 'SERVICE_UNAVAILABLE':
+      if (isEmailConfigurationError(message)) {
+        return `${backendMessage} Verifiez SENDGRID_API_KEY, SENDGRID_FROM_EMAIL et l'expediteur valide dans SendGrid.`;
+      }
+
+      return backendMessage || 'Service temporairement indisponible. Veuillez reessayer.';
     case 'BAD_REQUEST':
       return `Requête invalide: ${message}`;
     case 'UNAUTHORIZED':
@@ -112,6 +128,57 @@ export function getTrpcErrorMessage(error: TRPCClientError<any>): string {
     default:
       return message || 'Une erreur s\'est produite.';
   }
+}
+
+function getStatusCodeFromTrpcCode(code: unknown) {
+  switch (code) {
+    case 'BAD_REQUEST':
+      return 400;
+    case 'UNAUTHORIZED':
+      return 401;
+    case 'FORBIDDEN':
+      return 403;
+    case 'NOT_FOUND':
+      return 404;
+    case 'CONFLICT':
+      return 409;
+    case 'PRECONDITION_FAILED':
+      return 412;
+    case 'TOO_MANY_REQUESTS':
+      return 429;
+    case 'SERVICE_UNAVAILABLE':
+      return 503;
+    case 'GATEWAY_TIMEOUT':
+      return 504;
+    case 'INTERNAL_SERVER_ERROR':
+    default:
+      return 500;
+  }
+}
+
+function getBackendStatusCode(message: string) {
+  const match = message.match(/Backend request failed:\s+(\d{3})\b/);
+
+  return match ? Number(match[1]) : null;
+}
+
+function getBackendMessage(message: string) {
+  const separator = ' - ';
+  const separatorIndex = message.indexOf(separator);
+
+  if (separatorIndex === -1) {
+    return message;
+  }
+
+  return message.slice(separatorIndex + separator.length).trim();
+}
+
+function isEmailConfigurationError(message: string) {
+  return /Configuration email manquante|SENDGRID_|SendGrid/i.test(message);
+}
+
+function isNonRetryableBackendError(message: string) {
+  return isEmailConfigurationError(message);
 }
 
 export function isRetryableErrorCode(statusCode: number): boolean {
