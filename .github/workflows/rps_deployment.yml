@@ -145,7 +145,7 @@ jobs:
             export APP_URL="${{ vars.APP_URL }}"
             export APP_DOMAIN="${{ vars.APP_DOMAIN }}"
             export N8N_DOMAIN="${{ vars.N8N_DOMAIN }}"
-            export BACKEND_API_URL="${{ vars.BACKEND_API_URL || 'http://host.docker.internal:3000' }}"
+            export BACKEND_API_URL="${{ vars.BACKEND_API_URL || 'http://backend:3000/api' }}"
             export API_KEY="${{ secrets.API_KEY }}"
             export SENDGRID_API_KEY="${{ secrets.SENDGRID_API_KEY }}"
             export SENDGRID_FROM_EMAIL="${{ vars.SENDGRID_FROM_EMAIL }}"

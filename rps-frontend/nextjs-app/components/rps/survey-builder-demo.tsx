@@ -10,6 +10,7 @@ import type {
 } from "@/lib/repositories/rps-repository";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
 import { getTrpcClient } from "@/lib/trpc/client";
+import { parseApiError } from "@/lib/error-handler";
 
 const defaultChoiceOptions = ["Oui", "Partiellement", "Non"];
 const scaleAnswerGuide = [
@@ -1293,35 +1294,65 @@ export function SurveyBuilderDemo({
     setFeedback(null);
     setError(null);
 
-    try {
-      const rawResult = await getTrpcClient().campaignParticipants.sendInvitations.mutate({
-        campaignId,
-        force: forceResend,
-      });
-      const result = rawResult as SendInvitationsResponse;
-      const sentCount = result.sent_count ?? 0;
-      const failedCount = result.failed_count ?? 0;
+    let retryCount = 0;
+    const maxRetries = 3;
 
-      setHasSentInvitations(sentCount > 0);
-      setFeedback(
-        failedCount > 0
-          ? `Invitations ${forceResend ? "renvoyees" : "envoyees"} a ${sentCount} employe(s), ${failedCount} echec(s).`
-          : sentCount > 0
-          ? `Invitations ${forceResend ? "renvoyees" : "envoyees"} a ${sentCount} employe(s).`
-          : result.message ?? "Aucune nouvelle invitation a envoyer.",
-      );
-      if (mode === "edit") {
-        router.refresh();
+    const attemptSendInvitations = async (): Promise<void> => {
+      try {
+        const rawResult = await getTrpcClient().campaignParticipants.sendInvitations.mutate({
+          campaignId,
+          force: forceResend,
+        });
+        const result = rawResult as SendInvitationsResponse;
+        const sentCount = result.sent_count ?? 0;
+        const failedCount = result.failed_count ?? 0;
+
+        setHasSentInvitations(sentCount > 0);
+        setFeedback(
+          failedCount > 0
+            ? `Invitations ${forceResend ? "renvoyees" : "envoyees"} a ${sentCount} employe(s), ${failedCount} echec(s).`
+            : sentCount > 0
+            ? `Invitations ${forceResend ? "renvoyees" : "envoyees"} a ${sentCount} employe(s).`
+            : result.message ?? "Aucune nouvelle invitation a envoyer.",
+        );
+        if (mode === "edit") {
+          router.refresh();
+        }
+      } catch (caughtError) {
+        const errorInfo = parseApiError(caughtError);
+
+        // Log detailed error info for debugging
+        console.error('[Invitation Error]', {
+          code: errorInfo.code,
+          statusCode: errorInfo.statusCode,
+          message: errorInfo.message,
+          isRetryable: errorInfo.isRetryable,
+          retryCount,
+        });
+
+        // If retryable and we have retries left, wait and try again
+        if (errorInfo.isRetryable && retryCount < maxRetries) {
+          retryCount++;
+          const delayMs = Math.min(1000 * Math.pow(2, retryCount - 1), 10000);
+          setFeedback(
+            `Erreur ${errorInfo.statusCode}. Tentative ${retryCount}/${maxRetries} dans ${(delayMs / 1000).toFixed(1)}s... ${errorInfo.userMessage}`
+          );
+
+          // Wait before retrying
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+          // Retry
+          return attemptSendInvitations();
+        }
+
+        // No more retries or not retryable
+        setError(`${errorInfo.userMessage}${errorInfo.suggestedAction ? ` ${errorInfo.suggestedAction}` : ''}`);
       }
-    } catch (caughtError) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "L'envoi automatique a echoue.",
-      );
-    } finally {
+    };
+
+    attemptSendInvitations().finally(() => {
       setIsSendingInvitations(false);
-    }
+    });
   }
 
   return (

@@ -766,7 +766,7 @@ curl -X POST https://appli.laroche360.ca/api/reports \
 | `/` | redirection | Redirige vers `/login` |
 | `/login` | public | Connexion admin |
 | `/signup` | public | Inscription admin contrôlée |
-| `/forgot-password` | public | Page mot de passe oublié |
+| 
 | `/dashboard` | protégé | Vue d'ensemble |
 | `/surveys` | protégé | Gestion des sondages |
 | `/employees` | protégé | Gestion employés et participants |
@@ -1330,7 +1330,9 @@ Vérifier:
 
 Vérifier:
 
-- `BACKEND_API_URL` ne pointe pas vers `localhost` si n8n est dans un conteneur ou sur un domaine public;
+- `BACKEND_API_URL` ne pointe pas vers `localhost` ou `host.docker.internal:3000` si le backend n'est pas publié sur le port hôte;
+- avec le runtime Docker fourni par le projet, préférer `BACKEND_API_URL=http://backend:3000/api`;
+- si n8n est externe au réseau Docker, utiliser l'URL publique `https://appli.laroche360.ca/api`;
 - header `x-api-key`;
 - `API_KEY` identique côté backend et n8n;
 - routes `/api/reports` et `/api/automation/campaigns/pending-reminders`;
