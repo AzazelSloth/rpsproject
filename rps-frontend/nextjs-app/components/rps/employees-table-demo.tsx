@@ -25,10 +25,39 @@ type RemindResponse =
       reminded_count?: number;
       remindedParticipants?: number;
       count?: number;
+      failed_count?: number;
       success?: boolean;
       message?: string;
+      result?: RemindResponse;
+      sendgrid_result?: {
+        failed?: RemindFailure[];
+      };
     }
   | undefined;
+
+type RemindFailure = {
+  email?: string;
+  error?: string;
+  status_code?: number;
+  reason?: SendGridFailureReason;
+  retry_after?: string;
+  rate_limit?: SendGridRateLimit;
+};
+
+type SendGridFailureReason =
+  | "quota_exceeded"
+  | "rate_limited"
+  | "forbidden"
+  | "authentication"
+  | "invalid_request"
+  | "server_error"
+  | "unknown";
+
+type SendGridRateLimit = {
+  limit?: number;
+  remaining?: number;
+  reset?: number;
+};
 
 export function EmployeesTableDemo({
   managementData,
@@ -258,9 +287,19 @@ export function EmployeesTableDemo({
         campaignId,
         force: true,
       })) as RemindResponse;
-      const remindedCount = extractRemindedCount(directResult) ?? pendingCount;
+      const directPayload = unwrapRemindResult(directResult);
+      const remindedCount = extractRemindedCount(directPayload) ?? 0;
+      const failedCount = directPayload?.failed_count ?? 0;
+
+      if (failedCount > 0 && remindedCount === 0) {
+        setError(formatRemindFailureMessage(directPayload));
+        return;
+      }
 
       setFeedback(`Relance envoyée à ${remindedCount} employé(s).`);
+      if (failedCount > 0) {
+        setError(`Certaines relances ont échoué. ${formatRemindFailureMessage(directPayload)}`);
+      }
       router.refresh();
     } catch {
       try {
@@ -280,9 +319,19 @@ export function EmployeesTableDemo({
         }
 
         const fallbackResult = (await response.json()) as RemindResponse;
-        const remindedCount = extractRemindedCount(fallbackResult) ?? pendingCount;
+        const fallbackPayload = unwrapRemindResult(fallbackResult);
+        const remindedCount = extractRemindedCount(fallbackPayload) ?? 0;
+        const failedCount = fallbackPayload?.failed_count ?? 0;
+
+        if (failedCount > 0 && remindedCount === 0) {
+          setError(formatRemindFailureMessage(fallbackPayload));
+          return;
+        }
 
         setFeedback(`Relance envoyée à ${remindedCount} employé(s).`);
+        if (failedCount > 0) {
+          setError(`Certaines relances ont échoué. ${formatRemindFailureMessage(fallbackPayload)}`);
+        }
       } catch {
         setError("La relance a échoué. Vérifiez la configuration n8n.");
       }
@@ -686,6 +735,66 @@ function extractRemindedCount(result: RemindResponse) {
     result.count ??
     null
   );
+}
+
+function unwrapRemindResult(result: RemindResponse): RemindResponse {
+  return result?.result ?? result;
+}
+
+function formatRemindFailureMessage(result: RemindResponse) {
+  const baseMessage =
+    result?.message?.trim() || "Aucune relance n'a pu etre envoyee via SendGrid.";
+  const failures = result?.sendgrid_result?.failed ?? [];
+  const diagnostic = getSendGridFailureDiagnostic(failures);
+  const resolvedBaseMessage =
+    diagnostic && !/quota|limite SendGrid/i.test(baseMessage)
+      ? `${baseMessage} ${diagnostic}`
+      : baseMessage;
+  const details = failures
+    .map((failure) => {
+      const error = truncateMessage(failure.error?.trim() || "");
+
+      if (!error) {
+        return null;
+      }
+
+      return failure.email ? `${failure.email}: ${error}` : error;
+    })
+    .filter((detail): detail is string => Boolean(detail))
+    .slice(0, 3);
+
+  if (!details.length) {
+    return resolvedBaseMessage;
+  }
+
+  const remainingCount = Math.max(failures.length - details.length, 0);
+  const remainingMessage =
+    remainingCount > 0 ? ` ${remainingCount} autre(s) echec(s).` : "";
+
+  return `${resolvedBaseMessage} ${details.join(" ")}${remainingMessage}`;
+}
+
+function getSendGridFailureDiagnostic(failures: RemindFailure[]) {
+  if (
+    failures.some(
+      (failure) =>
+        failure.reason === "quota_exceeded" ||
+        failure.reason === "rate_limited" ||
+        /quota|credits?|rate.?limit|too many requests/i.test(failure.error ?? ""),
+    )
+  ) {
+    return "Cause probable: quota ou limite SendGrid atteint.";
+  }
+
+  return "";
+}
+
+function truncateMessage(value: string, maxLength = 260) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, maxLength - 1)}...`;
 }
 
 function formatParticipantStatusLabel(value: "pending" | "reminded" | "completed") {

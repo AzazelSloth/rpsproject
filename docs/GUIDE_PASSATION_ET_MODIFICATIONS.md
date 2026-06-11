@@ -292,14 +292,17 @@ Variables recommandees pour le template SendGrid :
 }
 ```
 
-Modification technique a prevoir :
+Configuration backend :
 
-- ajouter une variable `SENDGRID_INVITATION_TEMPLATE_ID` ;
-- envoyer `template_id` a SendGrid ;
-- envoyer `dynamic_template_data` ;
-- garder le template actuel comme fallback si la variable n'est pas configuree.
+- `SENDGRID_INVITATION_TEMPLATE_ID` pour le premier envoi ;
+- `SENDGRID_REMINDER_TEMPLATE_ID` pour les relances ;
+- le backend envoie `template_id` et `dynamic_template_data` a SendGrid ;
+- le template HTML actuel reste le fallback si l'ID d'invitation n'est pas configure ;
+- un template HTML simple reste le fallback si l'ID de relance n'est pas configure.
 
-Estimation : 0,5 a 1 jour pour une version propre et testee.
+Les variables dynamiques exposees existent en camelCase et snake_case, par
+exemple `firstName` / `first_name`, `campaignName` / `campaign_name` et
+`surveyLink` / `survey_url`.
 
 ### Option C - Petit module "Parametres email" dans l'application
 

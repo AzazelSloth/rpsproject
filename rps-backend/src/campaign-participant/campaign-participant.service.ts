@@ -10,7 +10,11 @@ import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { Campaign } from '../campaign/campaign.entity';
 import { parseCsvDocument } from '../common/csv.util';
 import { throwPersistenceError } from '../common/database-error.util';
-import { SendGridMailService } from '../email/sendgrid-mail.service';
+import {
+  SendGridMailService,
+  type SendGridBatchResult,
+  type SurveyInvitationEmailRecipient,
+} from '../email/sendgrid-mail.service';
 import { Employee } from '../employee/employee.entity';
 import { Question } from '../question/question.entity';
 import { SurveyResponse } from '../response/response.entity';
@@ -869,25 +873,13 @@ export class CampaignParticipantService {
     const campaignName = campaign.name?.trim() || `Campagne ${campaign.id}`;
     const companyName =
       campaign.company.name?.trim() || `Entreprise ${campaign.company.id}`;
-    const recipients = eligibleParticipants.map((participant) => {
-      const email = (participant.employee.email ?? '').trim().toLowerCase();
-      const firstName = participant.employee.first_name?.trim() || '';
-      const lastName = participant.employee.last_name?.trim() || '';
-      const name = `${firstName} ${lastName}`.trim() || email;
-
-      return {
-        participant_id: participant.id,
-        employee_id: participant.employee.id,
-        email,
-        name,
-        first_name: firstName,
-        survey_url: `${appUrl}/survey-response/${participant.participation_token}`,
-        campaign_name: campaignName,
-        company_name: companyName,
-        start_date: campaign.start_date,
-        end_date: campaign.end_date,
-      };
-    });
+    const recipients = this.buildSurveyEmailRecipients(
+      eligibleParticipants,
+      campaign,
+      appUrl,
+      campaignName,
+      companyName,
+    );
 
     const sendGridResult =
       await this.sendGridMailService.sendSurveyInvitations(recipients);
@@ -896,6 +888,10 @@ export class CampaignParticipantService {
       participant_id: item.recipient.participant_id,
       email: item.recipient.email,
       error: item.error,
+      status_code: item.status_code,
+      reason: item.reason,
+      retry_after: item.retry_after,
+      rate_limit: item.rate_limit,
     }));
 
     if (!sendGridResult.sent.length) {
@@ -905,8 +901,10 @@ export class CampaignParticipantService {
         sent_count: 0,
         failed_count: sendGridResult.failed.length,
         skipped_count: skippedCount,
-        message:
-          "Aucune invitation n'a pu etre envoyee via SendGrid. Verifiez la configuration SendGrid et les adresses email.",
+        message: this.buildSendGridNoDeliveryMessage(
+          'invitation',
+          sendGridResult.failed,
+        ),
         sendgrid_result: {
           failed: failedInvitations,
         },
@@ -956,6 +954,7 @@ export class CampaignParticipantService {
     campaignId: number,
     options: SendCampaignRemindersDto = {},
   ) {
+    const campaign = await this.findCampaignOrThrow(campaignId);
     const participants = await this.campaignParticipantRepository.find({
       where: {
         campaign: { id: campaignId },
@@ -964,12 +963,18 @@ export class CampaignParticipantService {
       relations: { employee: true },
     });
 
+    await this.ensureParticipationTokens(participants);
+
     const thresholdDays = options.minimum_days_since_invitation ?? 6;
     const thresholdMs = thresholdDays * 24 * 60 * 60 * 1000;
     const now = Date.now();
 
     const pendingParticipants = participants.filter((participant) => {
       if (participant.status === CampaignParticipantStatus.COMPLETED) {
+        return false;
+      }
+
+      if (!participant.employee?.email?.trim()) {
         return false;
       }
 
@@ -984,21 +989,91 @@ export class CampaignParticipantService {
       return now - participant.invitation_sent_at.getTime() >= thresholdMs;
     });
 
+    const skippedCount = participants.length - pendingParticipants.length;
+
+    if (!pendingParticipants.length) {
+      return {
+        success: true,
+        campaign_id: campaignId,
+        minimum_days_since_invitation: thresholdDays,
+        reminded_count: 0,
+        failed_count: 0,
+        skipped_count: skippedCount,
+        reminded_participants: [],
+        message: 'Aucune relance a envoyer.',
+      };
+    }
+
+    const appUrl = this.resolvePublicAppUrl();
+    const campaignName = campaign.name?.trim() || `Campagne ${campaign.id}`;
+    const companyName =
+      campaign.company.name?.trim() || `Entreprise ${campaign.company.id}`;
+    const recipients = this.buildSurveyEmailRecipients(
+      pendingParticipants,
+      campaign,
+      appUrl,
+      campaignName,
+      companyName,
+    );
+    const sendGridResult =
+      await this.sendGridMailService.sendSurveyReminders(recipients);
+    const failedReminders = sendGridResult.failed.map((item) => ({
+      participant_id: item.recipient.participant_id,
+      email: item.recipient.email,
+      error: item.error,
+      status_code: item.status_code,
+      reason: item.reason,
+      retry_after: item.retry_after,
+      rate_limit: item.rate_limit,
+    }));
+
+    if (!sendGridResult.sent.length) {
+      return {
+        success: false,
+        campaign_id: campaignId,
+        minimum_days_since_invitation: thresholdDays,
+        reminded_count: 0,
+        failed_count: sendGridResult.failed.length,
+        skipped_count: skippedCount,
+        message: this.buildSendGridNoDeliveryMessage(
+          'relance',
+          sendGridResult.failed,
+        ),
+        sendgrid_result: {
+          failed: failedReminders,
+        },
+        reminded_participants: [],
+      };
+    }
+
+    const sentParticipantIds = new Set(
+      sendGridResult.sent.map((recipient) => recipient.participant_id),
+    );
+    const sentParticipants = pendingParticipants.filter((participant) =>
+      sentParticipantIds.has(participant.id),
+    );
     const reminderDate = new Date();
 
-    for (const participant of pendingParticipants) {
+    for (const participant of sentParticipants) {
       participant.reminder_sent_at = reminderDate;
       participant.reminder_count = (participant.reminder_count ?? 0) + 1;
       participant.status = CampaignParticipantStatus.REMINDED;
     }
 
-    await this.campaignParticipantRepository.save(pendingParticipants);
+    await this.campaignParticipantRepository.save(sentParticipants);
 
     return {
+      success: sendGridResult.failed.length === 0,
       campaign_id: campaignId,
       minimum_days_since_invitation: thresholdDays,
-      reminded_count: pendingParticipants.length,
-      reminded_participants: pendingParticipants,
+      reminded_count: sendGridResult.sent.length,
+      failed_count: sendGridResult.failed.length,
+      skipped_count: skippedCount,
+      reminder_sent_at: reminderDate,
+      sendgrid_result: {
+        failed: failedReminders,
+      },
+      reminded_participants: sentParticipants,
     };
   }
 
@@ -1144,6 +1219,62 @@ export class CampaignParticipantService {
       reminder_count: participant.reminder_count ?? 0,
       status: participant.status,
     };
+  }
+
+  private buildSendGridNoDeliveryMessage(
+    emailKind: 'invitation' | 'relance',
+    failures: SendGridBatchResult['failed'],
+  ) {
+    const label = emailKind === 'invitation' ? 'invitation' : 'relance';
+    const hasQuotaOrRateLimit = failures.some(
+      (failure) =>
+        failure.reason === 'quota_exceeded' ||
+        failure.reason === 'rate_limited' ||
+        /quota|credits?|rate.?limit|too many requests/i.test(failure.error),
+    );
+
+    if (hasQuotaOrRateLimit) {
+      return `Aucune ${label} n'a pu etre envoyee: quota ou limite SendGrid atteint. Verifiez les credits SendGrid, le plan actif et le prochain reset avant de relancer.`;
+    }
+
+    const hasAuthenticationIssue = failures.some(
+      (failure) =>
+        failure.reason === 'authentication' || failure.reason === 'forbidden',
+    );
+
+    if (hasAuthenticationIssue) {
+      return `Aucune ${label} n'a pu etre envoyee: SendGrid refuse la cle API, l'expediteur ou les permissions du compte.`;
+    }
+
+    return `Aucune ${label} n'a pu etre envoyee via SendGrid. Verifiez le template, la configuration SendGrid et les adresses email.`;
+  }
+
+  private buildSurveyEmailRecipients(
+    participants: CampaignParticipant[],
+    campaign: Campaign,
+    appUrl: string,
+    campaignName: string,
+    companyName: string,
+  ): SurveyInvitationEmailRecipient[] {
+    return participants.map((participant) => {
+      const email = (participant.employee.email ?? '').trim().toLowerCase();
+      const firstName = participant.employee.first_name?.trim() || '';
+      const lastName = participant.employee.last_name?.trim() || '';
+      const name = `${firstName} ${lastName}`.trim() || email;
+
+      return {
+        participant_id: participant.id,
+        employee_id: participant.employee.id,
+        email,
+        name,
+        first_name: firstName,
+        survey_url: `${appUrl}/survey-response/${participant.participation_token}`,
+        campaign_name: campaignName,
+        company_name: companyName,
+        start_date: campaign.start_date,
+        end_date: campaign.end_date,
+      };
+    });
   }
 
   private async findCampaignOrThrow(campaignId: number) {

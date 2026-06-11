@@ -62,6 +62,25 @@ type SendInvitationFailure = {
   participant_id?: number;
   email?: string;
   error?: string;
+  status_code?: number;
+  reason?: SendGridFailureReason;
+  retry_after?: string;
+  rate_limit?: SendGridRateLimit;
+};
+
+type SendGridFailureReason =
+  | "quota_exceeded"
+  | "rate_limited"
+  | "forbidden"
+  | "authentication"
+  | "invalid_request"
+  | "server_error"
+  | "unknown";
+
+type SendGridRateLimit = {
+  limit?: number;
+  remaining?: number;
+  reset?: number;
 };
 
 type ImportedParticipantView = {
@@ -2220,6 +2239,11 @@ function formatInvitationFailureMessage(result: SendInvitationsResponse) {
   const baseMessage =
     result.message?.trim() || "L'envoi des invitations a echoue.";
   const failures = result.sendgrid_result?.failed ?? [];
+  const diagnostic = getSendGridFailureDiagnostic(failures);
+  const resolvedBaseMessage =
+    diagnostic && !/quota|limite SendGrid/i.test(baseMessage)
+      ? `${baseMessage} ${diagnostic}`
+      : baseMessage;
   const details = failures
     .map((failure) => {
       const error = truncateMessage(failure.error?.trim() || "");
@@ -2234,14 +2258,29 @@ function formatInvitationFailureMessage(result: SendInvitationsResponse) {
     .slice(0, 3);
 
   if (!details.length) {
-    return baseMessage;
+    return resolvedBaseMessage;
   }
 
   const remainingCount = Math.max(failures.length - details.length, 0);
   const remainingMessage =
     remainingCount > 0 ? ` ${remainingCount} autre(s) echec(s).` : "";
 
-  return `${baseMessage} ${details.join(" ")}${remainingMessage}`;
+  return `${resolvedBaseMessage} ${details.join(" ")}${remainingMessage}`;
+}
+
+function getSendGridFailureDiagnostic(failures: SendInvitationFailure[]) {
+  if (
+    failures.some(
+      (failure) =>
+        failure.reason === "quota_exceeded" ||
+        failure.reason === "rate_limited" ||
+        /quota|credits?|rate.?limit|too many requests/i.test(failure.error ?? ""),
+    )
+  ) {
+    return "Cause probable: quota ou limite SendGrid atteint.";
+  }
+
+  return "";
 }
 
 function truncateMessage(value: string, maxLength = 260) {

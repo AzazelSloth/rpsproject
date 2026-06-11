@@ -363,6 +363,8 @@ SENDGRID_API_KEY=
 SENDGRID_FROM_EMAIL=communications@laroche360.ca
 SENDGRID_FROM_NAME=Laroche 360
 SENDGRID_REPLY_TO=communications@laroche360.ca
+SENDGRID_INVITATION_TEMPLATE_ID=
+SENDGRID_REMINDER_TEMPLATE_ID=
 
 N8N_BASE_URL=http://localhost:5678
 N8N_WEBHOOK_URL=http://localhost:5678/webhook/rps-analysis
@@ -472,6 +474,8 @@ Ne jamais commiter de vrais secrets. Les valeurs ci-dessous sont des exemples.
 | `SENDGRID_FROM_EMAIL` | oui en prod | `communications@laroche360.ca` | Expéditeur |
 | `SENDGRID_FROM_NAME` | non | `Laroche 360` | Nom affiché |
 | `SENDGRID_REPLY_TO` | non | `communications@laroche360.ca` | Reply-To |
+| `SENDGRID_INVITATION_TEMPLATE_ID` | non | `d-...` | Dynamic Template SendGrid pour le premier envoi |
+| `SENDGRID_REMINDER_TEMPLATE_ID` | non | `d-...` | Dynamic Template SendGrid pour les relances |
 | `N8N_BASE_URL` | non | `https://automation.laroche360.ca` | Base n8n |
 | `N8N_WEBHOOK_URL` | oui si analyse | `https://automation.laroche360.ca/webhook/rps-analysis` | Webhook d'analyse |
 | `N8N_WEBHOOK_PATH` | non | `/webhook/rps-analysis` | Chemin par défaut si seule la base est fournie |

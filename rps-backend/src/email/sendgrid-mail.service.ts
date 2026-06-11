@@ -1,9 +1,23 @@
 import {
   Injectable,
-  InternalServerErrorException,
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
+
+export type SendGridFailureReason =
+  | 'quota_exceeded'
+  | 'rate_limited'
+  | 'forbidden'
+  | 'authentication'
+  | 'invalid_request'
+  | 'server_error'
+  | 'unknown';
+
+export type SendGridRateLimit = {
+  limit?: number;
+  remaining?: number;
+  reset?: number;
+};
 
 export type SurveyInvitationEmailRecipient = {
   participant_id: number;
@@ -23,8 +37,39 @@ export type SendGridBatchResult = {
   failed: {
     recipient: SurveyInvitationEmailRecipient;
     error: string;
+    status_code?: number;
+    reason?: SendGridFailureReason;
+    retry_after?: string;
+    rate_limit?: SendGridRateLimit;
   }[];
 };
+
+type SendGridConfig = {
+  apiKey: string;
+  fromEmail: string;
+  fromName: string;
+  replyTo: string;
+};
+
+type SendGridTemplateKind = 'invitation' | 'reminder';
+
+const DEFAULT_SENDGRID_TEMPLATE_IDS: Record<SendGridTemplateKind, string> = {
+  invitation: 'd-29ae7d6438ff4c24b8b179a840fd15a4',
+  reminder: 'd-83afb17df29c43c89489a20ee92d500b',
+};
+
+class SendGridDeliveryError extends Error {
+  constructor(
+    message: string,
+    readonly statusCode: number,
+    readonly reason: SendGridFailureReason,
+    readonly rateLimit?: SendGridRateLimit,
+    readonly retryAfter?: string,
+  ) {
+    super(message);
+    this.name = 'SendGridDeliveryError';
+  }
+}
 
 const SURVEY_INVITATION_HTML_TEMPLATE = `<!DOCTYPE html>
 <html lang="fr">
@@ -557,11 +602,20 @@ export class SendGridMailService {
   async sendSurveyInvitations(
     recipients: SurveyInvitationEmailRecipient[],
   ): Promise<SendGridBatchResult> {
-    const apiKey = this.getRequiredEnv('SENDGRID_API_KEY');
-    const fromEmail = this.getRequiredEnv('SENDGRID_FROM_EMAIL');
-    const fromName = this.getRequiredEnv('SENDGRID_FROM_NAME');
-    const replyTo = process.env.SENDGRID_REPLY_TO?.trim() || fromEmail;
+    return this.sendSurveyEmails(recipients, 'invitation');
+  }
 
+  async sendSurveyReminders(
+    recipients: SurveyInvitationEmailRecipient[],
+  ): Promise<SendGridBatchResult> {
+    return this.sendSurveyEmails(recipients, 'reminder');
+  }
+
+  private async sendSurveyEmails(
+    recipients: SurveyInvitationEmailRecipient[],
+    kind: SendGridTemplateKind,
+  ): Promise<SendGridBatchResult> {
+    const config = this.getSendGridConfig();
     const result: SendGridBatchResult = {
       sent: [],
       failed: [],
@@ -569,72 +623,261 @@ export class SendGridMailService {
 
     for (const recipient of recipients) {
       try {
-        await this.sendSurveyInvitation({
-          apiKey,
-          fromEmail,
-          fromName,
-          replyTo,
+        await this.sendSurveyEmail({
+          ...config,
+          kind,
           recipient,
         });
         result.sent.push(recipient);
       } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Erreur inconnue lors de l'envoi SendGrid";
+        const failure = this.formatSendGridFailure(error);
 
         this.logger.error(
-          `SendGrid invitation failed for ${recipient.email}: ${message}`,
+          `SendGrid ${kind} failed for ${recipient.email}: ${failure.error}`,
         );
-        result.failed.push({ recipient, error: message });
+        result.failed.push({ recipient, ...failure });
       }
     }
 
     return result;
   }
 
-  private async sendSurveyInvitation(params: {
+  private async sendSurveyEmail(params: {
     apiKey: string;
     fromEmail: string;
     fromName: string;
     replyTo: string;
+    kind: SendGridTemplateKind;
     recipient: SurveyInvitationEmailRecipient;
   }) {
-    const { apiKey, fromEmail, fromName, replyTo, recipient } = params;
-    const subject = `Sondage RPS - ${recipient.campaign_name}`;
-    const text = this.buildInvitationText(recipient, replyTo, fromName);
-    const html = this.buildInvitationHtml(recipient, replyTo);
+    const { apiKey, fromEmail, fromName, replyTo, kind, recipient } = params;
+    const subject =
+      kind === 'reminder'
+        ? `Relance - Sondage RPS - ${recipient.campaign_name}`
+        : `Sondage RPS - ${recipient.campaign_name}`;
+    const templateId = this.resolveTemplateId(kind);
 
+    if (templateId) {
+      try {
+        await this.deliverSendGridEmail(
+          apiKey,
+          this.buildTemplateEmailBody({
+            fromEmail,
+            fromName,
+            replyTo,
+            recipient,
+            templateId,
+            kind,
+            subject,
+          }),
+        );
+        return;
+      } catch (error) {
+        if (!this.shouldUseInlineFallback(error)) {
+          throw error;
+        }
+
+        const fallbackReason = this.formatSendGridFailure(error);
+        this.logger.warn(
+          `SendGrid ${kind} template failed for ${recipient.email}; trying inline fallback: ${fallbackReason.error}`,
+        );
+      }
+    }
+
+    await this.deliverSendGridEmail(
+      apiKey,
+      this.buildInlineEmailBody({
+        fromEmail,
+        fromName,
+        replyTo,
+        recipient,
+        kind,
+        subject,
+      }),
+    );
+  }
+
+  private async deliverSendGridEmail(
+    apiKey: string,
+    body: unknown,
+  ) {
     const response = await fetch(this.sendGridUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        personalizations: [
-          {
-            to: [{ email: recipient.email, name: recipient.name }],
-          },
-        ],
-        from: { email: fromEmail, name: fromName },
-        reply_to: { email: replyTo },
-        subject,
-        content: [
-          { type: 'text/plain', value: text },
-          { type: 'text/html', value: html },
-        ],
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      throw new InternalServerErrorException(
-        `SendGrid a refuse l'email (${response.status})${
-          body ? `: ${body.slice(0, 500)}` : ''
-        }`,
-      );
+      throw await this.buildDeliveryError(response);
     }
+  }
+
+  private async buildDeliveryError(response: Response) {
+    const responseBody = await response.text().catch(() => '');
+    const sendGridMessage = this.getSendGridErrorText(responseBody);
+    const reason = this.classifySendGridFailure(
+      response.status,
+      sendGridMessage,
+    );
+
+    return new SendGridDeliveryError(
+      this.buildSendGridErrorMessage(
+        response.status,
+        response.statusText,
+        reason,
+        sendGridMessage,
+      ),
+      response.status,
+      reason,
+      this.getRateLimitInfo(response),
+      response.headers.get('retry-after') ?? undefined,
+    );
+  }
+
+  private resolveTemplateId(kind: SendGridTemplateKind) {
+    const configuredTemplateId =
+      kind === 'reminder'
+        ? this.getOptionalEnv('SENDGRID_REMINDER_TEMPLATE_ID')
+        : this.getOptionalEnv('SENDGRID_INVITATION_TEMPLATE_ID');
+
+    return this.normalizeTemplateId(
+      configuredTemplateId ?? DEFAULT_SENDGRID_TEMPLATE_IDS[kind],
+    );
+  }
+
+  private normalizeTemplateId(value: string | null) {
+    const templateId = value?.trim();
+
+    if (!templateId) {
+      return null;
+    }
+
+    if (/^[a-f0-9]{32}$/i.test(templateId)) {
+      return `d-${templateId}`;
+    }
+
+    return templateId;
+  }
+
+  private shouldUseInlineFallback(error: unknown) {
+    if (!(error instanceof SendGridDeliveryError)) {
+      return true;
+    }
+
+    return !['quota_exceeded', 'rate_limited', 'authentication'].includes(
+      error.reason,
+    );
+  }
+
+  private buildTemplateEmailBody(params: {
+    fromEmail: string;
+    fromName: string;
+    replyTo: string;
+    recipient: SurveyInvitationEmailRecipient;
+    templateId: string;
+    kind: SendGridTemplateKind;
+    subject: string;
+  }) {
+    const { fromEmail, fromName, replyTo, recipient, templateId, kind, subject } =
+      params;
+
+    return {
+      personalizations: [
+        {
+          to: [{ email: recipient.email, name: recipient.name }],
+          dynamic_template_data: this.buildDynamicTemplateData(
+            recipient,
+            replyTo,
+            fromName,
+            kind,
+            subject,
+          ),
+        },
+      ],
+      from: { email: fromEmail, name: fromName },
+      reply_to: { email: replyTo },
+      template_id: templateId,
+    };
+  }
+
+  private buildInlineEmailBody(params: {
+    fromEmail: string;
+    fromName: string;
+    replyTo: string;
+    recipient: SurveyInvitationEmailRecipient;
+    kind: SendGridTemplateKind;
+    subject: string;
+  }) {
+    const { fromEmail, fromName, replyTo, recipient, kind, subject } = params;
+    const text =
+      kind === 'reminder'
+        ? this.buildReminderText(recipient, replyTo, fromName)
+        : this.buildInvitationText(recipient, replyTo, fromName);
+    const html =
+      kind === 'reminder'
+        ? this.buildReminderHtml(recipient, replyTo)
+        : this.buildInvitationHtml(recipient, replyTo);
+
+    return {
+      personalizations: [
+        {
+          to: [{ email: recipient.email, name: recipient.name }],
+        },
+      ],
+      from: { email: fromEmail, name: fromName },
+      reply_to: { email: replyTo },
+      subject,
+      content: [
+        { type: 'text/plain', value: text },
+        { type: 'text/html', value: html },
+      ],
+    };
+  }
+
+  private buildDynamicTemplateData(
+    recipient: SurveyInvitationEmailRecipient,
+    contactEmail: string,
+    fromName: string,
+    kind: SendGridTemplateKind,
+    subject: string,
+  ) {
+    const firstName = this.getFirstName(recipient);
+    const startDate = this.formatEmailDate(recipient.start_date);
+    const endDate = this.formatEmailDate(recipient.end_date);
+
+    return {
+      subject,
+      emailType: kind,
+      isReminder: kind === 'reminder',
+      participantId: recipient.participant_id,
+      participant_id: recipient.participant_id,
+      employeeId: recipient.employee_id,
+      employee_id: recipient.employee_id,
+      email: recipient.email,
+      name: recipient.name,
+      firstName,
+      first_name: firstName,
+      campaignName: recipient.campaign_name,
+      campaign_name: recipient.campaign_name,
+      companyName: recipient.company_name,
+      company_name: recipient.company_name,
+      startDate,
+      start_date: startDate,
+      endDate,
+      end_date: endDate,
+      surveyLink: recipient.survey_url,
+      survey_link: recipient.survey_url,
+      surveyUrl: recipient.survey_url,
+      survey_url: recipient.survey_url,
+      link: recipient.survey_url,
+      contactEmail,
+      contact_email: contactEmail,
+      fromName,
+      from_name: fromName,
+    };
   }
 
   private buildInvitationText(
@@ -673,6 +916,56 @@ export class SendGridMailService {
       surveyLink: recipient.survey_url,
       contactEmail,
     });
+  }
+
+  private buildReminderText(
+    recipient: SurveyInvitationEmailRecipient,
+    contactEmail: string,
+    fromName: string,
+  ) {
+    const firstName = this.getFirstName(recipient);
+    const endDate = this.formatEmailDate(recipient.end_date);
+
+    return [
+      `Bonjour ${firstName},`,
+      '',
+      `Petit rappel: le sondage RPS "${recipient.campaign_name}" est toujours ouvert.`,
+      endDate ? `Date limite : ${endDate}` : '',
+      `Lien personnalise : ${recipient.survey_url}`,
+      '',
+      'Merci de prendre quelques minutes pour le completer.',
+      `Contact : ${contactEmail}`,
+      '',
+      fromName,
+    ]
+      .filter((line) => line !== '')
+      .join('\n');
+  }
+
+  private buildReminderHtml(
+    recipient: SurveyInvitationEmailRecipient,
+    contactEmail: string,
+  ) {
+    const firstName = this.escapeHtml(this.getFirstName(recipient));
+    const campaignName = this.escapeHtml(recipient.campaign_name);
+    const surveyUrl = this.escapeHtml(recipient.survey_url);
+    const endDate = this.formatEmailDate(recipient.end_date);
+    const escapedEndDate = this.escapeHtml(endDate);
+    const escapedContactEmail = this.escapeHtml(contactEmail);
+
+    return [
+      '<!DOCTYPE html>',
+      '<html lang="fr">',
+      '<body style="font-family: Arial, sans-serif; color: #111827; line-height: 1.6;">',
+      `<p>Bonjour ${firstName},</p>`,
+      `<p>Petit rappel: le sondage RPS <strong>${campaignName}</strong> est toujours ouvert.</p>`,
+      endDate ? `<p>Date limite : <strong>${escapedEndDate}</strong></p>` : '',
+      `<p><a href="${surveyUrl}" style="display:inline-block;background:#E50914;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:24px;font-weight:700;">Completer le sondage</a></p>`,
+      `<p>Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>${surveyUrl}</p>`,
+      `<p>Contact : <a href="mailto:${escapedContactEmail}">${escapedContactEmail}</a></p>`,
+      '</body>',
+      '</html>',
+    ].join('');
   }
 
   private renderTemplate(template: string, values: Record<string, string>) {
@@ -726,6 +1019,186 @@ export class SendGridMailService {
       .replace(/'/g, '&#039;');
   }
 
+  private formatSendGridFailure(error: unknown) {
+    if (error instanceof SendGridDeliveryError) {
+      return {
+        error: error.message,
+        status_code: error.statusCode,
+        reason: error.reason,
+        ...(error.retryAfter ? { retry_after: error.retryAfter } : {}),
+        ...(error.rateLimit ? { rate_limit: error.rateLimit } : {}),
+      };
+    }
+
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erreur inconnue lors de l'envoi SendGrid",
+    };
+  }
+
+  private getSendGridErrorText(body: string) {
+    const trimmedBody = body.trim();
+
+    if (!trimmedBody) {
+      return '';
+    }
+
+    try {
+      const parsed = JSON.parse(trimmedBody) as {
+        errors?: { message?: unknown; field?: unknown }[];
+        message?: unknown;
+        error?: unknown;
+      };
+
+      if (Array.isArray(parsed.errors)) {
+        const messages = parsed.errors
+          .map((item) => {
+            const message =
+              typeof item.message === 'string' ? item.message.trim() : '';
+            const field =
+              typeof item.field === 'string' &&
+              item.field.trim() &&
+              item.field !== 'null'
+                ? ` (${item.field.trim()})`
+                : '';
+
+            return `${message}${field}`.trim();
+          })
+          .filter(Boolean);
+
+        if (messages.length) {
+          return messages.join('; ');
+        }
+      }
+
+      if (typeof parsed.message === 'string') {
+        return parsed.message.trim();
+      }
+
+      if (typeof parsed.error === 'string') {
+        return parsed.error.trim();
+      }
+    } catch {
+      // Keep the raw SendGrid response below when it is not JSON.
+    }
+
+    return trimmedBody.slice(0, 500);
+  }
+
+  private classifySendGridFailure(
+    status: number,
+    errorText: string,
+  ): SendGridFailureReason {
+    const normalized = errorText.toLowerCase();
+
+    if (/quota|credit|credits|balance|billing|overage/.test(normalized)) {
+      return 'quota_exceeded';
+    }
+
+    if (status === 429 || /rate.?limit|too many requests/.test(normalized)) {
+      return 'rate_limited';
+    }
+
+    if (status === 401) {
+      return 'authentication';
+    }
+
+    if (status === 403) {
+      return 'forbidden';
+    }
+
+    if (status >= 400 && status < 500) {
+      return 'invalid_request';
+    }
+
+    if (status >= 500) {
+      return 'server_error';
+    }
+
+    return 'unknown';
+  }
+
+  private buildSendGridErrorMessage(
+    status: number,
+    statusText: string,
+    reason: SendGridFailureReason,
+    errorText: string,
+  ) {
+    const reasonMessage = this.getSendGridReasonMessage(reason);
+    const rawDetails = errorText ? ` Detail SendGrid: ${errorText}` : '';
+    const statusLabel = statusText ? `${status} ${statusText}` : `${status}`;
+
+    return `SendGrid a refuse l'email (${statusLabel}). ${reasonMessage}${rawDetails}`;
+  }
+
+  private getSendGridReasonMessage(reason: SendGridFailureReason) {
+    switch (reason) {
+      case 'quota_exceeded':
+        return 'Quota ou credits SendGrid epuises. Verifiez le solde de credits et le prochain reset.';
+      case 'rate_limited':
+        return 'Limite SendGrid atteinte. Attendez le reset indique par SendGrid avant de relancer.';
+      case 'authentication':
+        return 'Authentification SendGrid refusee. Verifiez SENDGRID_API_KEY.';
+      case 'forbidden':
+        return "Acces SendGrid refuse. Verifiez l'expediteur, le compte et les permissions SendGrid.";
+      case 'invalid_request':
+        return 'Requete SendGrid invalide. Verifiez le payload, le template et les adresses email.';
+      case 'server_error':
+        return 'Erreur temporaire cote SendGrid.';
+      default:
+        return 'Erreur SendGrid non classee.';
+    }
+  }
+
+  private getRateLimitInfo(response: Response): SendGridRateLimit | undefined {
+    const rateLimit: SendGridRateLimit = {};
+    const limit = this.parseHeaderNumber(response.headers.get('x-ratelimit-limit'));
+    const remaining = this.parseHeaderNumber(
+      response.headers.get('x-ratelimit-remaining'),
+    );
+    const reset = this.parseHeaderNumber(response.headers.get('x-ratelimit-reset'));
+
+    if (limit !== null) {
+      rateLimit.limit = limit;
+    }
+
+    if (remaining !== null) {
+      rateLimit.remaining = remaining;
+    }
+
+    if (reset !== null) {
+      rateLimit.reset = reset;
+    }
+
+    return Object.keys(rateLimit).length ? rateLimit : undefined;
+  }
+
+  private parseHeaderNumber(value: string | null) {
+    if (!value) {
+      return null;
+    }
+
+    const numberValue = Number(value);
+
+    return Number.isFinite(numberValue) ? numberValue : null;
+  }
+
+  private getSendGridConfig(): SendGridConfig {
+    const apiKey = this.getRequiredEnv('SENDGRID_API_KEY');
+    const fromEmail = this.getRequiredEnv('SENDGRID_FROM_EMAIL');
+    const fromName = this.getRequiredEnv('SENDGRID_FROM_NAME');
+    const replyTo = this.getOptionalEnv('SENDGRID_REPLY_TO') || fromEmail;
+
+    return {
+      apiKey,
+      fromEmail,
+      fromName,
+      replyTo,
+    };
+  }
+
   private getRequiredEnv(name: string) {
     const value = process.env[name]?.trim();
 
@@ -736,5 +1209,9 @@ export class SendGridMailService {
     }
 
     return value;
+  }
+
+  private getOptionalEnv(name: string) {
+    return process.env[name]?.trim() || null;
   }
 }
