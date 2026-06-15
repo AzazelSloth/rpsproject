@@ -1,5 +1,6 @@
 import { Controller, Get, Logger, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { getN8nBaseUrl } from '../n8n/n8n.config';
 
 type HealthStatus = 'healthy' | 'unhealthy' | 'unavailable' | 'not-configured';
 
@@ -10,6 +11,17 @@ interface HealthCheck {
     database: HealthStatus;
     n8n: HealthStatus;
   };
+}
+
+function getConfiguredN8nHealthUrl() {
+  const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL?.trim();
+  const n8nBaseUrl = process.env.N8N_BASE_URL?.trim();
+
+  if (!n8nWebhookUrl && !n8nBaseUrl) {
+    return undefined;
+  }
+
+  return `${getN8nBaseUrl()}/healthz`;
 }
 
 @Controller('health')
@@ -41,21 +53,17 @@ export class HealthController {
       }
     }
 
-    // Check n8n webhook endpoint (if configured)
-    const n8nUrl = process.env.N8N_WEBHOOK_URL;
-    if (n8nUrl) {
+    // Check n8n service health endpoint (if configured)
+    const n8nHealthUrl = getConfiguredN8nHealthUrl();
+    if (n8nHealthUrl) {
       let timeout: ReturnType<typeof setTimeout> | undefined;
       try {
         const controller = new AbortController();
         timeout = setTimeout(() => controller.abort(), 5000);
-        const response = await fetch(
-          n8nUrl.replace(/\/[^/]*$/, '/healthz') ||
-            'http://localhost:5678/healthz',
-          {
-            method: 'GET',
-            signal: controller.signal,
-          },
-        );
+        const response = await fetch(n8nHealthUrl, {
+          method: 'GET',
+          signal: controller.signal,
+        });
         health.checks.n8n = response.ok ? 'healthy' : 'unavailable';
       } catch {
         health.checks.n8n = 'unavailable';

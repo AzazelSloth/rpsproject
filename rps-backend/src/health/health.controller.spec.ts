@@ -9,20 +9,66 @@ type HealthControllerWithLogger = HealthController & {
 describe('HealthController', () => {
   const originalEnv = {
     N8N_HEALTH_REQUIRED: process.env.N8N_HEALTH_REQUIRED,
+    N8N_BASE_URL: process.env.N8N_BASE_URL,
     N8N_WEBHOOK_URL: process.env.N8N_WEBHOOK_URL,
   };
   const originalFetch = global.fetch;
 
   afterEach(() => {
     restoreEnvValue('N8N_HEALTH_REQUIRED', originalEnv.N8N_HEALTH_REQUIRED);
+    restoreEnvValue('N8N_BASE_URL', originalEnv.N8N_BASE_URL);
     restoreEnvValue('N8N_WEBHOOK_URL', originalEnv.N8N_WEBHOOK_URL);
     global.fetch = originalFetch;
     jest.restoreAllMocks();
   });
 
+  it('checks n8n health at the root healthz endpoint derived from the webhook URL', async () => {
+    process.env.N8N_WEBHOOK_URL =
+      'http://localhost:5678/webhook/rps-analysis';
+    delete process.env.N8N_BASE_URL;
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const controller = new HealthController(createDataSourceMock());
+
+    await expect(controller.getHealth()).resolves.toMatchObject({
+      status: 'healthy',
+      checks: {
+        database: 'healthy',
+        n8n: 'healthy',
+      },
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:5678/healthz',
+      expect.objectContaining({ method: 'GET' }),
+    );
+  });
+
+  it('checks n8n health from the base URL when the webhook URL is not set', async () => {
+    process.env.N8N_BASE_URL = 'https://automation.laroche360.ca/';
+    delete process.env.N8N_WEBHOOK_URL;
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const controller = new HealthController(createDataSourceMock());
+
+    await expect(controller.getHealth()).resolves.toMatchObject({
+      status: 'healthy',
+      checks: {
+        database: 'healthy',
+        n8n: 'healthy',
+      },
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://automation.laroche360.ca/healthz',
+      expect.objectContaining({ method: 'GET' }),
+    );
+  });
+
   it('stays healthy when n8n is unavailable but optional', async () => {
     process.env.N8N_WEBHOOK_URL =
       'http://localhost:5678/webhook/rps-analysis';
+    delete process.env.N8N_BASE_URL;
     delete process.env.N8N_HEALTH_REQUIRED;
     global.fetch = jest
       .fn()
@@ -41,6 +87,7 @@ describe('HealthController', () => {
   it('degrades when n8n is required and unavailable', async () => {
     process.env.N8N_WEBHOOK_URL =
       'http://localhost:5678/webhook/rps-analysis';
+    delete process.env.N8N_BASE_URL;
     process.env.N8N_HEALTH_REQUIRED = 'true';
     global.fetch = jest
       .fn()
@@ -57,6 +104,7 @@ describe('HealthController', () => {
   });
 
   it('degrades when the database is unhealthy', async () => {
+    delete process.env.N8N_BASE_URL;
     delete process.env.N8N_WEBHOOK_URL;
     const controller = new HealthController(
       createDataSourceMock(jest.fn().mockRejectedValue(new Error('db down'))),
