@@ -16,7 +16,6 @@
     "types": ["node", "jest"],
   
     "incremental": true,
-    "ignoreDeprecations": "6.0",
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
