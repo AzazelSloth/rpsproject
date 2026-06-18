@@ -55,10 +55,3 @@ a {
     linear-gradient(90deg, rgba(155, 114, 35, 0.06) 1px, transparent 1px);
   background-size: 36px 36px;
 }
-
-.brand-wordmark {
-  font-family: var(--font-manrope), sans-serif;
-  font-weight: 900;
-  letter-spacing: -0.07em;
-  color: #111111;
-}
