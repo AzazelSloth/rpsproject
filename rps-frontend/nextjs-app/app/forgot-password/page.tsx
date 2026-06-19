@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
       const response = await requestPasswordReset({ email });
       setSuccessMessage(response.message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "La demande de reinitialisation a echoue.");
+      setError(err instanceof Error ? err.message : "La demande de réinitialisation a echoué.");
     } finally {
       setIsLoading(false);
     }
@@ -51,12 +51,12 @@ export default function ForgotPasswordPage() {
           <h1
             className={`max-w-2xl ${headingFontClass} text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl`}
           >
-            Recuperation d acces.
+            Récupération d'accès.
           </h1>
 
           <p className="max-w-2xl text-base leading-7 text-slate-600">
             Entrez votre email administrateur. Si le compte existe, nous enverrons un lien de
-            reinitialisation a usage unique.
+            réinitialisation a usage unique.
           </p>
         </section>
 
@@ -65,10 +65,10 @@ export default function ForgotPasswordPage() {
             Assistance de connexion
           </p>
           <h2 className={`mt-2 ${headingFontClass} text-2xl font-extrabold tracking-tight text-slate-900`}>
-            Reinitialiser mon mot de passe
+            Réinitialiser mon mot de passe
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Le lien de reinitialisation expire rapidement et ne touche pas votre session actuelle.
+            Le lien de réinitialisation expire rapidement et ne touche pas votre session actuelle.
           </p>
 
           <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-4">
@@ -110,7 +110,7 @@ export default function ForgotPasswordPage() {
               Retour a la connexion
             </Link>
             <Link href="/signup" className="text-slate-600 underline-offset-4 hover:underline">
-              Creer un compte
+              Créer un compte
             </Link>
           </div>
         </Card>
