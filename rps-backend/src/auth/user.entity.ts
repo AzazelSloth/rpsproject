@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
@@ -18,6 +19,13 @@ export class User {
 
   @Column({ type: 'varchar', nullable: true })
   password: string | null;
+
+  @Index('IDX_users_password_reset_token_hash')
+  @Column({ type: 'varchar', nullable: true })
+  password_reset_token_hash: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  password_reset_expires_at: Date | null;
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;

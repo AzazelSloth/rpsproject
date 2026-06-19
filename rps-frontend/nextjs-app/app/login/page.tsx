@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
@@ -100,6 +98,14 @@ export default function LoginPage() {
                 className={inputClassName}
                 placeholder="Votre mot de passe"
               />
+              <div className="flex justify-end">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-[#8a651f] underline-offset-4 hover:underline"
+                >
+                  Mot de passe oublie ?
+                </Link>
+              </div>
             </div>
 
             {error ? (

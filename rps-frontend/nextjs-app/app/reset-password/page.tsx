@@ -1,10 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/rps/brand-logo";
 import { Card } from "@/components/rps/ui";
-import { requestPasswordReset } from "@/lib/backend/auth";
+import { resetPassword } from "@/lib/backend/auth";
 
 const headingFontClass = "font-[family-name:var(--font-manrope)]";
 const inputClassName =
@@ -12,23 +12,50 @@ const inputClassName =
 const primaryButtonClassName =
   "w-full rounded-[12px] border border-[#d5ba85] bg-[#181818] px-5 py-3 text-sm font-semibold text-[#f7f1e6] shadow-[0_14px_28px_rgba(24,24,24,0.14)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:cursor-not-allowed disabled:opacity-60";
 
-export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
+export default function ResetPasswordPage() {
+  const [token, setToken] = useState("");
+  const [hasLoadedToken, setHasLoadedToken] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const nextToken = new URLSearchParams(window.location.search).get("token")?.trim() ?? "";
+    setToken(nextToken);
+    setHasLoadedToken(true);
+  }, []);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setSuccessMessage(null);
+
+    if (!token) {
+      setError("Le lien de reinitialisation est invalide ou incomplet.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Le nouveau mot de passe doit contenir au moins 6 caracteres.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const response = await requestPasswordReset({ email });
+      const response = await resetPassword({ token, password });
       setSuccessMessage(response.message);
+      setPassword("");
+      setConfirmPassword("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "La demande de reinitialisation a echoue.");
+      setError(err instanceof Error ? err.message : "La mise a jour du mot de passe a echoue.");
     } finally {
       setIsLoading(false);
     }
@@ -51,40 +78,57 @@ export default function ForgotPasswordPage() {
           <h1
             className={`max-w-2xl ${headingFontClass} text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl`}
           >
-            Recuperation d acces.
+            Nouveau mot de passe.
           </h1>
 
           <p className="max-w-2xl text-base leading-7 text-slate-600">
-            Entrez votre email administrateur. Si le compte existe, nous enverrons un lien de
-            reinitialisation a usage unique.
+            Choisissez un nouveau mot de passe pour retrouver l acces a votre espace
+            administrateur.
           </p>
         </section>
 
         <Card className="mx-auto w-full max-w-md rounded-[22px] border border-[#dfd1b9] bg-[rgba(255,252,246,0.95)] p-6 shadow-[0_24px_60px_rgba(40,33,24,0.16)] sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8a651f]">
-            Assistance de connexion
-          </p>
-          <h2 className={`mt-2 ${headingFontClass} text-2xl font-extrabold tracking-tight text-slate-900`}>
-            Reinitialiser mon mot de passe
+          <h2 className={`${headingFontClass} text-2xl font-extrabold tracking-tight text-slate-900`}>
+            Reinitialiser le mot de passe
           </h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Le lien de reinitialisation expire rapidement et ne touche pas votre session actuelle.
-          </p>
+
+          {hasLoadedToken && !token ? (
+            <p className="mt-4 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              Le lien de reinitialisation est invalide ou incomplet.
+            </p>
+          ) : null}
 
           <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-4">
             <div className="space-y-2">
-              <label htmlFor="forgot-password-email" className="text-sm font-semibold text-slate-700">
-                Email
+              <label htmlFor="reset-password" className="text-sm font-semibold text-slate-700">
+                Nouveau mot de passe
               </label>
               <input
-                id="forgot-password-email"
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                disabled={isLoading}
+                id="reset-password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                disabled={isLoading || !hasLoadedToken || !token}
                 className={inputClassName}
-                placeholder="admin@entreprise.com"
+                placeholder="Au moins 6 caracteres"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="reset-password-confirmation"
+                className="text-sm font-semibold text-slate-700"
+              >
+                Confirmer le mot de passe
+              </label>
+              <input
+                id="reset-password-confirmation"
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                disabled={isLoading || !hasLoadedToken || !token}
+                className={inputClassName}
+                placeholder="Retapez le mot de passe"
               />
             </div>
 
@@ -100,8 +144,12 @@ export default function ForgotPasswordPage() {
               </p>
             ) : null}
 
-            <button type="submit" disabled={isLoading} className={primaryButtonClassName}>
-              {isLoading ? "Envoi..." : "Envoyer le lien"}
+            <button
+              type="submit"
+              disabled={isLoading || !hasLoadedToken || !token}
+              className={primaryButtonClassName}
+            >
+              {isLoading ? "Mise a jour..." : "Mettre a jour le mot de passe"}
             </button>
           </form>
 
@@ -109,8 +157,8 @@ export default function ForgotPasswordPage() {
             <Link href="/login" className="text-[#8a651f] underline-offset-4 hover:underline">
               Retour a la connexion
             </Link>
-            <Link href="/signup" className="text-slate-600 underline-offset-4 hover:underline">
-              Creer un compte
+            <Link href="/forgot-password" className="text-slate-600 underline-offset-4 hover:underline">
+              Demander un nouveau lien
             </Link>
           </div>
         </Card>

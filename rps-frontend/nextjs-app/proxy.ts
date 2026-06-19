@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const publicRoutes = ["/login", "/signup", "/forgot-password", "/survey-response"];
+const publicRoutes = ["/login", "/signup", "/forgot-password", "/reset-password", "/survey-response"];
 
 function noStorePageResponse() {
   const response = NextResponse.next();

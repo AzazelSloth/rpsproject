@@ -1,14 +1,19 @@
 import {
   Body,
   Controller,
-  Post,
-  UseGuards,
-  Request,
   Get,
+  Post,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBody, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import {
+  ForgotPasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from './dto/auth.dto';
 import { AuthGuard } from './auth.guard';
 import type { AuthenticatedRequest } from './auth.guard';
 
@@ -33,6 +38,25 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Identifiants invalides' })
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('forgot-password')
+  @ApiBody({ type: ForgotPasswordDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Demande de reinitialisation prise en compte',
+  })
+  @ApiResponse({ status: 503, description: 'Email de reinitialisation indisponible' })
+  forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.requestPasswordReset(forgotPasswordDto);
+  }
+
+  @Post('reset-password')
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiResponse({ status: 200, description: 'Mot de passe mis a jour' })
+  @ApiResponse({ status: 401, description: 'Jeton invalide ou expire' })
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto);
   }
 
   @Get('me')

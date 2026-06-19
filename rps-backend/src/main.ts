@@ -40,7 +40,7 @@ async function bootstrap() {
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 10, // limit each IP to 10 requests per windowMs
-    message: 'Too many login attempts, please try again later.',
+    message: 'Too many authentication attempts, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
   });
@@ -55,6 +55,8 @@ async function bootstrap() {
   // Apply rate limiting before other middleware
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/register', authLimiter);
+  app.use('/api/auth/forgot-password', authLimiter);
+  app.use('/api/auth/reset-password', authLimiter);
   app.use(generalLimiter);
 
   // Body size limits for CSV imports

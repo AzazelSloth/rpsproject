@@ -23,6 +23,19 @@ export type RegisterCredentials = {
   password: string;
 };
 
+export type ForgotPasswordCredentials = {
+  email: string;
+};
+
+export type ResetPasswordCredentials = {
+  token: string;
+  password: string;
+};
+
+export type AuthMessageResponse = {
+  message: string;
+};
+
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
@@ -69,6 +82,32 @@ export async function register(credentials: RegisterCredentials): Promise<AuthRe
   });
 
   return readJsonOrThrow<AuthResponse>(response);
+}
+
+export async function requestPasswordReset(
+  credentials: ForgotPasswordCredentials,
+): Promise<AuthMessageResponse> {
+  const response = await appFetch("/auth/forgot-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: normalizeEmail(credentials.email),
+    }),
+  });
+
+  return readJsonOrThrow<AuthMessageResponse>(response);
+}
+
+export async function resetPassword(
+  credentials: ResetPasswordCredentials,
+): Promise<AuthMessageResponse> {
+  const response = await appFetch("/auth/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(credentials),
+  });
+
+  return readJsonOrThrow<AuthMessageResponse>(response);
 }
 
 export async function logout() {

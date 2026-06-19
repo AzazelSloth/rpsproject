@@ -44,6 +44,13 @@ export type SendGridBatchResult = {
   }[];
 };
 
+export type PasswordResetEmailRecipient = {
+  email: string;
+  name?: string | null;
+  resetUrl: string;
+  expiresAt?: Date | string | null;
+};
+
 type SendGridConfig = {
   apiKey: string;
   fromEmail: string;
@@ -611,6 +618,22 @@ export class SendGridMailService {
     return this.sendSurveyEmails(recipients, 'reminder');
   }
 
+  async sendPasswordResetEmail(
+    recipient: PasswordResetEmailRecipient,
+  ): Promise<void> {
+    const { apiKey, fromEmail, fromName, replyTo } = this.getSendGridConfig();
+
+    await this.deliverSendGridEmail(
+      apiKey,
+      this.buildPasswordResetEmailBody({
+        fromEmail,
+        fromName,
+        replyTo,
+        recipient,
+      }),
+    );
+  }
+
   private async sendSurveyEmails(
     recipients: SurveyInvitationEmailRecipient[],
     kind: SendGridTemplateKind,
@@ -837,6 +860,69 @@ export class SendGridMailService {
     };
   }
 
+  private buildPasswordResetEmailBody(params: {
+    fromEmail: string;
+    fromName: string;
+    replyTo: string;
+    recipient: PasswordResetEmailRecipient;
+  }) {
+    const { fromEmail, fromName, replyTo, recipient } = params;
+    const recipientName = recipient.name?.trim() || recipient.email;
+    const expiresAt = this.formatEmailDateTime(recipient.expiresAt);
+    const resetUrl = recipient.resetUrl;
+    const escapedResetUrl = this.escapeHtml(resetUrl);
+    const escapedReplyTo = this.escapeHtml(replyTo);
+    const escapedFromName = this.escapeHtml(fromName);
+    const escapedName = this.escapeHtml(recipientName);
+
+    return {
+      personalizations: [
+        {
+          to: [{ email: recipient.email, name: recipientName }],
+        },
+      ],
+      from: { email: fromEmail, name: fromName },
+      reply_to: { email: replyTo },
+      subject: 'Réinitialisation de votre mot de passe',
+      content: [
+        {
+          type: 'text/plain',
+          value: this.buildPasswordResetText(recipient, replyTo, fromName),
+        },
+        {
+          type: 'text/html',
+          value: [
+            '<!DOCTYPE html>',
+            '<html lang="fr">',
+            '<head>',
+            '  <meta charset="UTF-8" />',
+            '  <meta name="viewport" content="width=device-width, initial-scale=1.0" />',
+            '  <title>Réinitialisation du mot de passe</title>',
+            '</head>',
+            '<body style="margin:0;padding:24px;background:#f6f1e8;font-family:Arial,sans-serif;color:#1f2937;">',
+            '  <table role="presentation" style="max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #e5dccd;border-radius:18px;padding:32px;">',
+            '    <tr><td>',
+            `      <p style="font-size:16px;line-height:1.7;">Bonjour ${escapedName},</p>`,
+            '      <p style="font-size:16px;line-height:1.7;">Une demande de réinitialisation de mot de passe a été reçue pour votre compte administrateur.</p>',
+            `      <p style="font-size:16px;line-height:1.7;"><a href="${escapedResetUrl}" style="display:inline-block;background:#181818;color:#f7f1e6;text-decoration:none;padding:12px 20px;border-radius:12px;font-weight:700;">Choisir un nouveau mot de passe</a></p>`,
+            `      <p style="font-size:14px;line-height:1.7;">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br /><a href="${escapedResetUrl}">${escapedResetUrl}</a></p>`,
+            expiresAt
+              ? `      <p style="font-size:14px;line-height:1.7;">Ce lien expire le <strong>${this.escapeHtml(expiresAt)}</strong>.</p>`
+              : '',
+            "      <p style=\"font-size:14px;line-height:1.7;\">Si vous n'etes pas a l'origine de cette demande, vous pouvez ignorer cet email.</p>",
+            `      <p style="font-size:14px;line-height:1.7;">Besoin d aide : <a href="mailto:${escapedReplyTo}">${escapedReplyTo}</a><br />${escapedFromName}</p>`,
+            '    </td></tr>',
+            '  </table>',
+            '</body>',
+            '</html>',
+          ]
+            .filter(Boolean)
+            .join(''),
+        },
+      ],
+    };
+  }
+
   private buildDynamicTemplateData(
     recipient: SurveyInvitationEmailRecipient,
     contactEmail: string,
@@ -892,7 +978,7 @@ export class SendGridMailService {
     return [
       `Bonjour ${firstName},`,
       '',
-      'Nous avons le plaisir de vous inviter a participer a un sondage important sur le bien-etre au travail.',
+      'Nous avons le plaisir de vous inviter a participer a un sondage important sur le bien-être au travail.',
       '',
       `Debut : ${startDate}`,
       `Fin : ${endDate}`,
@@ -939,6 +1025,29 @@ export class SendGridMailService {
       fromName,
     ]
       .filter((line) => line !== '')
+      .join('\n');
+  }
+
+  private buildPasswordResetText(
+    recipient: PasswordResetEmailRecipient,
+    contactEmail: string,
+    fromName: string,
+  ) {
+    const recipientName = recipient.name?.trim() || recipient.email;
+    const expiresAt = this.formatEmailDateTime(recipient.expiresAt);
+
+    return [
+      `Bonjour ${recipientName},`,
+      '',
+      'Une demande de reinitialisation de mot de passe a ete recue pour votre compte administrateur.',
+      `Lien de reinitialisation : ${recipient.resetUrl}`,
+      expiresAt ? `Expiration : ${expiresAt}` : '',
+      '',
+      "Si vous n'etes pas a l'origine de cette demande, ignorez simplement cet email.",
+      `Besoin d'aide : ${contactEmail}`,
+      fromName,
+    ]
+      .filter(Boolean)
       .join('\n');
   }
 
@@ -1007,6 +1116,26 @@ export class SendGridMailService {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+    }).format(date);
+  }
+
+  private formatEmailDateTime(value?: Date | string | null) {
+    if (!value) {
+      return '';
+    }
+
+    const date = value instanceof Date ? value : new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     }).format(date);
   }
 
