@@ -1,5 +1,4 @@
 import bcryptModule from 'bcrypt';
-import * as crypto from 'crypto';
 import { createHash } from 'crypto';
 import { ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -158,8 +157,6 @@ describe('AuthService admin access', () => {
     process.env.APP_URL = 'http://localhost:3001/';
     process.env.NODE_ENV = 'test';
 
-    const expectedToken = Buffer.alloc(32, 7).toString('hex');
-
     repository.findOne.mockResolvedValue({
       id: 1,
       email: 'allowed@example.com',
@@ -170,10 +167,6 @@ describe('AuthService admin access', () => {
       created_at: new Date('2024-01-01T00:00:00.000Z'),
     });
 
-    jest
-      .spyOn(crypto, 'randomBytes')
-      .mockReturnValue(Buffer.from(expectedToken, 'hex') as never);
-
     await expect(
       service.requestPasswordReset({ email: ' Allowed@Example.com ' }),
     ).resolves.toEqual({
@@ -182,15 +175,25 @@ describe('AuthService admin access', () => {
     });
 
     const savedUser = repository.save.mock.calls[0][0];
+    const mailPayload = mailService.sendPasswordResetEmail.mock.calls[0][0];
+    const resetUrl = new URL(mailPayload.resetUrl);
+    const generatedToken = resetUrl.searchParams.get('token');
+
+    expect(resetUrl.origin + resetUrl.pathname).toBe(
+      'http://localhost:3001/reset-password',
+    );
+    expect(generatedToken).toMatch(/^[a-f0-9]{64}$/);
     expect(savedUser.password_reset_token_hash).toBe(
-      createHash('sha256').update(expectedToken).digest('hex'),
+      createHash('sha256').update(generatedToken!).digest('hex'),
     );
     expect(savedUser.password_reset_expires_at).toBeInstanceOf(Date);
     expect(mailService.sendPasswordResetEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         email: 'allowed@example.com',
         name: 'Allowed Admin',
-        resetUrl: `http://localhost:3001/reset-password?token=${expectedToken}`,
+        resetUrl: expect.stringMatching(
+          /^http:\/\/localhost:3001\/reset-password\?token=[a-f0-9]{64}$/,
+        ),
       }),
     );
   });
