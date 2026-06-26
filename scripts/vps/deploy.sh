@@ -14,7 +14,7 @@ fi
 
 APP_DIR="${APP_DIR:-$HOME/rps-$ENV}"
 N8N_RUNTIME_DIR="${N8N_RUNTIME_DIR:-/srv/n8n}"
-N8N_IMAGE="${N8N_IMAGE:-n8nio/n8n:2.22.5}"
+N8N_IMAGE="${N8N_IMAGE:-docker.n8n.io/n8nio/n8n:2.28.2}"
 REPO_URL="${REPO_URL:-git@github.com:AzazelSloth/rpsproject.git}"
 VPS_HOST="${VPS_HOST:-127.0.0.1}"
 DOMAIN_NAME="${DOMAIN_NAME:-}"
