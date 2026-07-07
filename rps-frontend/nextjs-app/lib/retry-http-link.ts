@@ -81,9 +81,11 @@ export function retryHttpLink(options: RetryOptions = {}): TRPCLink<any> {
                     config.maxDelayMs || 5000
                   );
                   
-                  console.log(
-                    `[tRPC Retry] Attempt ${retryCount}/${config.maxRetries} after ${totalDelayMs.toFixed(0)}ms for ${op.path}`
-                  );
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log(
+                      `[tRPC Retry] Attempt ${retryCount}/${config.maxRetries} after ${totalDelayMs.toFixed(0)}ms for ${op.path}`
+                    );
+                  }
                   
                   currentDelayMs = Math.min(
                     currentDelayMs * (config.backoffMultiplier || 2),
