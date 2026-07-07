@@ -18,12 +18,16 @@ export function parseApiError(error: unknown): ErrorInfo {
       getStatusCodeFromTrpcCode(error.data?.code);
     const isRetryable =
       isRetryableErrorCode(statusCode) && !isNonRetryableBackendError(error.message);
+    const userMessage =
+      statusCode === 429
+        ? getRateLimitUserMessage(error.message)
+        : getTrpcErrorMessage(error);
 
     return {
       code: error.data?.code || 'UNKNOWN_ERROR',
       statusCode,
       message: error.message,
-      userMessage: getTrpcErrorMessage(error),
+      userMessage,
       isRetryable,
       suggestedAction: isRetryable ? getRetryAction(statusCode) : undefined,
     };
@@ -39,6 +43,17 @@ export function parseApiError(error: unknown): ErrorInfo {
         userMessage: 'Erreur de connexion réseau. Vérifiez votre connexion Internet.',
         isRetryable: true,
         suggestedAction: 'Veuillez réessayer après quelques secondes.',
+      };
+    }
+
+    if (getBackendStatusCode(error.message) === 429 || error.message.includes('429')) {
+      return {
+        code: 'RATE_LIMIT_ERROR',
+        statusCode: 429,
+        message: error.message,
+        userMessage: getRateLimitUserMessage(error.message),
+        isRetryable: true,
+        suggestedAction: 'Patientez quelques secondes, puis relancez l\'action.',
       };
     }
 
@@ -173,6 +188,19 @@ function getBackendMessage(message: string) {
   return message.slice(separatorIndex + separator.length).trim();
 }
 
+function getRateLimitUserMessage(message: string) {
+  const backendMessage = getBackendMessage(message);
+
+  if (
+    backendMessage &&
+    !/Backend request failed|Too Many Requests|too many requests/i.test(backendMessage)
+  ) {
+    return backendMessage;
+  }
+
+  return 'Trop de demandes en meme temps. Patientez quelques secondes, puis reessayez.';
+}
+
 function isEmailConfigurationError(message: string) {
   return /Configuration email manquante|SENDGRID_|SendGrid/i.test(message);
 }
@@ -193,6 +221,10 @@ export function isRetryableErrorCode(statusCode: number): boolean {
 }
 
 export function getRetryAction(statusCode: number): string {
+  if (statusCode === 429) {
+    return 'Patientez quelques secondes, puis relancez l\'action.';
+  }
+
   switch (statusCode) {
     case 429:
       return 'Le système va automatiquement attendre et réessayer avec un délai exponentiel.';

@@ -9,6 +9,12 @@ import rateLimit from 'express-rate-limit';
 import { AppModule } from './app.module';
 import { WinstonLoggerService } from './common/winston-logger.service';
 
+function readPositiveIntegerEnv(name: string, fallback: number) {
+  const value = Number(process.env[name]);
+
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bodyParser: true,
@@ -39,15 +45,28 @@ async function bootstrap() {
   // Rate limiting - stricter for auth endpoints
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // limit each IP to 10 requests per windowMs
-    message: 'Too many authentication attempts, please try again later.',
+    max: readPositiveIntegerEnv('AUTH_RATE_LIMIT_MAX', 10),
+    message: {
+      code: 'AUTH_RATE_LIMITED',
+      message:
+        'Trop de tentatives ont ete detectees. Patientez quelques minutes avant de reessayer.',
+    },
     standardHeaders: true,
     legacyHeaders: false,
   });
 
   const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100, // limit each IP to 100 requests per windowMs
+    max: readPositiveIntegerEnv('RATE_LIMIT_MAX', 1000),
+    skip: (request) =>
+      request.method === 'GET' ||
+      request.method === 'HEAD' ||
+      request.method === 'OPTIONS',
+    message: {
+      code: 'RATE_LIMITED',
+      message:
+        'Le serveur recoit beaucoup de demandes en ce moment. Patientez quelques secondes puis reessayez.',
+    },
     standardHeaders: true,
     legacyHeaders: false,
   });

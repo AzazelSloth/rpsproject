@@ -14,7 +14,7 @@ const DEFAULT_OPTIONS: RetryOptions = {
   initialDelayMs: 100,
   maxDelayMs: 5000,
   backoffMultiplier: 2,
-  retryableStatusCodes: [408, 429, 500, 502, 503, 504],
+  retryableStatusCodes: [408, 500, 502, 503, 504],
 };
 
 function delay(ms: number): Promise<void> {

@@ -50,9 +50,7 @@ export function AppShell({
         }
       })
       .catch(() => {
-        if (isMounted) {
-          setUser(null);
-        }
+        return;
       });
 
     return () => {

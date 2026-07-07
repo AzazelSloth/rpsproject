@@ -2,8 +2,6 @@ import { ApiResponseError, apiFetch, getApiBaseUrl } from "@/lib/api";
 
 const READ_CACHE_TTL_MS = 5000;
 const RATE_LIMIT_STALE_TTL_MS = 5 * 60 * 1000;
-const RATE_LIMIT_RETRY_DELAYS_MS = [800, 1800, 3200];
-const MAX_RETRY_AFTER_MS = 5000;
 
 const inFlightReadRequests = new Map<string, Promise<unknown>>();
 const readResponseCache = new Map<string, { createdAt: number; value: unknown }>();
@@ -147,32 +145,6 @@ function clearReadCacheAfterWrite(init?: RequestInit) {
   }
 }
 
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
-function getRateLimitDelay(error: ApiResponseError, retryIndex: number) {
-  const retryAfter = error.headers.get("retry-after");
-
-  if (retryAfter) {
-    const seconds = Number(retryAfter);
-
-    if (Number.isFinite(seconds) && seconds >= 0) {
-      return Math.min(seconds * 1000, MAX_RETRY_AFTER_MS);
-    }
-
-    const retryDate = Date.parse(retryAfter);
-
-    if (Number.isFinite(retryDate)) {
-      return Math.min(Math.max(retryDate - Date.now(), 0), MAX_RETRY_AFTER_MS);
-    }
-  }
-
-  return RATE_LIMIT_RETRY_DELAYS_MS[retryIndex] ?? RATE_LIMIT_RETRY_DELAYS_MS.at(-1) ?? 1000;
-}
-
 async function backendFetchAttempt<T>(path: string, init: RequestInit | undefined) {
   const controller = new AbortController();
   const timeoutMs = path.includes("/import-employees") ? 120000 : 30000;
@@ -213,7 +185,8 @@ function normalizeBackendError(path: string, error: unknown, backendUrl: string)
 
     if (error.status === 429) {
       return new Error(
-        "Le serveur recoit trop de demandes en meme temps. La page va reutiliser les donnees deja chargees quand c'est possible; patiente quelques secondes puis reessaie.",
+        apiMessage ||
+          "Le serveur recoit trop de demandes en meme temps. Patiente quelques secondes puis reessaie.",
       );
     }
 
@@ -250,8 +223,7 @@ async function backendFetchWithRetry<T>(
   requestKey: string | null,
 ) {
   const backendUrl = getRequiredBackendUrl();
-  const canRetryRateLimit = isReadRequest(init);
-  const maxAttempts = canRetryRateLimit ? RATE_LIMIT_RETRY_DELAYS_MS.length + 1 : 1;
+  const maxAttempts = 1;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     try {
@@ -271,13 +243,6 @@ async function backendFetchWithRetry<T>(
         if (staleValue.hit) {
           logBackendWarning(`Rate limit on ${path}; serving cached data.`);
           return staleValue.value;
-        }
-
-        if (attempt < maxAttempts - 1) {
-          const delayMs = getRateLimitDelay(error, attempt);
-          logBackendWarning(`Rate limit on ${path}; retrying in ${delayMs}ms.`);
-          await wait(delayMs);
-          continue;
         }
       }
 
