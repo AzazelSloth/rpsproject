@@ -6,14 +6,14 @@ export class AddCampaignDescription1710000000001 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       ALTER TABLE "campaigns"
-      ADD COLUMN "description" text
+      ADD COLUMN IF NOT EXISTS "description" text
     `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       ALTER TABLE "campaigns"
-      DROP COLUMN "description"
+      DROP COLUMN IF EXISTS "description"
     `);
   }
 }

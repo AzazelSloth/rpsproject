@@ -11,8 +11,11 @@ import {
 } from '@nestjs/common';
 import { ApiBody, ApiResponse } from '@nestjs/swagger';
 import {
+  CreateQuestionSectionDto,
   CreateQuestionDto,
   ReorderQuestionDto,
+  ReorderQuestionSectionDto,
+  UpdateQuestionSectionDto,
   UpdateQuestionDto,
 } from './dto/question.dto';
 import { QuestionService } from './question.service';
@@ -22,6 +25,35 @@ import { AuthGuard } from '../auth/auth.guard';
 @Controller('questions')
 export class QuestionController {
   constructor(private readonly questionService: QuestionService) {}
+
+  @Post('sections')
+  @ApiBody({ type: CreateQuestionSectionDto })
+  createSection(@Body() createSectionDto: CreateQuestionSectionDto) {
+    return this.questionService.createSection(createSectionDto);
+  }
+
+  @Patch('sections/campaign/:campaignId/reorder')
+  @ApiBody({ type: [ReorderQuestionSectionDto] })
+  reorderSections(
+    @Param('campaignId', ParseIntPipe) campaignId: number,
+    @Body() items: ReorderQuestionSectionDto[],
+  ) {
+    return this.questionService.reorderSections(campaignId, items);
+  }
+
+  @Patch('sections/:id')
+  @ApiBody({ type: UpdateQuestionSectionDto })
+  updateSection(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateSectionDto: UpdateQuestionSectionDto,
+  ) {
+    return this.questionService.updateSection(id, updateSectionDto);
+  }
+
+  @Delete('sections/:id')
+  removeSection(@Param('id', ParseIntPipe) id: number) {
+    return this.questionService.removeSection(id);
+  }
 
   @Post()
   @ApiBody({ type: CreateQuestionDto })

@@ -12,6 +12,7 @@ import type {
   BackendEmployee,
   BackendQuestionnaire,
   BackendQuestion,
+  BackendQuestionSection,
   BackendReport,
   BackendResponse,
 } from "@/lib/backend/types";
@@ -581,10 +582,7 @@ function mapBackendQuestionnaire(entry: BackendQuestionnaire): SurveyResponseDat
     campaignName: entry.campaign.name,
     status: entry.status,
     completedAt: entry.completed_at,
-    questions: entry.questions
-      .slice()
-      .sort((a, b) => a.order_index - b.order_index)
-      .map(mapBackendQuestion),
+    questions: mapBackendSurveyItems(entry.sections, entry.questions),
   };
 }
 
@@ -620,10 +618,39 @@ function mapBackendCampaign(entry: BackendCampaign) {
     startDate: entry.start_date ?? "",
     endDate: entry.end_date ?? "",
     companyName: entry.company?.name ?? "Entreprise",
-    questions: (entry.questions ?? [])
-      .slice()
-      .sort((a, b) => a.order_index - b.order_index)
-      .map(mapBackendQuestion),
+    questions: mapBackendSurveyItems(entry.question_sections, entry.questions),
+  };
+}
+
+function mapBackendSurveyItems(
+  sections: BackendQuestionSection[] | undefined,
+  questions: BackendQuestion[] | undefined,
+): SurveyQuestion[] {
+  const sectionItems = (sections ?? []).map(mapBackendSection);
+  const questionItems = (questions ?? []).map(mapBackendQuestion);
+
+  return [...sectionItems, ...questionItems].sort((left, right) => {
+    if (left.orderIndex === right.orderIndex) {
+      if (left.type === right.type) {
+        return Number(left.id.replace(/\D/g, "") || 0) - Number(right.id.replace(/\D/g, "") || 0);
+      }
+
+      return left.type === "section" ? -1 : 1;
+    }
+
+    return left.orderIndex - right.orderIndex;
+  });
+}
+
+function mapBackendSection(entry: BackendQuestionSection): SurveyQuestion {
+  return {
+    id: `section-${entry.id}`,
+    documentId: `section-${entry.id}`,
+    type: "section",
+    title: entry.title,
+    helpText: entry.description?.trim() || "Section du questionnaire",
+    orderIndex: entry.order_index ?? 0,
+    sectionId: entry.id,
   };
 }
 
@@ -646,6 +673,7 @@ function mapBackendQuestion(entry: BackendQuestion): SurveyQuestion {
           : defaultOptions
         : undefined,
     orderIndex: entry.order_index ?? 0,
+    sectionId: entry.section?.id ?? null,
   };
 }
 

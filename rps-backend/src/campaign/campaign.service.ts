@@ -6,11 +6,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { DataSource, IsNull, Repository } from 'typeorm';
 import { SurveyResponse } from '../response/response.entity';
 import { throwPersistenceError } from '../common/database-error.util';
 import { Company } from '../company/company.entity';
 import { getN8nWebhookUrl } from '../n8n/n8n.config';
+import { QuestionSection } from '../question/question-section.entity';
+import { Question } from '../question/question.entity';
 import {
   campaignStatuses,
   CampaignStatus,
@@ -31,6 +33,7 @@ export class CampaignService {
     private readonly companyRepository: Repository<Company>,
     @InjectRepository(SurveyResponse)
     private readonly responseRepository: Repository<SurveyResponse>,
+    private readonly dataSource: DataSource,
   ) {
     this.n8nWebhookUrl = getN8nWebhookUrl();
   }
@@ -55,10 +58,42 @@ export class CampaignService {
     });
 
     try {
-      return this.normalizeCampaignForRead(
-        await this.campaignRepository.save(campaign),
+      const savedCampaign = await this.dataSource.transaction(
+        async (manager) => {
+          const campaignRepository = manager.getRepository(Campaign);
+          const nextCampaign = await campaignRepository.save(campaign);
+
+          if (createCampaignDto.source_campaign_id) {
+            await this.copyQuestionnaireTemplate(
+              createCampaignDto.source_campaign_id,
+              nextCampaign.id,
+              manager.getRepository(QuestionSection),
+              manager.getRepository(Question),
+              campaignRepository,
+            );
+          }
+
+          return campaignRepository.findOneOrFail({
+            where: { id: nextCampaign.id },
+            relations: {
+              company: true,
+              questions: { section: true },
+              question_sections: true,
+              reports: true,
+            },
+          });
+        },
       );
+
+      return this.normalizeCampaignForRead(savedCampaign);
     } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+
       throwPersistenceError(error, {
         defaultMessage: 'Failed to create campaign',
         foreignKeyMessage: 'Company not found',
@@ -75,7 +110,12 @@ export class CampaignService {
   async findAll() {
     const campaigns = await this.campaignRepository.find({
       order: { id: 'ASC' },
-      relations: { company: true, questions: true, reports: true },
+      relations: {
+        company: true,
+        questions: { section: true },
+        question_sections: true,
+        reports: true,
+      },
     });
 
     return campaigns.map((campaign) => this.normalizeCampaignForRead(campaign));
@@ -84,7 +124,12 @@ export class CampaignService {
   async findOne(id: number) {
     const campaign = await this.campaignRepository.findOne({
       where: { id },
-      relations: { company: true, questions: true, reports: true },
+      relations: {
+        company: true,
+        questions: { section: true },
+        question_sections: true,
+        reports: true,
+      },
     });
 
     if (!campaign) {
@@ -220,6 +265,91 @@ export class CampaignService {
     }
 
     return company;
+  }
+
+  private async copyQuestionnaireTemplate(
+    sourceCampaignId: number,
+    targetCampaignId: number,
+    sectionRepository: Repository<QuestionSection>,
+    questionRepository: Repository<Question>,
+    campaignRepository: Repository<Campaign>,
+  ) {
+    const sourceCampaign = await campaignRepository.findOne({
+      where: { id: sourceCampaignId },
+      relations: {
+        question_sections: true,
+        questions: { section: true },
+      },
+    });
+
+    if (!sourceCampaign) {
+      throw new NotFoundException(
+        `Source campaign ${sourceCampaignId} not found`,
+      );
+    }
+
+    const targetCampaign = await campaignRepository.findOne({
+      where: { id: targetCampaignId },
+    });
+
+    if (!targetCampaign) {
+      throw new NotFoundException(`Campaign ${targetCampaignId} not found`);
+    }
+
+    const sectionBySourceId = new Map<number, QuestionSection>();
+    const sourceSections = [...(sourceCampaign.question_sections ?? [])].sort(
+      (left, right) => {
+        if (left.order_index === right.order_index) {
+          return left.id - right.id;
+        }
+
+        return left.order_index - right.order_index;
+      },
+    );
+
+    for (const sourceSection of sourceSections) {
+      const copiedSection = await sectionRepository.save(
+        sectionRepository.create({
+          campaign: targetCampaign,
+          title: sourceSection.title,
+          description: sourceSection.description,
+          order_index: sourceSection.order_index,
+        }),
+      );
+
+      sectionBySourceId.set(sourceSection.id, copiedSection);
+    }
+
+    const sourceQuestions = [...(sourceCampaign.questions ?? [])].sort(
+      (left, right) => {
+        if (left.order_index === right.order_index) {
+          return left.id - right.id;
+        }
+
+        return left.order_index - right.order_index;
+      },
+    );
+
+    for (const sourceQuestion of sourceQuestions) {
+      const sourceSectionId = sourceQuestion.section?.id;
+      const copiedSection = sourceSectionId
+        ? (sectionBySourceId.get(sourceSectionId) ?? null)
+        : null;
+
+      await questionRepository.save(
+        questionRepository.create({
+          campaign: targetCampaign,
+          section: copiedSection,
+          question_text: sourceQuestion.question_text,
+          question_type: sourceQuestion.question_type,
+          rps_dimension: sourceQuestion.rps_dimension,
+          order_index: sourceQuestion.order_index,
+          choice_options: sourceQuestion.choice_options
+            ? [...sourceQuestion.choice_options]
+            : null,
+        }),
+      );
+    }
   }
 
   /**

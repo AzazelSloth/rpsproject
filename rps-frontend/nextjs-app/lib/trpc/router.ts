@@ -19,6 +19,7 @@ import {
 	getSurveyResponseData,
 	getAllSurveys,
 } from "@/lib/repositories/rps-repository";
+import type { BackendCampaign } from "@/lib/backend/types";
 
 const t = initTRPC.create();
 
@@ -56,18 +57,20 @@ const adminSurveysRouter = t.router({
 				description: z.string().max(1000).optional(),
 				startDate: z.string().optional(),
 				endDate: z.string().optional(),
+				sourceCampaignId: z.number().int().positive().optional().nullable(),
 			}),
 		)
 		.mutation(async ({ input }) => {
 			ensureBackendConfigured();
 			return postBackend<
-				{ id: number; status?: string },
+				BackendCampaign,
 				{
 					company_id: number;
 					name: string;
 					description?: string;
 					start_date?: string;
 					end_date?: string;
+					source_campaign_id?: number;
 				}
 			>("/campaigns", {
 				company_id: input.companyId,
@@ -75,6 +78,7 @@ const adminSurveysRouter = t.router({
 				description: input.description || undefined,
 				start_date: input.startDate || undefined,
 				end_date: input.endDate || undefined,
+				source_campaign_id: input.sourceCampaignId || undefined,
 			});
 		}),
 
@@ -143,6 +147,7 @@ const adminSurveysRouter = t.router({
 		.input(
 			z.object({
 				campaignId: z.number().int().positive(),
+				sectionId: z.number().int().positive().optional().nullable(),
 				title: z.string().min(1),
 				type: z.enum(["scale", "choice", "text"]),
 				options: z.array(z.string()).optional(),
@@ -155,6 +160,7 @@ const adminSurveysRouter = t.router({
 				{ id: number },
 				{
 					campaign_id: number;
+					section_id?: number | null;
 					question_text: string;
 					question_type: "scale" | "choice" | "text";
 					rps_dimension: "scale" | "choice" | "text";
@@ -163,6 +169,7 @@ const adminSurveysRouter = t.router({
 				}
 			>("/questions", {
 				campaign_id: input.campaignId,
+				section_id: input.sectionId ?? undefined,
 				question_text: input.title,
 				question_type: input.type,
 				rps_dimension: input.type,
@@ -175,6 +182,7 @@ const adminSurveysRouter = t.router({
 		.input(
 			z.object({
 				questionId: z.number().int().positive(),
+				sectionId: z.number().int().positive().optional().nullable(),
 				title: z.string().min(1),
 				type: z.enum(["scale", "choice", "text"]),
 				options: z.array(z.string()).optional(),
@@ -185,6 +193,7 @@ const adminSurveysRouter = t.router({
 			ensureBackendConfigured();
 			return patchBackend(`/questions/${input.questionId}`, {
 				question_text: input.title,
+				section_id: input.sectionId ?? null,
 				question_type: input.type,
 				rps_dimension: input.type,
 				choice_options: input.type === "choice" ? input.options : undefined,
@@ -206,6 +215,7 @@ const adminSurveysRouter = t.router({
 				items: z.array(
 					z.object({
 						questionId: z.number().int().positive(),
+						sectionId: z.number().int().positive().optional().nullable(),
 						orderIndex: z.number().int().min(0),
 					}),
 				),
@@ -217,6 +227,79 @@ const adminSurveysRouter = t.router({
 				`/questions/campaign/${input.campaignId}/reorder`,
 				input.items.map((item) => ({
 					question_id: item.questionId,
+					section_id: item.sectionId ?? null,
+					order_index: item.orderIndex,
+				})),
+			);
+		}),
+
+	createSection: t.procedure
+		.input(
+			z.object({
+				campaignId: z.number().int().positive(),
+				title: z.string().min(1),
+				description: z.string().max(1000).optional(),
+				orderIndex: z.number().int().min(0),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			ensureBackendConfigured();
+			return postBackend<{ id: number }, {
+				campaign_id: number;
+				title: string;
+				description?: string;
+				order_index: number;
+			}>("/questions/sections", {
+				campaign_id: input.campaignId,
+				title: input.title,
+				description: input.description || undefined,
+				order_index: input.orderIndex,
+			});
+		}),
+
+	updateSection: t.procedure
+		.input(
+			z.object({
+				sectionId: z.number().int().positive(),
+				title: z.string().min(1),
+				description: z.string().max(1000).optional(),
+				orderIndex: z.number().int().min(0),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			ensureBackendConfigured();
+			return patchBackend(`/questions/sections/${input.sectionId}`, {
+				title: input.title,
+				description: input.description || undefined,
+				order_index: input.orderIndex,
+			});
+		}),
+
+	deleteSection: t.procedure
+		.input(z.object({ sectionId: z.number().int().positive() }))
+		.mutation(async ({ input }) => {
+			ensureBackendConfigured();
+			return deleteBackend(`/questions/sections/${input.sectionId}`);
+		}),
+
+	reorderSections: t.procedure
+		.input(
+			z.object({
+				campaignId: z.number().int().positive(),
+				items: z.array(
+					z.object({
+						sectionId: z.number().int().positive(),
+						orderIndex: z.number().int().min(0),
+					}),
+				),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			ensureBackendConfigured();
+			return patchBackend(
+				`/questions/sections/campaign/${input.campaignId}/reorder`,
+				input.items.map((item) => ({
+					section_id: item.sectionId,
 					order_index: item.orderIndex,
 				})),
 			);

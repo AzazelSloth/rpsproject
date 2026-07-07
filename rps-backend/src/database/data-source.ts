@@ -6,6 +6,7 @@ import { CampaignParticipant } from '../campaign-participant/campaign-participan
 import { Campaign } from '../campaign/campaign.entity';
 import { Company } from '../company/company.entity';
 import { Employee } from '../employee/employee.entity';
+import { QuestionSection } from '../question/question-section.entity';
 import { Question } from '../question/question.entity';
 import { Report } from '../report/report.entity';
 import { SurveyResponse } from '../response/response.entity';
@@ -24,6 +25,7 @@ export const AppDataSource = new DataSource({
     Company,
     Campaign,
     Employee,
+    QuestionSection,
     Question,
     Report,
     SurveyResponse,

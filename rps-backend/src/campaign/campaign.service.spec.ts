@@ -5,6 +5,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { Company } from '../company/company.entity';
 import { SurveyResponse } from '../response/response.entity';
 import { Campaign } from './campaign.entity';
@@ -52,6 +53,12 @@ describe('CampaignService', () => {
         {
           provide: getRepositoryToken(SurveyResponse),
           useValue: responseRepository,
+        },
+        {
+          provide: DataSource,
+          useValue: {
+            transaction: jest.fn(),
+          },
         },
       ],
     }).compile();

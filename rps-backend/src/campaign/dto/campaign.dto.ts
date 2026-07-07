@@ -75,6 +75,15 @@ export class CreateCampaignDto {
   @IsOptional()
   @IsIn(campaignStatuses)
   status?: CampaignStatus;
+
+  @ApiProperty({
+    description: 'Campagne source a copier comme modele de questionnaire',
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  source_campaign_id?: number;
 }
 
 export class UpdateCampaignDto {

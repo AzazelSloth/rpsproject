@@ -12,6 +12,15 @@ export type BackendQuestion = {
   choice_options?: string[] | null;
   order_index: number;
   created_at: string;
+  section?: BackendQuestionSection | null;
+};
+
+export type BackendQuestionSection = {
+  id: number;
+  title: string;
+  description?: string | null;
+  order_index: number;
+  created_at: string;
 };
 
 export type BackendCampaign = {
@@ -24,6 +33,7 @@ export type BackendCampaign = {
   created_at: string;
   company: BackendCompany;
   questions: BackendQuestion[];
+  question_sections?: BackendQuestionSection[];
   reports?: {
     id: number;
     report_path: string | null;
@@ -84,6 +94,7 @@ export type BackendQuestionnaire = {
     };
   };
   questions: BackendQuestion[];
+  sections?: BackendQuestionSection[];
 };
 
 export type BackendCampaignParticipant = {

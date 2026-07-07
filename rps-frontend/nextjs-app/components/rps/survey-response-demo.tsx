@@ -31,15 +31,19 @@ export function SurveyResponseDemo({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const isCompleted = Boolean(completedAt) || submitted;
+  const answerableQuestions = useMemo(
+    () => questions.filter((question) => question.type !== "section"),
+    [questions],
+  );
 
   const completion = useMemo(() => {
-    if (!questions.length) {
+    if (!answerableQuestions.length) {
       return 0;
     }
 
-    const completed = questions.filter((question) => (answers[question.id] ?? "").trim()).length;
-    return Math.round((completed / questions.length) * 100);
-  }, [answers, questions]);
+    const completed = answerableQuestions.filter((question) => (answers[question.id] ?? "").trim()).length;
+    return Math.round((completed / answerableQuestions.length) * 100);
+  }, [answers, answerableQuestions]);
 
   function handleSubmit() {
     if (isCompleted) {
@@ -49,14 +53,14 @@ export function SurveyResponseDemo({
     setSubmitError(null);
 
     startTransition(async () => {
-      const payloadAnswers = questions
+      const payloadAnswers = answerableQuestions
         .map((question) => ({
           questionId: Number(question.id),
           answer: (answers[question.id] ?? "").trim(),
         }))
         .filter((entry) => entry.answer);
 
-      if (payloadAnswers.length !== questions.length) {
+      if (payloadAnswers.length !== answerableQuestions.length) {
         setSubmitError("Merci de répondre à toutes les questions avant l'envoi.");
         return;
       }
@@ -149,12 +153,27 @@ export function SurveyResponseDemo({
         </div>
 
         {questions.map((question, index) => (
-          <div key={question.id} className="rounded-[12px] border border-slate-200 p-5">
+          <div
+            key={question.id}
+            className={`rounded-[12px] border p-5 ${
+              question.type === "section"
+                ? "border-amber-300 bg-amber-50"
+                : question.sectionId
+                  ? "ml-4 border-slate-200 sm:ml-8"
+                  : "border-slate-200"
+            }`}
+          >
             <p className="text-sm font-semibold">
-              {index + 1}. {question.title}
+              {question.type === "section"
+                ? question.title
+                : `${getQuestionNumber(questions, index)}. ${question.title}`}
             </p>
 
-            {question.type === "scale" ? (
+            {question.type === "section" ? (
+              question.helpText && question.helpText !== "Section du questionnaire" ? (
+                <p className="mt-2 text-sm text-slate-600">{question.helpText}</p>
+              ) : null
+            ) : question.type === "scale" ? (
               <>
                 <div className="mt-4 grid grid-cols-5 gap-3">
                   {[1, 2, 3, 4, 5].map((value) => (
@@ -219,7 +238,7 @@ export function SurveyResponseDemo({
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <PrimaryButton
           className="sm:w-auto"
-          disabled={isPending || !questions.length}
+          disabled={isPending || !answerableQuestions.length}
           onClick={handleSubmit}
         >
           {completedAt
@@ -239,4 +258,10 @@ export function SurveyResponseDemo({
       </div>
     </Card>
   );
+}
+
+function getQuestionNumber(questions: SurveyQuestion[], targetIndex: number) {
+  return questions
+    .slice(0, targetIndex + 1)
+    .filter((question) => question.type !== "section").length;
 }

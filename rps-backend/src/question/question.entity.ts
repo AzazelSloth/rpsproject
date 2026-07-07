@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Campaign } from '../campaign/campaign.entity';
 import { SurveyResponse } from '../response/response.entity';
+import { QuestionSection } from './question-section.entity';
 
 @Entity({ name: 'questions' })
 export class Question {
@@ -21,6 +22,13 @@ export class Question {
   })
   @JoinColumn({ name: 'campaign_id' })
   campaign: Campaign;
+
+  @ManyToOne(() => QuestionSection, (section) => section.questions, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'section_id' })
+  section: QuestionSection | null;
 
   @Column('text', { nullable: true })
   question_text: string;

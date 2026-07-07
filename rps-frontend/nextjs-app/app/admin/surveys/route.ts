@@ -17,6 +17,7 @@ type CreateCampaignPayload = {
   description?: string;
   startDate?: string;
   endDate?: string;
+  sourceCampaignId?: number | null;
 };
 
 type UpdateCampaignPayload = {
@@ -37,6 +38,7 @@ type CampaignStatusPayload = {
 type CreateQuestionPayload = {
   action: "createQuestion";
   campaignId: number;
+  sectionId?: number | null;
   title: string;
   type: "scale" | "choice" | "text";
   options?: string[];
@@ -46,6 +48,7 @@ type CreateQuestionPayload = {
 type UpdateQuestionPayload = {
   action: "updateQuestion";
   questionId: number;
+  sectionId?: number | null;
   title: string;
   type: "scale" | "choice" | "text";
   options?: string[];
@@ -62,6 +65,37 @@ type ReorderQuestionsPayload = {
   campaignId: number;
   items: Array<{
     questionId: number;
+    sectionId?: number | null;
+    orderIndex: number;
+  }>;
+};
+
+type CreateSectionPayload = {
+  action: "createSection";
+  campaignId: number;
+  title: string;
+  description?: string;
+  orderIndex: number;
+};
+
+type UpdateSectionPayload = {
+  action: "updateSection";
+  sectionId: number;
+  title: string;
+  description?: string;
+  orderIndex: number;
+};
+
+type DeleteSectionPayload = {
+  action: "deleteSection";
+  sectionId: number;
+};
+
+type ReorderSectionsPayload = {
+  action: "reorderSections";
+  campaignId: number;
+  items: Array<{
+    sectionId: number;
     orderIndex: number;
   }>;
 };
@@ -74,7 +108,11 @@ type AdminSurveyPayload =
   | CreateQuestionPayload
   | UpdateQuestionPayload
   | DeleteQuestionPayload
-  | ReorderQuestionsPayload;
+  | ReorderQuestionsPayload
+  | CreateSectionPayload
+  | UpdateSectionPayload
+  | DeleteSectionPayload
+  | ReorderSectionsPayload;
 
 export async function POST(request: Request) {
   const payload = (await request.json()) as AdminSurveyPayload;
@@ -95,6 +133,7 @@ export async function POST(request: Request) {
           description: payload.description || undefined,
           start_date: payload.startDate || undefined,
           end_date: payload.endDate || undefined,
+          source_campaign_id: payload.sourceCampaignId || undefined,
         });
 
         return NextResponse.json({ success: true, result });
@@ -126,6 +165,7 @@ export async function POST(request: Request) {
       case "createQuestion": {
         const result = await postBackend("/questions", {
           campaign_id: payload.campaignId,
+          section_id: payload.sectionId ?? undefined,
           question_text: payload.title,
           question_type: payload.type,
           rps_dimension: payload.type,
@@ -137,6 +177,7 @@ export async function POST(request: Request) {
       }
       case "updateQuestion": {
         const result = await patchBackend(`/questions/${payload.questionId}`, {
+          section_id: payload.sectionId ?? null,
           question_text: payload.title,
           question_type: payload.type,
           rps_dimension: payload.type,
@@ -156,6 +197,42 @@ export async function POST(request: Request) {
           `/questions/campaign/${payload.campaignId}/reorder`,
           payload.items.map((item) => ({
             question_id: item.questionId,
+            section_id: item.sectionId ?? null,
+            order_index: item.orderIndex,
+          })),
+        );
+
+        return NextResponse.json({ success: true, result });
+      }
+      case "createSection": {
+        const result = await postBackend("/questions/sections", {
+          campaign_id: payload.campaignId,
+          title: payload.title,
+          description: payload.description || undefined,
+          order_index: payload.orderIndex,
+        });
+
+        return NextResponse.json({ success: true, result });
+      }
+      case "updateSection": {
+        const result = await patchBackend(`/questions/sections/${payload.sectionId}`, {
+          title: payload.title,
+          description: payload.description || undefined,
+          order_index: payload.orderIndex,
+        });
+
+        return NextResponse.json({ success: true, result });
+      }
+      case "deleteSection": {
+        const result = await deleteBackend(`/questions/sections/${payload.sectionId}`);
+
+        return NextResponse.json({ success: true, result });
+      }
+      case "reorderSections": {
+        const result = await patchBackend(
+          `/questions/sections/campaign/${payload.campaignId}/reorder`,
+          payload.items.map((item) => ({
+            section_id: item.sectionId,
             order_index: item.orderIndex,
           })),
         );

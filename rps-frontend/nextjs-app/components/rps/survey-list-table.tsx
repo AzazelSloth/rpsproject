@@ -77,13 +77,19 @@ export function SurveyListTable({
           <tbody>
             {filteredSurveys.length > 0 ? (
               filteredSurveys.map((survey) => {
+                const surveyHref = buildSurveyHref(survey.id, scenario ?? null);
                 const resultsHref = buildResultsHref(survey.id, scenario ?? null);
 
                 return (
                   <tr key={survey.id} className="border-t border-slate-100 align-top">
                     <td className="px-6 py-4">
                       <p className="font-semibold">{survey.companyName}</p>
-                      <p className="mt-1 text-slate-600">{survey.title}</p>
+                      <Link
+                        href={surveyHref}
+                        className="mt-1 inline-flex text-slate-600 no-underline transition hover:text-slate-950 hover:underline"
+                      >
+                        {survey.title}
+                      </Link>
                     </td>
                     <td className="px-6 py-4">
                       <Pill tone={getStatusTone(survey.status)}>
@@ -132,6 +138,18 @@ export function SurveyListTable({
       </div>
     </Card>
   );
+}
+
+function buildSurveyHref(campaignId: number, scenario?: string | null) {
+  const params = new URLSearchParams();
+  params.set("tab", "edit");
+  params.set("campaignId", String(campaignId));
+
+  if (scenario) {
+    params.set("scenario", scenario);
+  }
+
+  return `/surveys?${params.toString()}`;
 }
 
 function buildResultsHref(campaignId: number, scenario?: string | null) {

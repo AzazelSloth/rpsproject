@@ -10,6 +10,7 @@ import {
 import { Company } from '../company/company.entity';
 import { CampaignParticipant } from '../campaign-participant/campaign-participant.entity';
 import { Question } from '../question/question.entity';
+import { QuestionSection } from '../question/question-section.entity';
 import { Report } from '../report/report.entity';
 
 @Entity({ name: 'campaigns' })
@@ -44,6 +45,9 @@ export class Campaign {
 
   @OneToMany(() => Question, (question) => question.campaign)
   questions: Question[];
+
+  @OneToMany(() => QuestionSection, (section) => section.campaign)
+  question_sections: QuestionSection[];
 
   @OneToMany(() => Report, (report) => report.campaign)
   reports: Report[];

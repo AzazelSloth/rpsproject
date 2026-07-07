@@ -8,6 +8,7 @@ import type {
   CampaignParticipantRecord,
   SurveyBuilderData,
 } from "@/lib/repositories/rps-repository";
+import type { BackendCampaign } from "@/lib/backend/types";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
 import { getTrpcClient } from "@/lib/trpc/client";
 import { parseApiError } from "@/lib/error-handler";
@@ -126,7 +127,7 @@ const templateByType: Record<SurveyQuestionType, SurveyQuestion> = {
     documentId: "question-template-section",
     type: "section",
     title: "Nouvelle section",
-    helpText: "Titre de section pour regrouper les questions",
+    helpText: "",
     orderIndex: 99,
   },
 };
@@ -151,6 +152,9 @@ export function SurveyBuilderDemo({
     mode === "create" ? null : initialData.campaignId,
   );
   const [companyId, setCompanyId] = useState(initialCompanyId);
+  const [templateMode, setTemplateMode] = useState<"blank" | "existing">("blank");
+  const [sourceCompanyId, setSourceCompanyId] = useState<number | null>(null);
+  const [sourceCampaignId, setSourceCampaignId] = useState<number | null>(null);
   const [newCompanyName, setNewCompanyName] = useState("");
   const [status, setStatus] = useState(mode === "create" ? "draft" : initialData.status);
   const [title, setTitle] = useState(() => (mode === "create" ? "" : initialData.title));
@@ -195,12 +199,34 @@ export function SurveyBuilderDemo({
   const [participantCount, setParticipantCount] = useState(
     mode === "create" ? 0 : initialData.participantCount,
   );
+  const [previewIndex, setPreviewIndex] = useState(0);
   const canEditQuestions = status !== "active";
+  const answerableQuestionCount = questions.filter((question) => question.type !== "section").length;
+  const previewSections = buildSurveySectionCards(questions);
+  const previewSection =
+    previewSections[Math.min(previewIndex, Math.max(previewSections.length - 1, 0))];
   const isBusy = isPending || isMutating;
   const isCreateMode = mode === "create";
   const selectedCompanyName =
     companies.find((company) => company.id === companyId)?.name?.trim() ?? "";
   const selectedCampaign = campaigns.find((campaign) => campaign.id === campaignId);
+  const templateSourceCompanies = companies.filter((company) =>
+    campaigns.some(
+      (campaign) =>
+        campaign.companyId === company.id &&
+        campaign.id !== campaignId &&
+        campaign.questions.some((question) => question.type !== "section"),
+    ),
+  );
+  const templateSourceCampaigns = campaigns.filter(
+    (campaign) =>
+      campaign.companyId === sourceCompanyId &&
+      campaign.id !== campaignId &&
+      campaign.questions.some((question) => question.type !== "section"),
+  );
+  const selectedSourceCampaign = campaigns.find(
+    (campaign) => campaign.id === sourceCampaignId,
+  );
   const campaignMatchesCompany =
     !campaignId || !companyId || !selectedCampaign || selectedCampaign.companyId === companyId;
   const trimmedTitle = (title ?? "").trim();
@@ -208,13 +234,16 @@ export function SurveyBuilderDemo({
   const effectiveCampaignTitle = trimmedTitle;
   const isDateRangeInvalid = isEndDateBeforeStartDate(startDate, endDate);
   const canSaveCampaign =
-    Boolean(companyId) && effectiveCampaignTitle.length >= 3 && !isDateRangeInvalid;
+    Boolean(companyId) &&
+    effectiveCampaignTitle.length >= 3 &&
+    !isDateRangeInvalid &&
+    (templateMode === "blank" || Boolean(sourceCampaignId));
   const isSurveyReadyForImport = Boolean(
     campaignId &&
       companyId &&
       campaignMatchesCompany &&
       status === "active" &&
-      questions.length > 0,
+      answerableQuestionCount > 0,
   );
   const hasImportedEmployees = Boolean(
     participantCount > 0 ||
@@ -224,16 +253,25 @@ export function SurveyBuilderDemo({
   const displayedImportedParticipants = importSuccess?.participants.length
     ? importSuccess.participants
     : importedParticipants;
-  const canActivateCampaign = Boolean(campaignId && questions.length > 0);
+  const canActivateCampaign = Boolean(campaignId && answerableQuestionCount > 0);
   const isAllStepsComplete = Boolean(
-    campaignId && status === "active" && questions.length > 0 && hasImportedEmployees,
+    campaignId && status === "active" && answerableQuestionCount > 0 && hasImportedEmployees,
   );
   const invitationActionLabel = mode === "edit" ? "Renvoyer" : "Envoyer";
+  useEffect(() => {
+    setPreviewIndex((current) =>
+      Math.min(current, Math.max(previewSections.length - 1, 0)),
+    );
+  }, [previewSections.length]);
+
   useEffect(() => {
     setCompanies(initialData.companies);
     setCampaigns(initialData.campaigns);
     setCampaignId(mode === "create" ? null : initialData.campaignId);
     setCompanyId(getInitialCompanyId(initialData, mode));
+    setTemplateMode("blank");
+    setSourceCompanyId(null);
+    setSourceCampaignId(null);
     setNewCompanyName("");
     setStatus(mode === "create" ? "draft" : initialData.status);
     setTitle(mode === "create" ? "" : initialData.title);
@@ -383,6 +421,11 @@ export function SurveyBuilderDemo({
       return false;
     }
 
+    if (mode === "create" && templateMode === "existing" && !sourceCampaignId) {
+      setError("Choisis un questionnaire modèle ou repasse sur Partir de zéro.");
+      return false;
+    }
+
     return true;
   }
 
@@ -508,7 +551,7 @@ export function SurveyBuilderDemo({
       return;
     }
 
-    runMutation<{ id: number; status?: string }>(
+    runMutation<BackendCampaign>(
         () =>
           getTrpcClient().adminSurveys.createCampaign.mutate({
             companyId: selectedCompanyId,
@@ -516,12 +559,15 @@ export function SurveyBuilderDemo({
             description: trimmedDescription || undefined,
             startDate,
             endDate,
+            sourceCampaignId: templateMode === "existing" ? sourceCampaignId : undefined,
           }),
       "Sondage créé.",
       undefined,
       (result) => {
+        const copiedQuestions = mapBackendCampaignQuestions(result);
         setCampaignId(result.id);
         setStatus(result.status ?? "preparation");
+        setQuestions(copiedQuestions);
         setCampaigns((current) =>
           current.some((campaign) => campaign.id === result.id)
             ? current
@@ -535,7 +581,7 @@ export function SurveyBuilderDemo({
                   companyId: selectedCompanyId,
                   startDate,
                   endDate,
-                  questions: [],
+                  questions: copiedQuestions,
                 },
               ],
         );
@@ -566,6 +612,11 @@ export function SurveyBuilderDemo({
       return null;
     }
 
+    if (templateMode === "existing" && !sourceCampaignId) {
+      setError("Choisis un questionnaire modèle ou repasse sur Partir de zéro.");
+      return null;
+    }
+
     if (campaignId) {
       return campaignId;
     }
@@ -582,10 +633,13 @@ export function SurveyBuilderDemo({
         description: trimmedDescription,
         startDate,
         endDate,
+        sourceCampaignId: templateMode === "existing" ? sourceCampaignId : undefined,
       });
+      const copiedQuestions = mapBackendCampaignQuestions(result);
 
       setCampaignId(result.id);
       setStatus(result.status ?? "preparation");
+      setQuestions(copiedQuestions);
       setCampaigns((current) =>
         current.some((campaign) => campaign.id === result.id)
           ? current
@@ -599,7 +653,7 @@ export function SurveyBuilderDemo({
                 companyId: selectedCompanyId,
                 startDate,
                 endDate,
-                questions: [],
+                questions: copiedQuestions,
               },
             ],
       );
@@ -633,7 +687,7 @@ export function SurveyBuilderDemo({
 
     if (!isSurveyReadyForImport) {
       setError(
-        questions.length === 0
+        answerableQuestionCount === 0
           ? "Crée et vérifie les questions avant d'activer puis d'importer les employés."
           : "Activez d'abord le sondage avant d'importer les employés.",
       );
@@ -1049,20 +1103,59 @@ export function SurveyBuilderDemo({
     const template = ensureQuestionOptions(templateByType[type]);
     const temporaryId = `tmp-${Date.now()}`;
 
+    if (type === "section") {
+      runMutation<{ id: number }>(
+        () =>
+          getTrpcClient().adminSurveys.createSection.mutate({
+            campaignId,
+            title: template.title,
+            orderIndex: questions.length,
+          }),
+        "Section ajoutée.",
+        () =>
+          setQuestions((current) => [
+            ...current,
+            { ...template, id: temporaryId, documentId: temporaryId, sectionId: null },
+          ]),
+        (result) => {
+          setQuestions((current) =>
+            current.map((question) =>
+              question.id === temporaryId
+                ? {
+                    ...question,
+                    id: `section-${result.id}`,
+                    documentId: `section-${result.id}`,
+                    sectionId: result.id,
+                  }
+                : question,
+            ),
+          );
+        },
+        mode === "edit",
+      );
+      return;
+    }
+
     runMutation<{ id: number }>(
       () =>
         getTrpcClient().adminSurveys.createQuestion.mutate({
           campaignId,
+          sectionId: getSectionIdBeforeIndex(questions, questions.length),
           title: template.title,
-          type: type === "section" ? "text" : type,
+          type,
           options: template.options,
           orderIndex: questions.length,
         }),
-      type === "section" ? "Section ajoutée." : "Question ajoutée.",
+      "Question ajoutée.",
       () =>
         setQuestions((current) => [
           ...current,
-          { ...template, id: temporaryId, documentId: temporaryId },
+          {
+            ...template,
+            id: temporaryId,
+            documentId: temporaryId,
+            sectionId: getSectionIdBeforeIndex(current, current.length),
+          },
         ]),
       (result) => {
         setQuestions((current) =>
@@ -1179,6 +1272,7 @@ export function SurveyBuilderDemo({
       () =>
         getTrpcClient().adminSurveys.updateQuestion.mutate({
           questionId: Number(question.id),
+          sectionId: question.sectionId ?? null,
           title: trimmedQuestionTitle,
           type: question.type === "section" ? "text" : question.type,
           options: question.type === "choice" ? sanitizedOptions : undefined,
@@ -1191,9 +1285,60 @@ export function SurveyBuilderDemo({
     );
   }
 
+  function persistSection(section: SurveyQuestion, index: number) {
+    const sectionId = getSectionBackendId(section);
+    if (!sectionId) {
+      setError("La section doit d'abord être créée avant édition détaillée.");
+      return;
+    }
+
+    const trimmedSectionTitle = section.title.trim();
+    if (trimmedSectionTitle.length < 2) {
+      setError("Le titre de la section doit contenir au moins 2 caractères.");
+      return;
+    }
+
+    runMutation(
+      () =>
+        getTrpcClient().adminSurveys.updateSection.mutate({
+          sectionId,
+          title: trimmedSectionTitle,
+          description: section.helpText === "Section du questionnaire" ? undefined : section.helpText,
+          orderIndex: index,
+        }),
+      "Section mise à jour.",
+      undefined,
+      undefined,
+      mode === "edit",
+    );
+  }
+
   function removeQuestion(question: SurveyQuestion) {
-    if (!Number.isFinite(Number(question.id))) {
+    if (question.type !== "section" && !Number.isFinite(Number(question.id))) {
       setQuestions((current) => current.filter((item) => item.id !== question.id));
+      return;
+    }
+
+    if (question.type === "section") {
+      const sectionId = getSectionBackendId(question);
+      if (!sectionId) {
+        setQuestions((current) => current.filter((item) => item.id !== question.id));
+        return;
+      }
+
+      runMutation(
+        () =>
+          getTrpcClient().adminSurveys.deleteSection.mutate({
+            sectionId,
+          }),
+        "Section supprimée.",
+        () =>
+          setQuestions((current) =>
+            removeSectionFromSurveyStructure(current, sectionId),
+          ),
+        undefined,
+        mode === "edit",
+      );
       return;
     }
 
@@ -1217,23 +1362,35 @@ export function SurveyBuilderDemo({
 
     const nextQuestions = questions.slice();
     [nextQuestions[index], nextQuestions[nextIndex]] = [nextQuestions[nextIndex], nextQuestions[index]];
-    const reordered = nextQuestions.map((question, orderIndex) => ({
-      ...question,
-      orderIndex,
-    }));
+    const reordered = normalizeSurveyStructure(nextQuestions);
     setQuestions(reordered);
 
-    const reorderableItems = reordered.filter((question) => Number.isFinite(Number(question.id)));
+    const reorderableItems = reordered.filter(
+      (question) => question.type !== "section" && Number.isFinite(Number(question.id)),
+    );
+    const reorderableSections = reordered.filter(
+      (question) => question.type === "section" && getSectionBackendId(question),
+    );
 
     runMutation(
-      () =>
-        getTrpcClient().adminSurveys.reorderQuestions.mutate({
+      async () => {
+        await getTrpcClient().adminSurveys.reorderSections.mutate({
+          campaignId,
+          items: reorderableSections.map((section) => ({
+            sectionId: getSectionBackendId(section) ?? 0,
+            orderIndex: section.orderIndex,
+          })),
+        });
+
+        return getTrpcClient().adminSurveys.reorderQuestions.mutate({
           campaignId,
           items: reorderableItems.map((question) => ({
             questionId: Number(question.id),
+            sectionId: question.sectionId ?? null,
             orderIndex: question.orderIndex,
           })),
-        }),
+        });
+      },
       "Ordre des questions mis à jour.",
       undefined,
       undefined,
@@ -1252,7 +1409,7 @@ export function SurveyBuilderDemo({
         setError("Corriger les informations du sondage avant activation.");
         return;
       }
-      if (questions.length === 0) {
+      if (answerableQuestionCount === 0) {
         setError("Ajouter au moins une question avant d'activer le sondage.");
         return;
       }
@@ -1289,7 +1446,7 @@ export function SurveyBuilderDemo({
   }
 
   function handleActivateStep() {
-    if (questions.length === 0) {
+    if (answerableQuestionCount === 0) {
       setError("Ajouter d'abord des questions avant d'activer le sondage.");
       return;
     }
@@ -1512,10 +1669,94 @@ export function SurveyBuilderDemo({
             ) : null}
           </div>
 
+          {isCreateMode ? (
+            <div className="relative order-2 rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+              <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+                2
+              </span>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+                Modèle de questionnaire
+              </p>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTemplateMode("blank");
+                    setSourceCompanyId(null);
+                    setSourceCampaignId(null);
+                  }}
+                  className={`rounded-[10px] border px-3 py-2 text-xs font-semibold ${
+                    templateMode === "blank"
+                      ? "border-amber-300 bg-amber-50 text-amber-800"
+                      : "border-slate-200 bg-white text-slate-600"
+                  }`}
+                >
+                  Partir de zéro
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTemplateMode("existing")}
+                  className={`rounded-[10px] border px-3 py-2 text-xs font-semibold ${
+                    templateMode === "existing"
+                      ? "border-amber-300 bg-amber-50 text-amber-800"
+                      : "border-slate-200 bg-white text-slate-600"
+                  }`}
+                >
+                  Depuis un modèle
+                </button>
+              </div>
+
+              {templateMode === "existing" ? (
+                <div className="mt-3 space-y-3">
+                  <select
+                    value={sourceCompanyId ?? ""}
+                    onChange={(event) => {
+                      const nextSourceCompanyId = Number(event.target.value);
+                      setSourceCompanyId(nextSourceCompanyId || null);
+                      setSourceCampaignId(null);
+                    }}
+                    className="w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                  >
+                    <option value="">Entreprise source</option>
+                    {templateSourceCompanies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={sourceCampaignId ?? ""}
+                    onChange={(event) =>
+                      setSourceCampaignId(Number(event.target.value) || null)
+                    }
+                    disabled={!sourceCompanyId}
+                    className="w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none disabled:bg-slate-100"
+                  >
+                    <option value="">Questionnaire modèle</option>
+                    {templateSourceCampaigns.map((campaign) => (
+                      <option key={campaign.id} value={campaign.id}>
+                        {campaign.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {selectedSourceCampaign ? (
+                    <p className="text-xs leading-5 text-slate-500">
+                      {selectedSourceCampaign.questions.filter((question) => question.type === "section").length} section(s),{" "}
+                      {selectedSourceCampaign.questions.filter((question) => question.type !== "section").length} question(s) seront copiées.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           {/* Card 2: Periode */}
-          <div className={`relative ${mode === "edit" ? "order-3" : "order-2"} rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col`}>
+          <div className={`relative ${mode === "edit" ? "order-3" : "order-3"} rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col`}>
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-              {mode === "edit" ? 3 : 2}
+              {mode === "edit" ? 3 : 3}
             </span>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
               Période
@@ -1549,9 +1790,9 @@ export function SurveyBuilderDemo({
           </div>
 
           {/* Card 3: Nom et description */}
-          <div className={`relative ${mode === "edit" ? "order-2" : "order-3"} rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col`}>
+          <div className={`relative ${mode === "edit" ? "order-2" : "order-4"} rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col`}>
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-              {mode === "edit" ? 2 : 3}
+              {mode === "edit" ? 2 : 4}
             </span>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
               Nom et description
@@ -1572,9 +1813,9 @@ export function SurveyBuilderDemo({
           </div>
 
           {/* Card 4: Activation */}
-          <div className="relative order-4 rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+          <div className={`relative ${mode === "edit" ? "order-4" : "order-5"} rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col`}>
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-              4
+              {mode === "edit" ? 4 : 5}
             </span>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
               Activation
@@ -1612,9 +1853,9 @@ export function SurveyBuilderDemo({
           </div>
 
           {/* Card 5: Import */}
-          <div className="relative order-5 rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
+          <div className={`relative ${mode === "edit" ? "order-5" : "order-6"} rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col`}>
             <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
-              5
+              {mode === "edit" ? 5 : 6}
             </span>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
               Import
@@ -1664,6 +1905,13 @@ export function SurveyBuilderDemo({
           Finalise les questions avant activation : ce contenu sera celui visible dans le lien envoyé aux employés.
         </p>
         <div className="flex flex-wrap gap-2 sm:gap-3 mb-4">
+          <SecondaryButton
+            disabled={isBusy || !campaignId || status === "active"}
+            onClick={() => addQuestion("section")}
+            className="sm:w-auto"
+          >
+            Ajouter section
+          </SecondaryButton>
           <SecondaryButton 
             disabled={isBusy || !campaignId || status === "active"} 
             onClick={() => addQuestion("scale")} 
@@ -1703,7 +1951,7 @@ export function SurveyBuilderDemo({
             </p>
           </div>
         )}
-        {questions.length === 0 && status === "active" && (
+        {answerableQuestionCount === 0 && status === "active" && (
           <p className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
             Attention : Au moins une question est requise avant d&apos;importer les employés. Ajoutez au moins une question maintenant.
           </p>
@@ -1714,68 +1962,117 @@ export function SurveyBuilderDemo({
           </p>
         )}
 
-        <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
-          {questions.map((question, index) => {
-            const isSection = question.type === "section";
-            
+        <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-5">
+          {buildSurveySectionCards(questions).map((group) => {
+            const section = group.section;
+            const sectionQuestionCount = group.questions.length;
+
             return (
               <div
-                key={`${question.id}-${index}`}
-                className={`rounded-[12px] sm:rounded-[16px] border p-3 sm:p-4 shadow-sm ${
-                  isSection
-                    ? "border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50"
-                    : "border-slate-200 bg-white"
+                key={section ? `section-card-${section.question.id}` : "unsectioned-card"}
+                className={`rounded-[12px] sm:rounded-[16px] border p-3 sm:p-5 shadow-sm ${
+                  section
+                    ? "border-amber-300 bg-amber-50/60"
+                    : "border-slate-200 bg-slate-50"
                 }`}
               >
-                {isSection ? (
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                {section ? (
+                  <div className="flex flex-col gap-3 border-b border-amber-200 pb-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <GripHorizontal className="h-5 w-5 text-amber-700" />
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
                           Section
                         </p>
+                        <span className="rounded-full border border-amber-200 bg-white px-2 py-1 text-xs font-semibold text-amber-800">
+                          {sectionQuestionCount} question{sectionQuestionCount > 1 ? "s" : ""}
+                        </span>
                       </div>
                       <input
-                        value={question.title}
-                        onChange={(event) => updateQuestion(index, { title: event.target.value })}
+                        value={section.question.title}
+                        onChange={(event) =>
+                          updateQuestion(section.index, { title: event.target.value })
+                        }
                         disabled={!canEditQuestions}
                         className="w-full text-lg font-bold bg-transparent border-b-2 border-amber-300 pb-2 outline-none focus:border-amber-500"
                         placeholder="Titre de la section"
+                      />
+                      <textarea
+                        value={
+                          section.question.helpText === "Section du questionnaire"
+                            ? ""
+                            : section.question.helpText
+                        }
+                        onChange={(event) =>
+                          updateQuestion(section.index, { helpText: event.target.value })
+                        }
+                        disabled={!canEditQuestions}
+                        className="mt-3 min-h-24 w-full rounded-[12px] border border-amber-200 bg-white/80 px-3 py-3 text-sm leading-6 text-slate-700 outline-none focus:border-amber-400"
+                        placeholder="Description de la section visible avant ses questions"
                       />
                     </div>
                     <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                       <SecondaryButton
                         className="flex-1 sm:flex-none px-3 py-2"
-                        disabled={index === 0 || !canEditQuestions}
-                        onClick={() => moveQuestion(index, -1)}
+                        disabled={section.index === 0 || !canEditQuestions}
+                        onClick={() => moveQuestion(section.index, -1)}
                       >
                         Monter
                       </SecondaryButton>
                       <SecondaryButton
                         className="flex-1 sm:flex-none px-3 py-2"
-                        disabled={index === questions.length - 1 || !canEditQuestions}
-                        onClick={() => moveQuestion(index, 1)}
+                        disabled={section.index === questions.length - 1 || !canEditQuestions}
+                        onClick={() => moveQuestion(section.index, 1)}
                       >
                         Descendre
                       </SecondaryButton>
+                      <PrimaryButton
+                        className="flex-1 sm:flex-none px-3 py-2"
+                        disabled={isBusy || !canEditQuestions}
+                        onClick={() => persistSection(section.question, section.index)}
+                      >
+                        Enregistrer
+                      </PrimaryButton>
                       <SecondaryButton
                         className="flex-1 sm:flex-none px-3 py-2 text-red-600 hover:bg-red-50"
                         disabled={!canEditQuestions}
-                        onClick={() => removeQuestion(question)}
+                        onClick={() => removeQuestion(section.question)}
                       >
                         Supprimer
                       </SecondaryButton>
                     </div>
                   </div>
                 ) : (
-                  <div>
+                  <div className="border-b border-slate-200 pb-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      Questions sans section
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-4 space-y-3">
+                  {group.questions.length === 0 ? (
+                    <div className="rounded-[12px] border border-dashed border-amber-300 bg-white/70 px-4 py-5 text-sm font-medium text-slate-500">
+                      Aucune question dans cette section.
+                    </div>
+                  ) : null}
+
+                  {group.questions.map(({ question, index }) => (
+                    <div
+                      key={`${question.id}-${index}`}
+                      className="rounded-[12px] border border-slate-200 bg-white p-3 sm:p-4"
+                    >
                     <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-                          Bloc {index + 1}
+                          Question {getQuestionNumber(questions, index)}
                         </p>
                         <p className="mt-2 text-sm font-semibold">{question.type}</p>
+                        {section ? (
+                          <p className="mt-1 text-xs font-medium text-slate-500">
+                            Section: {section.question.title}
+                          </p>
+                        ) : null}
                       </div>
                       <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                         <SecondaryButton
@@ -1811,7 +2108,6 @@ export function SurveyBuilderDemo({
                       <option value="scale">Echelle 1 a 5</option>
                       <option value="choice">QCM</option>
                       <option value="text">Texte libre</option>
-                      <option value="section">Section</option>
                     </select>
 
                     {question.type === "scale" && (
@@ -1882,7 +2178,8 @@ export function SurveyBuilderDemo({
                       </SecondaryButton>
                     </div>
                   </div>
-                )}
+                  ))}
+                </div>
               </div>
             );
           })}
@@ -1910,46 +2207,129 @@ export function SurveyBuilderDemo({
             <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
           </div>
 
-          {questions.map((question, index) => (
-            <div key={`${question.id}-preview-${index}`} className="rounded-[12px] sm:rounded-[16px] border border-slate-200 p-3 sm:p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-                Question {index + 1}
-              </p>
-              <p className="mt-2 text-sm font-medium">{question.title}</p>
-              <p className="mt-1 text-sm text-slate-500">
-                {question.type === "scale"
-                  ? "Reponse attendue sur une echelle de 1 a 5, de pas du tout d&apos;accord a tout a fait d&apos;accord."
-                  : question.type === "choice"
-                    ? "Selection d'un choix parmi les options ci-dessous."
-                    : "Champ libre pour commentaire qualitatif."}
-              </p>
-              {question.type === "scale" && (
-                <div className="mt-3 grid gap-2 grid-cols-2 sm:grid-cols-5">
-                  {scaleAnswerGuide.map((item) => (
-                    <div
-                      key={`${question.id}-scale-preview-${item.value}`}
-                      className="rounded-[12px] border border-sky-200 bg-sky-50/60 px-3 py-2 text-center"
-                    >
-                      <p className="text-sm font-bold text-sky-800">{item.value}</p>
-                      <p className="mt-1 text-[11px] text-slate-600">{item.label}</p>
-                    </div>
-                  ))}
+          {previewSection ? (
+            <div
+              className={`rounded-[12px] sm:rounded-[16px] border p-4 sm:p-5 ${
+                previewSection.section
+                  ? "border-amber-300 bg-amber-50"
+                  : "border-slate-200 bg-white"
+              }`}
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                    {previewSection.section ? "Section" : "Questions sans section"}
+                  </p>
+                  <p className="mt-2 text-base font-semibold text-slate-900">
+                    {previewSection.section?.question.title ?? "Questions générales"}
+                  </p>
                 </div>
-              )}
-              {question.type === "choice" && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {sanitizeOptions(question.options).map((option) => (
-                    <span
-                      key={`${question.id}-${option}`}
-                      className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800"
-                    >
-                      {option}
-                    </span>
-                  ))}
-                </div>
-              )}
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                  {previewIndex + 1} / {previewSections.length}
+                </span>
+              </div>
+
+              {previewSection.section?.question.helpText &&
+                previewSection.section.question.helpText !== "Section du questionnaire" ? (
+                <p className="mt-4 rounded-[12px] border border-amber-200 bg-white px-4 py-4 text-sm leading-6 text-slate-700">
+                  {previewSection.section.question.helpText}
+                </p>
+              ) : null}
+
+              <div className="mt-4 space-y-3 sm:space-y-4">
+                {previewSection.questions.length === 0 ? (
+                  <div className="rounded-[12px] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm font-medium text-slate-500">
+                    Cette section ne contient pas encore de question.
+                  </div>
+                ) : null}
+
+                {previewSection.questions.map(({ question, index }) => (
+                  <div
+                    key={`${question.id}-preview-${index}`}
+                    className="rounded-[12px] border border-slate-200 bg-white p-4 sm:p-5"
+                  >
+                    <p className="text-sm font-semibold text-slate-900">
+                      {getQuestionNumber(questions, index)}. {question.title}
+                      <span className="ml-1 text-rose-500">*</span>
+                    </p>
+
+                    {question.type === "scale" ? (
+                      <div className="mt-4 space-y-3">
+                        {scaleAnswerGuide.map((item) => (
+                          <label
+                            key={`${question.id}-scale-preview-${item.value}`}
+                            className="flex items-center gap-3 text-sm text-slate-700"
+                          >
+                            <input
+                              type="radio"
+                              readOnly
+                              checked={item.value === 1}
+                              className="h-4 w-4 accent-amber-600"
+                            />
+                            <span>
+                              {item.value} - {item.label}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {question.type === "choice" ? (
+                      <div className="mt-4 space-y-3">
+                        {sanitizeOptions(question.options).map((option, optionIndex) => (
+                          <label
+                            key={`${question.id}-${option}`}
+                            className="flex items-center gap-3 text-sm text-slate-700"
+                          >
+                            <input
+                              type="radio"
+                              readOnly
+                              checked={optionIndex === 0}
+                              className="h-4 w-4 accent-amber-600"
+                            />
+                            <span>{option}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {question.type === "text" ? (
+                      <textarea
+                        readOnly
+                        className="mt-4 min-h-28 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                        placeholder="Reponse libre"
+                      />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <SecondaryButton
+                  disabled={previewIndex === 0}
+                  onClick={() => setPreviewIndex((current) => Math.max(current - 1, 0))}
+                  className="w-full sm:w-auto"
+                >
+                  Précédent
+                </SecondaryButton>
+                <PrimaryButton
+                  disabled={previewIndex >= previewSections.length - 1}
+                  onClick={() =>
+                    setPreviewIndex((current) =>
+                      Math.min(current + 1, previewSections.length - 1),
+                    )
+                  }
+                  className="w-full sm:w-auto"
+                >
+                  Suivant
+                </PrimaryButton>
+              </div>
             </div>
-          ))}
+          ) : (
+            <div className="rounded-[12px] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm font-medium text-slate-500">
+              Ajoutez une section puis des questions pour afficher l'aperçu.
+            </div>
+          )}
         </div>
       </Card>
 
@@ -1986,7 +2366,7 @@ export function SurveyBuilderDemo({
                     step: 1,
                     title: "Sondage activé",
                     body: "Les questions sont validées avant l'import et l'envoi des liens.",
-                    done: Boolean(campaignId && status === "active" && questions.length > 0),
+                    done: Boolean(campaignId && status === "active" && answerableQuestionCount > 0),
                   },
                   {
                     step: 2,
@@ -2201,6 +2581,60 @@ function mapImportedParticipant(participant: CampaignParticipantRecord): Importe
   };
 }
 
+function mapBackendCampaignQuestions(campaign: BackendCampaign): SurveyQuestion[] {
+  const sectionItems: SurveyQuestion[] = (campaign.question_sections ?? []).map((section) => ({
+    id: `section-${section.id}`,
+    documentId: `section-${section.id}`,
+    type: "section",
+    title: section.title,
+    helpText: section.description?.trim() || "",
+    orderIndex: section.order_index ?? 0,
+    sectionId: section.id,
+  }));
+
+  const questionItems: SurveyQuestion[] = (campaign.questions ?? []).map((question) => {
+    const type = normalizeBackendQuestionType(question.question_type);
+    return ensureQuestionOptions({
+      id: String(question.id),
+      documentId: `question-${question.id}`,
+      type,
+      title: question.question_text,
+      helpText: question.rps_dimension
+        ? `Dimension analysee: ${question.rps_dimension}`
+        : "Question du questionnaire RPS",
+      options:
+        type === "choice"
+          ? question.choice_options?.filter(Boolean)
+          : undefined,
+      orderIndex: question.order_index ?? 0,
+      sectionId: question.section?.id ?? null,
+    });
+  });
+
+  return [...sectionItems, ...questionItems].sort((left, right) => {
+    if (left.orderIndex === right.orderIndex) {
+      return left.type === "section" ? -1 : 1;
+    }
+
+    return left.orderIndex - right.orderIndex;
+  });
+}
+
+function normalizeBackendQuestionType(type: string | null | undefined): SurveyQuestion["type"] {
+  switch ((type ?? "").toLowerCase()) {
+    case "scale":
+    case "rating":
+    case "likert":
+      return "scale";
+    case "choice":
+    case "multiple_choice":
+    case "radio":
+      return "choice";
+    default:
+      return "text";
+  }
+}
+
 function toAbsoluteSurveyUrl(value: string) {
   if (!value) {
     return "";
@@ -2229,6 +2663,147 @@ function formatParticipantStatus(status?: string) {
   }
 
   return status ?? "";
+}
+
+function getSectionBackendId(question: SurveyQuestion) {
+  if (question.type !== "section") {
+    return null;
+  }
+
+  if (typeof question.sectionId === "number") {
+    return question.sectionId;
+  }
+
+  const match = question.id.match(/^section-(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+function getSectionIdBeforeIndex(questions: SurveyQuestion[], targetIndex: number) {
+  let currentSectionId: number | null = null;
+
+  for (let index = 0; index < targetIndex; index += 1) {
+    const question = questions[index];
+
+    if (question?.type === "section") {
+      currentSectionId = getSectionBackendId(question);
+    }
+  }
+
+  return currentSectionId;
+}
+
+function normalizeSurveyStructure(questions: SurveyQuestion[]) {
+  let currentSectionId: number | null = null;
+
+  return questions.map((question, orderIndex) => {
+    if (question.type === "section") {
+      currentSectionId = getSectionBackendId(question);
+      return {
+        ...question,
+        orderIndex,
+        sectionId: currentSectionId,
+      };
+    }
+
+    return {
+      ...question,
+      orderIndex,
+      sectionId: currentSectionId,
+    };
+  });
+}
+
+function removeSectionFromSurveyStructure(
+  questions: SurveyQuestion[],
+  removedSectionId: number,
+) {
+  return questions
+    .filter((question) => getSectionBackendId(question) !== removedSectionId)
+    .map((question, orderIndex) => ({
+      ...question,
+      orderIndex,
+      sectionId: question.sectionId === removedSectionId ? null : question.sectionId,
+    }));
+}
+
+function buildSurveySectionCards(questions: SurveyQuestion[]) {
+  const groups: Array<{
+    section: { question: SurveyQuestion; index: number } | null;
+    questions: Array<{ question: SurveyQuestion; index: number }>;
+  }> = [];
+  const sectionGroupById = new Map<number, (typeof groups)[number]>();
+  let unsectionedGroup: (typeof groups)[number] | null = null;
+
+  questions.forEach((question, index) => {
+    if (question.type === "section") {
+      const sectionId = getSectionBackendId(question);
+      const group = {
+        section: { question, index },
+        questions: [],
+      };
+
+      groups.push(group);
+
+      if (sectionId) {
+        sectionGroupById.set(sectionId, group);
+      }
+
+      return;
+    }
+
+    const sectionGroup = question.sectionId
+      ? sectionGroupById.get(question.sectionId)
+      : null;
+
+    if (sectionGroup) {
+      sectionGroup.questions.push({ question, index });
+      return;
+    }
+
+    if (!unsectionedGroup) {
+      unsectionedGroup = {
+        section: null,
+        questions: [],
+      };
+      groups.unshift(unsectionedGroup);
+    }
+
+    unsectionedGroup.questions.push({ question, index });
+  });
+
+  return groups.filter((group) => group.section || group.questions.length > 0);
+}
+
+function getSectionQuestionCount(questions: SurveyQuestion[], sectionId: number | null) {
+  if (!sectionId) {
+    return 0;
+  }
+
+  return questions.filter(
+    (question) => question.type !== "section" && question.sectionId === sectionId,
+  ).length;
+}
+
+function getQuestionSectionTitle(
+  questions: SurveyQuestion[],
+  sectionId?: number | null,
+) {
+  if (!sectionId) {
+    return "";
+  }
+
+  return (
+    questions.find(
+      (question) =>
+        question.type === "section" && getSectionBackendId(question) === sectionId,
+    )?.title ?? ""
+  );
+}
+
+function getQuestionNumber(questions: SurveyQuestion[], targetIndex: number) {
+  return questions
+    .slice(0, targetIndex + 1)
+    .filter((question) => question.type !== "section").length;
 }
 
 function sanitizeOptions(options?: string[]) {

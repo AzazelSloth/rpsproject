@@ -194,7 +194,8 @@ export class CampaignParticipantService {
       relations: {
         campaign: {
           company: true,
-          questions: true,
+          questions: { section: true },
+          question_sections: true,
         },
         employee: true,
       },
@@ -223,6 +224,13 @@ export class CampaignParticipantService {
         end_date: participant.campaign.end_date,
         company: participant.campaign.company,
       },
+      sections: [...(participant.campaign.question_sections ?? [])].sort((a, b) => {
+        if (a.order_index === b.order_index) {
+          return a.id - b.id;
+        }
+
+        return a.order_index - b.order_index;
+      }),
       questions: [...participant.campaign.questions].sort((a, b) => {
         if (a.order_index === b.order_index) {
           return a.id - b.id;
