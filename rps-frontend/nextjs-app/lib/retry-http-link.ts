@@ -14,7 +14,7 @@ const DEFAULT_OPTIONS: RetryOptions = {
   initialDelayMs: 100,
   maxDelayMs: 5000,
   backoffMultiplier: 2,
-  retryableStatusCodes: [408, 429, 500, 502, 503, 504],
+  retryableStatusCodes: [408, 500, 502, 503, 504],
 };
 
 function delay(ms: number): Promise<void> {
@@ -81,9 +81,11 @@ export function retryHttpLink(options: RetryOptions = {}): TRPCLink<any> {
                     config.maxDelayMs || 5000
                   );
                   
-                  console.log(
-                    `[tRPC Retry] Attempt ${retryCount}/${config.maxRetries} after ${totalDelayMs.toFixed(0)}ms for ${op.path}`
-                  );
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log(
+                      `[tRPC Retry] Attempt ${retryCount}/${config.maxRetries} after ${totalDelayMs.toFixed(0)}ms for ${op.path}`
+                    );
+                  }
                   
                   currentDelayMs = Math.min(
                     currentDelayMs * (config.backoffMultiplier || 2),

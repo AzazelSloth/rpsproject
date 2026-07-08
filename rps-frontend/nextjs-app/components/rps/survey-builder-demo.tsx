@@ -22,6 +22,24 @@ const scaleAnswerGuide = [
   { value: 5, label: "Tout à fait d'accord" },
 ];
 
+function devLog(...args: unknown[]) {
+  if (process.env.NODE_ENV === "development") {
+    console.log(...args);
+  }
+}
+
+function devWarn(...args: unknown[]) {
+  if (process.env.NODE_ENV === "development") {
+    console.warn(...args);
+  }
+}
+
+function devError(...args: unknown[]) {
+  if (process.env.NODE_ENV === "development") {
+    console.error(...args);
+  }
+}
+
 type ImportedParticipantPayload = {
   employee?: {
     first_name?: string;
@@ -756,8 +774,8 @@ export function SurveyBuilderDemo({
         return;
       }
 
-      console.log(`[Excel Import] Extracted ${jsonData.length} rows from Excel file`);
-      console.log("[Excel Import] Column headers:", Object.keys(jsonData[0]));
+      devLog(`[Excel Import] Extracted ${jsonData.length} rows from Excel file`);
+      devLog("[Excel Import] Column headers:", Object.keys(jsonData[0]));
 
       // Map Excel columns to expected CSV format with flexible column name matching
       // NOTE: Company name is NOT in Excel - it comes from the selected campaign
@@ -774,7 +792,7 @@ export function SurveyBuilderDemo({
           normalized: normalizeColumnLabel(key),
         }));
         
-        console.log("[Excel Import] Processing row with keys:", keys);
+        devLog("[Excel Import] Processing row with keys:", keys);
 
         // Flexible column mapping - exact match first, then partial match
         const findColumn = (aliases: string[]): string => {
@@ -786,7 +804,7 @@ export function SurveyBuilderDemo({
               (entry) => entry.normalized === alias,
             );
             if (exactMatch) {
-              console.log(`[Excel Import] Exact match for "${alias}": "${exactMatch.key}"`);
+              devLog(`[Excel Import] Exact match for "${alias}": "${exactMatch.key}"`);
               return row[exactMatch.key];
             }
           }
@@ -797,12 +815,12 @@ export function SurveyBuilderDemo({
               (entry) => entry.normalized.includes(alias),
             );
             if (partialMatch) {
-              console.log(`[Excel Import] Partial match for "${alias}": "${partialMatch.key}"`);
+              devLog(`[Excel Import] Partial match for "${alias}": "${partialMatch.key}"`);
               return row[partialMatch.key];
             }
           }
           
-          console.warn(`[Excel Import] No match found for aliases:`, aliases);
+          devWarn(`[Excel Import] No match found for aliases:`, aliases);
           return "";
         };
 
@@ -811,7 +829,7 @@ export function SurveyBuilderDemo({
         const email = findColumn(["Adresse courriel", "Adresse email", "Email", "Courriel", "E-mail", "Mail"]);
         const fonction = findColumn(["Fonction", "poste", "role", "titre", "department"]);
 
-        console.log("[Excel Import] Extracted values:", { nom, prenom, email, fonction });
+        devLog("[Excel Import] Extracted values:", { nom, prenom, email, fonction });
 
         return {
           Nom: String(nom).trim(),
@@ -840,9 +858,9 @@ export function SurveyBuilderDemo({
 
       const parsedCsv = csvLines.join("\n");
 
-      console.log("[Excel Import] Generated CSV preview (first 500 chars):", parsedCsv.slice(0, 500));
-      console.log(`[Excel Import] Total rows in CSV: ${csvLines.length - 1}`);
-      console.log(`[Excel Import] Company will be auto-set from campaign: ${selectedCompanyName || "N/A"}`);
+      devLog("[Excel Import] Generated CSV preview (first 500 chars):", parsedCsv.slice(0, 500));
+      devLog(`[Excel Import] Total rows in CSV: ${csvLines.length - 1}`);
+      devLog(`[Excel Import] Company will be auto-set from campaign: ${selectedCompanyName || "N/A"}`);
 
       setImportCsv(normalizeCsv(parsedCsv));
       setImportFeedback(`Fichier chargé : ${file.name} (${jsonData.length} employés extraits, entreprise: ${selectedCompanyName || "auto"})`);
@@ -977,10 +995,10 @@ export function SurveyBuilderDemo({
       try {
         // Log data being sent to backend for debugging
         const csvLines = importCsv.split("\n").filter((line) => line.trim());
-        console.log(`[Import Employees] Sending ${csvLines.length - 1} employees to backend`);
-        console.log("[Import Employees] CSV headers:", csvLines[0]);
-        console.log("[Import Employees] Company ID:", companyId);
-        console.log("[Import Employees] Campaign ID:", campaignId);
+        devLog(`[Import Employees] Sending ${csvLines.length - 1} employees to backend`);
+        devLog("[Import Employees] CSV headers:", csvLines[0]);
+        devLog("[Import Employees] Company ID:", companyId);
+        devLog("[Import Employees] Campaign ID:", campaignId);
         
         const rawResult = await getTrpcClient().campaignParticipants.importEmployees.mutate({
           campaignId,
@@ -989,7 +1007,7 @@ export function SurveyBuilderDemo({
         });
         const result = rawResult as ImportEmployeesResponse;
 
-        console.log("[Import Employees] Backend response:", result);
+        devLog("[Import Employees] Backend response:", result);
         
         const participants = (result.participants ?? []).map((participant) => {
           // Backend returns employee data nested in employee object
@@ -1001,7 +1019,7 @@ export function SurveyBuilderDemo({
           const department = participant.employee?.department || participant.department || "";
           const status = participant.status || "pending";
 
-          console.log("Processing participant:", { firstName, lastName, email, token, surveyUrl });
+          devLog("Processing participant:", { firstName, lastName, email, token, surveyUrl });
 
           return {
             name: `${firstName} ${lastName}`.trim() || "Employé",
@@ -1014,7 +1032,7 @@ export function SurveyBuilderDemo({
           };
         });
 
-        console.log("Processed participants:", participants);
+        devLog("Processed participants:", participants);
 
         const progressResult = (await getTrpcClient().campaignParticipants.getCampaignProgress.query({
           campaignId,
@@ -1517,7 +1535,7 @@ export function SurveyBuilderDemo({
         const errorInfo = parseApiError(caughtError);
 
         // Log detailed error info for debugging
-        console.error('[Invitation Error]', {
+        devError('[Invitation Error]', {
           code: errorInfo.code,
           statusCode: errorInfo.statusCode,
           message: errorInfo.message,
@@ -2959,7 +2977,7 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/^["']|["']$/g, "");
   const headers = parseCsvLine(lines[0]).map(normalizeHeaderLabel);
-  console.log("[CSV Validation] Detected headers:", headers);
+  devLog("[CSV Validation] Detected headers:", headers);
   
   // Required columns with flexible matching (backend is flexible, so frontend should be too)
   // Email column can be: "adresse courriel", "courriel", "email", "adresse email", etc.

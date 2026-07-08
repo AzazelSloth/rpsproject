@@ -3,6 +3,7 @@ import { appFetch, getAppUrl } from "@/lib/api";
 import type { AppRouter } from "@/lib/trpc/router";
 import { retryHttpLink } from "@/lib/retry-http-link";
 import { getRequestThrottler } from "@/lib/request-throttler";
+import { parseApiError } from "@/lib/error-handler";
 
 let trpcClient: ReturnType<typeof createTRPCProxyClient<AppRouter>> | null = null;
 
@@ -21,7 +22,7 @@ export function getTrpcClient() {
           initialDelayMs: 100,
           maxDelayMs: 5000,
           backoffMultiplier: 2,
-          retryableStatusCodes: [408, 429, 500, 502, 503, 504],
+          retryableStatusCodes: [408, 500, 502, 503, 504],
         }),
         // HTTP link with timeout and request throttling
         httpLink({
@@ -46,10 +47,10 @@ export function getTrpcClient() {
 
 export function formatTrpcError(error: unknown): string {
   if (error instanceof TRPCClientError) {
-    return error.message;
+    return parseApiError(error).userMessage;
   }
   if (error instanceof Error) {
-    return error.message;
+    return parseApiError(error).userMessage;
   }
   return "Une erreur inattendue s'est produite.";
 }

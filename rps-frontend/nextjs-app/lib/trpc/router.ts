@@ -402,10 +402,10 @@ const surveyResponsesRouter = t.router({
 		.mutation(async ({ input }) => {
 			ensureBackendConfigured();
 
-			if (!input.participantToken && !input.employeeId) {
+			if (!input.participantToken) {
 				throw new TRPCError({
 					code: "BAD_REQUEST",
-					message: "participantToken ou employeeId est requis.",
+					message: "participantToken est requis.",
 				});
 			}
 
@@ -416,28 +416,14 @@ const surveyResponsesRouter = t.router({
 				});
 			}
 
-			if (input.participantToken) {
-				await postBackend(`/campaign-participants/token/${input.participantToken}/submit`, {
-					responses: input.answers.map((answer) => ({
-						question_id: answer.questionId,
-						answer: answer.answer,
-					})),
-				});
+			await postBackend(`/campaign-participants/token/${input.participantToken}/submit`, {
+				responses: input.answers.map((answer) => ({
+					question_id: answer.questionId,
+					answer: answer.answer,
+				})),
+			});
 
-				return { success: true, mode: "backend-token" as const };
-			}
-
-			await Promise.all(
-				input.answers.map((answer) =>
-					postBackend("/responses", {
-						employee_id: input.employeeId,
-						question_id: answer.questionId,
-						answer: answer.answer,
-					}),
-				),
-			);
-
-			return { success: true, mode: "backend" as const };
+			return { success: true, mode: "backend-token" as const };
 		}),
 });
 

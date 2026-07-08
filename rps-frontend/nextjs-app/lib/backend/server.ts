@@ -11,6 +11,14 @@ import {
 } from "./client";
 import { type User } from "./auth";
 
+function isAuthenticationError(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+
+  return /\b(401|403)\b|Invalid token|Missing authorization token|User not found|Session user mismatch|autorise/i.test(
+    message,
+  );
+}
+
 async function getServerAuthToken() {
   const cookieStore = await cookies();
   const token = cookieStore.get("auth_token")?.value?.trim();
@@ -51,7 +59,11 @@ export async function getServerSessionUser(): Promise<User | null> {
 
   try {
     return await getBackendItem<User>("/auth/me", token);
-  } catch {
+  } catch (error) {
+    if (!isAuthenticationError(error)) {
+      throw error;
+    }
+
     return null;
   }
 }

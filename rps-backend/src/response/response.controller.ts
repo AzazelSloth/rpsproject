@@ -19,6 +19,7 @@ export class ResponseController {
   constructor(private readonly responseService: ResponseService) {}
 
   @Post()
+  @UseGuards(AuthGuard)
   @ApiBody({ type: CreateResponseDto })
   @ApiResponse({ status: 201, description: 'Réponse créée avec succès' })
   @ApiResponse({ status: 400, description: 'Données invalides' })

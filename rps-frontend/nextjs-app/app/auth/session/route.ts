@@ -40,6 +40,14 @@ function preventAuthResponseCaching(response: NextResponse) {
   response.headers.set("Expires", "0");
 }
 
+function isAuthenticationError(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+
+  return /\b(401|403)\b|Invalid token|Missing authorization token|User not found|Session user mismatch|autorise/i.test(
+    message,
+  );
+}
+
 export async function GET(request: Request) {
   const cookieStore = await cookies();
   const token = cookieStore.get("auth_token")?.value?.trim();
@@ -56,6 +64,20 @@ export async function GET(request: Request) {
     preventAuthResponseCaching(response);
     return response;
   } catch (error) {
+    if (!isAuthenticationError(error)) {
+      const response = NextResponse.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "La verification de session est temporairement indisponible.",
+        },
+        { status: 503 },
+      );
+      preventAuthResponseCaching(response);
+      return response;
+    }
+
     const response = NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Session expirée ou invalide.",
