@@ -56,6 +56,7 @@ services:
       APP_URL: ${APP_URL:-http://localhost}
       STRAPI_API_TOKEN: ${STRAPI_API_TOKEN:-}
       ADMIN_ALLOWED_EMAILS: ${ADMIN_ALLOWED_EMAILS:-}
+      TEST_SURVEY_DELETE_ALLOWED_EMAILS: ${TEST_SURVEY_DELETE_ALLOWED_EMAILS:-}
       N8N_BASE_URL: ${N8N_BASE_URL:-http://host.docker.internal:5678}
       N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-https://automation.laroche360.ca/webhook/rps-analysis}
       N8N_WEBHOOK_PATH: ${N8N_WEBHOOK_PATH:-/webhook/rps-analysis}

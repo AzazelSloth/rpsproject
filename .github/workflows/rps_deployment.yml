@@ -116,6 +116,7 @@ jobs:
             export DB_SYNCHRONIZE="false"
             export DB_LOGGING="false"
             export ADMIN_ALLOWED_EMAILS="${{ secrets.ADMIN_ALLOWED_EMAILS }}"
+            export TEST_SURVEY_DELETE_ALLOWED_EMAILS="${{ secrets.TEST_SURVEY_DELETE_ALLOWED_EMAILS }}"
             export ALLOWED_REGISTRATION_DOMAINS="${{ secrets.ALLOWED_REGISTRATION_DOMAINS }}"
             export SWAGGER_ENABLED="true"
             export SWAGGER_PATH="api-docs"
