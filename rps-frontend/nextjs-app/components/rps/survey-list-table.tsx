@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, Pill } from "@/components/rps/ui";
+import { formatTrpcError, getTrpcClient } from "@/lib/trpc/client";
 import type { SurveyOption } from "@/lib/repositories/rps-repository";
 
 const STATUS_FILTERS = [
@@ -16,12 +18,17 @@ const STATUS_FILTERS = [
 export function SurveyListTable({
   surveys,
   scenario,
+  canDeleteTestSurveys = false,
 }: {
   surveys: SurveyOption[];
   scenario?: string | null;
+  canDeleteTestSurveys?: boolean;
 }) {
+  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [deletingSurveyId, setDeletingSurveyId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const filteredSurveys = useMemo(() => {
     const normalizedQuery = normalizeSearchText(searchQuery);
@@ -36,6 +43,28 @@ export function SurveyListTable({
       return matchesStatus && matchesSearch;
     });
   }, [searchQuery, statusFilter, surveys]);
+
+  async function deleteSurvey(survey: SurveyOption) {
+    const confirmed = window.confirm(
+      `Supprimer définitivement le sondage "${survey.title}" ? Cette action supprimera aussi les données liées à ce sondage.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleteError(null);
+    setDeletingSurveyId(survey.id);
+
+    try {
+      await getTrpcClient().adminSurveys.deleteCampaign.mutate({ campaignId: survey.id });
+      router.refresh();
+    } catch (error) {
+      setDeleteError(formatTrpcError(error));
+    } finally {
+      setDeletingSurveyId(null);
+    }
+  }
 
   return (
     <Card className="overflow-hidden">
@@ -62,6 +91,12 @@ export function SurveyListTable({
         </select>
       </div>
 
+      {deleteError ? (
+        <div className="border-b border-red-100 bg-red-50 px-6 py-3 text-sm font-semibold text-red-700">
+          {deleteError}
+        </div>
+      ) : null}
+
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
           <thead className="bg-slate-50 uppercase tracking-[0.18em] text-slate-500">
@@ -72,6 +107,7 @@ export function SurveyListTable({
               <th className="px-6 py-4">Date de début</th>
               <th className="px-6 py-4">Date de fin</th>
               <th className="px-6 py-4">Résultats</th>
+              {canDeleteTestSurveys ? <th className="px-6 py-4">Action</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -121,12 +157,27 @@ export function SurveyListTable({
                         Voir les résultats
                       </Link>
                     </td>
+                    {canDeleteTestSurveys ? (
+                      <td className="px-6 py-4">
+                        <button
+                          type="button"
+                          disabled={deletingSurveyId === survey.id}
+                          onClick={() => void deleteSurvey(survey)}
+                          className="inline-flex items-center justify-center rounded-[12px] border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {deletingSurveyId === survey.id ? "Suppression..." : "Supprimer"}
+                        </button>
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })
             ) : (
               <tr className="border-t border-slate-100">
-                <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                <td
+                  colSpan={canDeleteTestSurveys ? 7 : 6}
+                  className="px-6 py-12 text-center text-slate-500"
+                >
                   {surveys.length > 0
                     ? "Aucun sondage ne correspond a la recherche."
                     : "Aucun sondage disponible."}

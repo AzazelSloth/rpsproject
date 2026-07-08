@@ -7,9 +7,11 @@ import { getAppBaseUrl } from "@/lib/api";
 import {
 	deleteServerBackend as deleteBackend,
 	getServerBackendItem as getBackendItem,
+	getServerSessionUser,
 	patchServerBackend as patchBackend,
 	postServerBackend as postBackend,
 } from "@/lib/backend/server";
+import { isTestSurveyDeleteAllowedEmail } from "@/lib/backend/auth-config";
 import {
 	getDashboardData,
 	getEmployeeManagementData,
@@ -141,6 +143,22 @@ const adminSurveysRouter = t.router({
 				`/campaigns/${input.campaignId}/archive`,
 				{},
 			);
+		}),
+
+	deleteCampaign: t.procedure
+		.input(z.object({ campaignId: z.number().int().positive() }))
+		.mutation(async ({ input }) => {
+			ensureBackendConfigured();
+
+			const user = await getServerSessionUser();
+			if (!user || !isTestSurveyDeleteAllowedEmail(user.email)) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "Vous n'etes pas autorise a supprimer ce sondage.",
+				});
+			}
+
+			return deleteBackend(`/campaigns/${input.campaignId}`);
 		}),
 
 	createQuestion: t.procedure
