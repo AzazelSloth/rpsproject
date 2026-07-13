@@ -2,13 +2,25 @@ import bcryptModule from 'bcrypt';
 import { createHash } from 'crypto';
 import { ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Repository } from 'typeorm';
+import { DeepPartial, FindOneOptions, Repository } from 'typeorm';
 import { SendGridMailService } from '../email/sendgrid-mail.service';
 import { AuthService } from './auth.service';
 import { User } from './user.entity';
 
-type MockRepository = Pick<Repository<User>, 'create' | 'findOne' | 'save'>;
-type MockSendGridMailService = Pick<SendGridMailService, 'sendPasswordResetEmail'>;
+type MockRepository = {
+  create: jest.MockedFunction<(input: DeepPartial<User>) => User>;
+  findOne: jest.MockedFunction<
+    (options: FindOneOptions<User>) => Promise<User | null>
+  >;
+  save: jest.MockedFunction<(input: User) => Promise<User>>;
+};
+type MockJwtService = {
+  sign: jest.MockedFunction<(payload: object) => string>;
+};
+type MockSendGridMailService = Pick<
+  SendGridMailService,
+  'sendPasswordResetEmail'
+>;
 
 const bcrypt = bcryptModule as unknown as {
   compare(data: string, encrypted: string): Promise<boolean>;
@@ -26,21 +38,27 @@ describe('AuthService admin access', () => {
     NODE_ENV: process.env.NODE_ENV,
   };
 
-  let repository: jest.Mocked<MockRepository>;
-  let jwtService: jest.Mocked<Pick<JwtService, 'sign'>>;
+  let repository: MockRepository;
+  let jwtService: MockJwtService;
   let mailService: jest.Mocked<MockSendGridMailService>;
   let service: AuthService;
 
   beforeEach(() => {
     repository = {
-      create: jest.fn((input: Partial<User>) => input as User),
-      findOne: jest.fn(),
+      create: jest.fn((input: DeepPartial<User>) => input as User),
+      findOne: jest.fn((options: FindOneOptions<User>) => {
+        void options;
+        return Promise.resolve(null);
+      }),
       save: jest.fn((input: User) =>
         Promise.resolve({ ...input, id: input.id ?? 1 }),
       ),
     };
     jwtService = {
-      sign: jest.fn(() => 'signed-token'),
+      sign: jest.fn((payload: object) => {
+        void payload;
+        return 'signed-token';
+      }),
     };
     mailService = {
       sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
@@ -103,6 +121,40 @@ describe('AuthService admin access', () => {
     expect(repository.create).toHaveBeenCalledWith(
       expect.objectContaining({ email: 'allowed@example.com' }),
     );
+  });
+
+  it('registers an email allowed by a domain wildcard', async () => {
+    process.env.ADMIN_ALLOWED_EMAILS = 'allowed@gmail.com, *@Laroche360.ca ';
+    process.env.ALLOWED_REGISTRATION_DOMAINS = 'gmail.com';
+    repository.findOne.mockResolvedValue(null);
+
+    await expect(
+      service.register({
+        name: 'Laroche Admin',
+        email: ' New.Admin@Laroche360.ca ',
+        password: 'password123',
+      }),
+    ).resolves.toEqual({
+      user: {
+        id: 1,
+        email: 'new.admin@laroche360.ca',
+        name: 'Laroche Admin',
+      },
+      token: 'signed-token',
+    });
+  });
+
+  it('does not let a domain wildcard match a lookalike domain', async () => {
+    process.env.ADMIN_ALLOWED_EMAILS = '*@laroche360.ca';
+
+    await expect(
+      service.register({
+        name: 'Lookalike',
+        email: 'admin@fake-laroche360.ca',
+        password: 'password123',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repository.findOne).not.toHaveBeenCalled();
   });
 
   it('rejects login before checking credentials when email is not allowed', async () => {
@@ -187,14 +239,10 @@ describe('AuthService admin access', () => {
       createHash('sha256').update(generatedToken!).digest('hex'),
     );
     expect(savedUser.password_reset_expires_at).toBeInstanceOf(Date);
-    expect(mailService.sendPasswordResetEmail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        email: 'allowed@example.com',
-        name: 'Allowed Admin',
-        resetUrl: expect.stringMatching(
-          /^http:\/\/localhost:3001\/reset-password\?token=[a-f0-9]{64}$/,
-        ),
-      }),
+    expect(mailPayload.email).toBe('allowed@example.com');
+    expect(mailPayload.name).toBe('Allowed Admin');
+    expect(mailPayload.resetUrl).toMatch(
+      /^http:\/\/localhost:3001\/reset-password\?token=[a-f0-9]{64}$/,
     );
   });
 
@@ -207,7 +255,9 @@ describe('AuthService admin access', () => {
       email: 'allowed@example.com',
       name: 'Allowed Admin',
       password: '$2b$10$012345678901234567890uL8s4v1I8uB5Vg1mCPwP8sIk2s9InBez',
-      password_reset_token_hash: createHash('sha256').update(token).digest('hex'),
+      password_reset_token_hash: createHash('sha256')
+        .update(token)
+        .digest('hex'),
       password_reset_expires_at: new Date(Date.now() + 30 * 60 * 1000),
       created_at: new Date('2024-01-01T00:00:00.000Z'),
     });

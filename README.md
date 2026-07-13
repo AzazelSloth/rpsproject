@@ -354,7 +354,7 @@ DB_NAME=rps_platform
 DB_SYNCHRONIZE=false
 DB_LOGGING=false
 
-ADMIN_ALLOWED_EMAILS=admin@example.com
+ADMIN_ALLOWED_EMAILS=admin@example.com,*@company.example
 ALLOWED_REGISTRATION_DOMAINS=example.com,localhost.local
 
 APP_URL=http://localhost:3001
@@ -467,8 +467,8 @@ Ne jamais commiter de vrais secrets. Les valeurs ci-dessous sont des exemples.
 | `DB_NAME` | oui | `rps_platform` | Base applicative |
 | `DB_SYNCHRONIZE` | non | `false` | Synchronisation TypeORM, à garder `false` en prod |
 | `DB_LOGGING` | non | `false` | Logs SQL |
-| `ADMIN_ALLOWED_EMAILS` | oui | `admin@example.com` | Emails admin autorisés |
-| `ALLOWED_REGISTRATION_DOMAINS` | non | `example.com` | Domaines d'inscription autorisés |
+| `ADMIN_ALLOWED_EMAILS` | oui | `admin@example.com,*@company.example` | Emails admin autorisés; `*@domaine` autorise tout le domaine |
+| `ALLOWED_REGISTRATION_DOMAINS` | non | `example.com` | Domaines configurés hors contrôle d'accès administrateur |
 | `APP_URL` | oui | `https://appli.laroche360.ca` | URL publique utilisée dans les invitations |
 | `SENDGRID_API_KEY` | oui en prod | `SG...` | Envoi des emails |
 | `SENDGRID_FROM_EMAIL` | oui en prod | `communications@laroche360.ca` | Expéditeur |
@@ -495,7 +495,7 @@ Ne jamais commiter de vrais secrets. Les valeurs ci-dessous sont des exemples.
 | `NEXT_PUBLIC_APP_URL` | oui côté navigateur | `http://localhost:3001` | URL publique exposée |
 | `NEXT_PUBLIC_STRAPI_URL` | non | `http://localhost:1337` | CMS optionnel pour template rapport |
 | `STRAPI_API_TOKEN` | non | `...` | Token Strapi serveur |
-| `ADMIN_ALLOWED_EMAILS` | non | `admin@example.com` | Usage frontend pour affichage/validation côté UI |
+| `ADMIN_ALLOWED_EMAILS` | non | `admin@example.com,*@company.example` | Usage frontend pour affichage/validation côté UI; accepte `*@domaine` |
 | `N8N_BASE_URL` | non | `https://automation.laroche360.ca` | Base n8n |
 | `N8N_WEBHOOK_URL` | oui si route Next d'analyse | `https://automation.laroche360.ca/webhook/rps-analysis` | Webhook n8n |
 | `N8N_WEBHOOK_PATH` | non | `/webhook/rps-analysis` | Chemin webhook |

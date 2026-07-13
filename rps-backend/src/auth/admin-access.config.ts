@@ -18,7 +18,14 @@ export function getAllowedAdminEmails() {
 
 export function isAdminEmailAllowed(email: string): boolean {
   const normalizedEmail = email.trim().toLowerCase();
-  return getAllowedAdminEmails().includes(normalizedEmail);
+
+  return getAllowedAdminEmails().some((allowedEmail) => {
+    if (allowedEmail.startsWith('*@') && allowedEmail.length > 2) {
+      return normalizedEmail.endsWith(allowedEmail.slice(1));
+    }
+
+    return allowedEmail === normalizedEmail;
+  });
 }
 
 export function getAllowedRegistrationDomains(): string[] {

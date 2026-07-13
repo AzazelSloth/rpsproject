@@ -10,7 +10,15 @@ export function getConfiguredAdminEmails() {
 }
 
 export function isAllowedAdminEmail(email: string) {
-  return getConfiguredAdminEmails().includes(normalizeAdminEmail(email));
+  const normalizedEmail = normalizeAdminEmail(email);
+
+  return getConfiguredAdminEmails().some((allowedEmail) => {
+    if (allowedEmail.startsWith("*@") && allowedEmail.length > 2) {
+      return normalizedEmail.endsWith(allowedEmail.slice(1));
+    }
+
+    return allowedEmail === normalizedEmail;
+  });
 }
 
 export function getTestSurveyDeleteAllowedEmails() {
