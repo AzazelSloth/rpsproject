@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   ParseIntPipe,
@@ -16,6 +17,7 @@ import { CreateCampaignDto, UpdateCampaignDto } from './dto/campaign.dto';
 import { CampaignService } from './campaign.service';
 import { AuthGuard } from '../auth/auth.guard';
 import type { AuthenticatedRequest } from '../auth/auth.guard';
+import { isTestSurveyDeleteAllowedEmail } from '../auth/admin-access.config';
 
 @Controller('campaigns')
 export class CampaignController {
@@ -110,7 +112,16 @@ export class CampaignController {
 
   @Delete(':id')
   @UseGuards(AuthGuard)
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    if (!isTestSurveyDeleteAllowedEmail(req.user.email)) {
+      throw new ForbiddenException(
+        "Vous n'etes pas autorise a supprimer ce sondage.",
+      );
+    }
+
     return this.campaignService.remove(id);
   }
 }

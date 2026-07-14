@@ -130,8 +130,33 @@ describe('CampaignController', () => {
 
   it('should delegate remove to service', async () => {
     service.remove.mockResolvedValue({ id: 5 });
+    const previousAllowedEmails = process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
 
-    await expect(controller.remove(5)).resolves.toEqual({ id: 5 });
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS = 'test@test.com';
+
+    try {
+      await expect(
+        controller.remove(5, { user: { sub: 1, email: 'test@test.com' } } as never),
+      ).resolves.toEqual({ id: 5 });
+    } finally {
+      process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS = previousAllowedEmails;
+    }
+
     expect(service.remove).toHaveBeenCalledWith(5);
+  });
+
+  it('should reject remove when user is not allowed to delete surveys', async () => {
+    const previousAllowedEmails = process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS = 'allowed@test.com';
+
+    try {
+      expect(() =>
+        controller.remove(5, { user: { sub: 1, email: 'other@test.com' } } as never),
+      ).toThrow("Vous n'etes pas autorise a supprimer ce sondage.");
+    } finally {
+      process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS = previousAllowedEmails;
+    }
+
+    expect(service.remove).not.toHaveBeenCalled();
   });
 });
