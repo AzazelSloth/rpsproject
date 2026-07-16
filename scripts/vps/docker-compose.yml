@@ -4,8 +4,13 @@ services:
       context: ../../rps-backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    mem_limit: ${BACKEND_MEMORY_LIMIT:?BACKEND_MEMORY_LIMIT must be set by the deployment workflow}
+    mem_reservation: ${BACKEND_MEMORY_RESERVATION:?BACKEND_MEMORY_RESERVATION must be set by the deployment workflow}
+    cpus: ${BACKEND_CPU_LIMIT:?BACKEND_CPU_LIMIT must be set by the deployment workflow}
+    pids_limit: ${BACKEND_PIDS_LIMIT:?BACKEND_PIDS_LIMIT must be set by the deployment workflow}
     environment:
       NODE_ENV: production
+      NODE_OPTIONS: ${BACKEND_NODE_OPTIONS:?BACKEND_NODE_OPTIONS must be set by the deployment workflow}
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET}
       DB_HOST: ${DB_HOST:-localhost}
@@ -46,8 +51,13 @@ services:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost}
         NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL:-}
     restart: unless-stopped
+    mem_limit: ${FRONTEND_MEMORY_LIMIT:?FRONTEND_MEMORY_LIMIT must be set by the deployment workflow}
+    mem_reservation: ${FRONTEND_MEMORY_RESERVATION:?FRONTEND_MEMORY_RESERVATION must be set by the deployment workflow}
+    cpus: ${FRONTEND_CPU_LIMIT:?FRONTEND_CPU_LIMIT must be set by the deployment workflow}
+    pids_limit: ${FRONTEND_PIDS_LIMIT:?FRONTEND_PIDS_LIMIT must be set by the deployment workflow}
     environment:
       NODE_ENV: production
+      NODE_OPTIONS: ${FRONTEND_NODE_OPTIONS:?FRONTEND_NODE_OPTIONS must be set by the deployment workflow}
       PORT: 3001
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost}
@@ -72,6 +82,10 @@ services:
   nginx:
     image: nginx:alpine
     restart: unless-stopped
+    mem_limit: ${NGINX_MEMORY_LIMIT:?NGINX_MEMORY_LIMIT must be set by the deployment workflow}
+    mem_reservation: ${NGINX_MEMORY_RESERVATION:?NGINX_MEMORY_RESERVATION must be set by the deployment workflow}
+    cpus: ${NGINX_CPU_LIMIT:?NGINX_CPU_LIMIT must be set by the deployment workflow}
+    pids_limit: ${NGINX_PIDS_LIMIT:?NGINX_PIDS_LIMIT must be set by the deployment workflow}
     environment:
       APP_DOMAIN: ${APP_DOMAIN:-appli.laroche360.ca}
       N8N_DOMAIN: ${N8N_DOMAIN:-automation.laroche360.ca}

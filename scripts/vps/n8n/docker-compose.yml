@@ -2,6 +2,12 @@ services:
   n8n:
     image: ${N8N_IMAGE:-}
     restart: unless-stopped
+    mem_limit: ${N8N_MEMORY_LIMIT:?N8N_MEMORY_LIMIT must be set by the deployment workflow}
+    mem_reservation: ${N8N_MEMORY_RESERVATION:?N8N_MEMORY_RESERVATION must be set by the deployment workflow}
+    cpus: ${N8N_CPU_LIMIT:?N8N_CPU_LIMIT must be set by the deployment workflow}
+    pids_limit: ${N8N_PIDS_LIMIT:?N8N_PIDS_LIMIT must be set by the deployment workflow}
+    environment:
+      NODE_OPTIONS: ${N8N_NODE_OPTIONS:?N8N_NODE_OPTIONS must be set by the deployment workflow}
     ports:
       - "127.0.0.1:5678:5678"
     env_file:
