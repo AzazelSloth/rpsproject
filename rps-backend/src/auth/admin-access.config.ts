@@ -28,6 +28,15 @@ export function isAdminEmailAllowed(email: string): boolean {
   });
 }
 
+export function getTestSurveyDeleteAllowedEmails() {
+  return parseEmailList(process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS);
+}
+
+export function isTestSurveyDeleteAllowedEmail(email: string): boolean {
+  const normalizedEmail = email.trim().toLowerCase();
+  return getTestSurveyDeleteAllowedEmails().includes(normalizedEmail);
+}
+
 export function getAllowedRegistrationDomains(): string[] {
   return parseDomainList(process.env.ALLOWED_REGISTRATION_DOMAINS);
 }
