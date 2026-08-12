@@ -228,6 +228,7 @@ export class CampaignService {
       campaign.name,
       companyName,
       userEmail,
+      campaign.company?.context ?? '',
     );
   }
 
@@ -246,6 +247,7 @@ export class CampaignService {
       campaign.name,
       finalCompanyName,
       userEmail,
+      campaign.company?.context ?? '',
     );
   }
 
@@ -411,6 +413,7 @@ export class CampaignService {
     campaignName: string | null,
     companyName: string,
     userEmail: string,
+    companyContext = '',
   ) {
     // Récupérer les données des employés avec leurs réponses
     const employeesData = await this.getCampaignResponsesFormatted(
@@ -430,9 +433,11 @@ export class CampaignService {
         body: employeesData,
         campaign_id: campaignId,
         client_email: userEmail,
+        company_context: companyContext,
       },
       campaign_name: campaignName,
       company_name: companyName,
+      company_context: companyContext,
       user_email: userEmail,
     };
 

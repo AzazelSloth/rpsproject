@@ -51,6 +51,24 @@ const adminSurveysRouter = t.router({
 			});
 		}),
 
+	updateCompanyContext: t.procedure
+		.input(
+			z.object({
+				companyId: z.number().int().positive(),
+				context: z.string(),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			ensureBackendConfigured();
+			return patchBackend<
+				{ id: number; name: string; context: string | null },
+				{ context: string }
+			>(
+				`/companies/${input.companyId}`,
+				{ context: input.context },
+			);
+		}),
+
 	createCampaign: t.procedure
 		.input(
 			z.object({

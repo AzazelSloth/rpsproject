@@ -33,7 +33,7 @@ export default function ResetPasswordPage() {
     setSuccessMessage(null);
 
     if (!token) {
-      setError("Le lien de reinitialisation est invalide ou incomplet.");
+      setError("Le lien de réinitialisation est invalide ou incomplet.");
       return;
     }
 
@@ -55,7 +55,7 @@ export default function ResetPasswordPage() {
       setPassword("");
       setConfirmPassword("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "La mise a jour du mot de passe a echoue.");
+      setError(err instanceof Error ? err.message : "La mise à jour du mot de passe a échoué.");
     } finally {
       setIsLoading(false);
     }
@@ -82,19 +82,19 @@ export default function ResetPasswordPage() {
           </h1>
 
           <p className="max-w-2xl text-base leading-7 text-slate-600">
-            Choisissez un nouveau mot de passe pour retrouver l acces a votre espace
+            Choisissez un nouveau mot de passe pour retrouver l accès a votre espace
             administrateur.
           </p>
         </section>
 
         <Card className="mx-auto w-full max-w-md rounded-[22px] border border-[#dfd1b9] bg-[rgba(255,252,246,0.95)] p-6 shadow-[0_24px_60px_rgba(40,33,24,0.16)] sm:p-8">
           <h2 className={`${headingFontClass} text-2xl font-extrabold tracking-tight text-slate-900`}>
-            Reinitialiser le mot de passe
+            Réinitialiser le mot de passe
           </h2>
 
           {hasLoadedToken && !token ? (
             <p className="mt-4 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Le lien de reinitialisation est invalide ou incomplet.
+              Le lien de réinitialisation est invalide ou incomplet.
             </p>
           ) : null}
 
@@ -149,13 +149,13 @@ export default function ResetPasswordPage() {
               disabled={isLoading || !hasLoadedToken || !token}
               className={primaryButtonClassName}
             >
-              {isLoading ? "Mise a jour..." : "Mettre a jour le mot de passe"}
+              {isLoading ? "Mise à jour..." : "Mettre à jour le mot de passe"}
             </button>
           </form>
 
           <div className="mt-4 flex items-center justify-between gap-3 text-xs text-slate-500">
             <Link href="/login" className="text-[#8a651f] underline-offset-4 hover:underline">
-              Retour a la connexion
+              Retour à la connexion
             </Link>
             <Link href="/forgot-password" className="text-slate-600 underline-offset-4 hover:underline">
               Demander un nouveau lien

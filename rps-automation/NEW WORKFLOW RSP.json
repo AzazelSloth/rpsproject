@@ -1,533 +1,461 @@
 ﻿{
-    "nodes":  [
-                  {
-                      "parameters":  {
-                                         "jsCode":  "const input = $input.first().json;\nconst webhookBody = input.body \u0026\u0026 typeof input.body === \u0027object\u0027 \u0026\u0026 !Array.isArray(input.body)\n  ? input.body\n  : null;\n\nif (!webhookBody) {\n  throw new Error(\u0027Payload invalide: body objet requis.\u0027);\n}\n\nconst responses = webhookBody.body;\nif (!Array.isArray(responses) || responses.length === 0) {\n  throw new Error(\u0027Payload invalide: body.body doit etre un tableau de reponses non vide.\u0027);\n}\n\nconst campaignId = Number(webhookBody.campaign_id);\nif (!Number.isInteger(campaignId) || campaignId \u003c= 0) {\n  throw new Error(\u0027Payload invalide: campaign_id entier positif requis.\u0027);\n}\n\nconst companyName = String(input.company_name ?? webhookBody.company_name ?? \u0027\u0027).trim();\nif (!companyName) {\n  throw new Error(\u0027Payload invalide: company_name requis.\u0027);\n}\n\nconst campaignName = String(input.campaign_name ?? webhookBody.campaign_name ?? \u0027\u0027).trim();\nif (!campaignName) {\n  throw new Error(\u0027Payload invalide: campaign_name requis.\u0027);\n}\n\nconst clientEmail = String(webhookBody.client_email ?? input.user_email ?? input.client_email ?? \u0027\u0027).trim();\nif (!clientEmail) {\n  throw new Error(\u0027Payload invalide: client_email requis.\u0027);\n}\n\nconst questionKeys = [...new Set(\n  responses.flatMap((row) =\u003e Object.keys(row || {}).filter((key) =\u003e /^Q\\d+$/.test(key)))\n)].sort((a, b) =\u003e Number(a.slice(1)) - Number(b.slice(1)));\n\nconst formattedForAI = responses.map((row, index) =\u003e {\n  const identity = row[\u0027Nom et Prenom\u0027] || row[\u0027Nom et Prénom(s)\u0027] || row.nom || row.name || `Repondant ${index + 1}`;\n  const header = [`Repondant ${index + 1}`, identity, row.Fonction || row.fonction, row.Email || row.email]\n    .filter(Boolean)\n    .join(\u0027 - \u0027);\n  const answers = questionKeys.map((key) =\u003e `${key}: ${row[key] ?? \u0027\u0027}`).join(\u0027\\n\u0027);\n  return `${header}\\n${answers}`;\n}).join(\u0027\\n\\n---\\n\\n\u0027);\n\nreturn [{\n  json: {\n    campaignInfo: {\n      entreprise: companyName,\n      campagne: campaignName,\n      total_repondants: responses.length,\n      campaign_id: campaignId,\n      client_email: clientEmail,\n    },\n    openAnswers: responses,\n    formattedForAI,\n  },\n}];"
-                                     },
-                      "id":  "4a2a0164-7495-4637-b025-af19f04eb1cc",
-                      "name":  "Formater les donnees",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       608,
-                                       448
-                                   ],
-                      "notes":  "Nettoie et formate les réponses ouvertes pour l\u0027analyse IA. Adapter les noms de champs selon votre API."
-                  },
-                  {
-                      "parameters":  {
-                                         "jsCode":  "const input = $input.first().json;\nconst analysis = input.output || input.text || input.response || Object.values(input)[0] || \u0027\u0027;\nconst campaignInfo = $(\u0027Formater les donnees\u0027).first().json.campaignInfo || {};\n\nconst now = new Date();\nconst dateStr = now.toLocaleDateString(\u0027fr-CA\u0027, { year: \u0027numeric\u0027, month: \u0027long\u0027, day: \u0027numeric\u0027 });\nconst fileDate = now.toISOString().split(\u0027T\u0027)[0];\nconst entreprise = campaignInfo.entreprise || \u0027Entreprise\u0027;\nconst campagne = campaignInfo.campagne || \u0027Campagne RPS\u0027;\nconst slug = `${entreprise}_${campagne}`\n  .normalize(\u0027NFD\u0027)\n  .replace(/[\\u0300-\\u036f]/g, \u0027\u0027)\n  .replace(/[^a-z0-9]+/gi, \u0027_\u0027)\n  .replace(/^_+|_+$/g, \u0027\u0027)\n  .slice(0, 80) || \u0027Rapport_RPS\u0027;\n\nconst rapport = `\n=================================================\nRAPPORT D\u0027ANALYSE RPS\n=================================================\nEntreprise    : ${entreprise}\nCampagne      : ${campagne}\nDate d\u0027analyse: ${dateStr}\nRepondants    : ${campaignInfo.total_repondants || 0}\n=================================================\n\n${analysis}\n\n=================================================\nRapport genere automatiquement par la plateforme RPS\nConfidentiel - Usage interne uniquement\n=================================================\n`.trim();\n\nreturn [{\n  json: {\n    rapport,\n    campaignInfo: {\n      ...campaignInfo,\n      entreprise,\n      campagne,\n    },\n    subject: `Rapport RPS - ${entreprise} - ${campagne}`,\n    filename: `${slug}_${fileDate}.txt`\n  }\n}];"
-                                     },
-                      "id":  "3c70ab7b-c626-4602-926a-ae6ab5ce3d01",
-                      "name":  "Construire le rapport",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       1408,
-                                       448
-                                   ],
-                      "notes":  "Formate le rapport final avec en-tête et pied de page."
-                  },
-                  {
-                      "parameters":  {
-                                         "promptType":  "define",
-                                         "text":  "=Analyse les résultats RPS pour {{ $json.campaignInfo.entreprise }} - {{ $json.campaignInfo.campagne }}.\n\nNombre de repondants: {{ $json.campaignInfo.total_repondants }}\n\nDonnées à analyser:\n{{ $json.formattedForAI }}",
-                                         "options":  {
-                                                         "systemMessage":  "=Tu es un Expert Senior en Psychologie du Travail. Tu analyses les résultats d\u0027un sondage RPS à partir de réponses fermées et de réponses libres.\n\nMéthodologie d\u0027analyse :\n\n1. Réponses sur échelle d\u0027accord :\n\"Tout à fait d\u0027accord\" ou \"Plutôt d\u0027accord\" = score 4-5, facteur de protection ou satisfaction.\n\"Ni d\u0027accord, ni pas d\u0027accord\" = score 3, zone neutre ou ambivalente.\n\"Plutôt pas d\u0027accord\" ou \"Pas du tout d\u0027accord\" = score 1-2, alerte ou risque psychosocial.\n\n2. Réponses Oui / Partiellement / Non :\n\"Oui\" indique une présence claire du phénomène demandé. Interprète le sens selon la formulation de la question : si la question porte sur une ressource positive, c\u0027est un facteur de protection ; si elle porte sur une difficulté, c\u0027est un signal de risque.\n\"Partiellement\" indique une situation mitigée, fragile ou incomplète. Classe-la comme point de vigilance.\n\"Non\" indique une absence du phénomène demandé. Interprète aussi selon la formulation de la question : absence d\u0027une ressource positive = risque ; absence d\u0027une difficulté = protection.\nSi la formulation exacte de la question n\u0027est pas disponible et que seule la réponse est visible, décris la tendance sans conclure trop fortement sur son sens positif ou négatif.\n\n3. Réponses libres :\nAnalyse les verbatims qualitativement. Repère les thèmes récurrents, irritants, besoins exprimés, signaux faibles, contradictions et exemples concrets. Ne cite pas les personnes, n\u0027invente pas de verbatim et ne transforme pas une opinion isolée en tendance générale. Si un commentaire est isolé, précise qu\u0027il s\u0027agit d\u0027un signal ponctuel.\n\nRègles d\u0027analyse :\nCroise les réponses fermées et les réponses libres.\nDistingue tendance forte, tendance modérée et signal ponctuel.\nSi le nombre de répondants est faible, reste prudent dans les conclusions.\nNe pose aucun diagnostic médical.\nFormule des constats utiles pour l\u0027entreprise, puis des actions concrètes.\n\nConsignes de formatage :\nAUCUN formatage Markdown (pas de #, pas de *, pas de **).\nUtilise uniquement les titres de sections ci-dessous.\nDans chaque section, indique les tendances principales, les facteurs de protection, les risques et les éléments qualitatifs issus des réponses libres quand ils existent.\n\nStructure du Rapport :\n\nCharge de travail\n(Analyse la quantité, le rythme et la complexité perçue).\n\nOrganisation \u0026 Éthique\n(Analyse la clarté des rôles, les procédures et le respect des valeurs).\n\nAutonomie et Développement\n(Analyse la liberté de décision, l\u0027utilisation des compétences et les possibilités d\u0027évolution).\n\nReconnaissance \u0026 Conditions\n(Analyse le sentiment de justice, la valorisation du travail et les conditions matérielles ou organisationnelles).\n\nRelation et Soutien\n(Analyse l\u0027ambiance d\u0027équipe, la coopération et le soutien managérial).\n\nDemandes Émotionnelles \u0026 Valeurs\n(Analyse la charge mentale liée au public, aux tensions relationnelles et aux conflits d\u0027éthique).\n\nConséquence sur la santé et Équilibre\n(Analyse l\u0027impact déclaré sur le bien-être, la fatigue, le stress et la vie personnelle).\n\nAvis pour améliorer le bien être au travail\n(Propose 3 actions concrètes, réalistes et adaptées aux tendances observées dans l\u0027entreprise analysée)."
-                                                     }
-                                     },
-                      "type":  "@n8n/n8n-nodes-langchain.agent",
-                      "typeVersion":  3.1,
-                      "position":  [
-                                       1008,
-                                       448
-                                   ],
-                      "id":  "f50bc785-f149-40e0-9ad3-3d128d6a9a81",
-                      "name":  "AI Agent1",
-                      "retryOnFail":  true
-                  },
-                  {
-                      "parameters":  {
-                                         "operation":  "createFromText",
-                                         "content":  "={{ $json.rapport }}",
-                                         "name":  "={{ $json.filename }}",
-                                         "driveId":  {
-                                                         "__rl":  true,
-                                                         "mode":  "list",
-                                                         "value":  "My Drive"
-                                                     },
-                                         "folderId":  {
-                                                          "__rl":  true,
-                                                          "mode":  "list",
-                                                          "value":  "root",
-                                                          "cachedResultName":  "/ (Root folder)"
-                                                      },
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "type":  "n8n-nodes-base.googleDrive",
-                      "typeVersion":  3,
-                      "position":  [
-                                       1648,
-                                       448
-                                   ],
-                      "id":  "3a9eabbb-0405-411a-8494-9ff80187d6f3",
-                      "name":  "Enregistrement du rapport dans drive",
-                      "retryOnFail":  true,
-                      "credentials":  {
-                                          "googleDriveOAuth2Api":  {
-                                                                       "id":  "e7Bs31aKgGanb2uk",
-                                                                       "name":  "Google Drive account"
-                                                                   }
-                                      }
-                  },
-                  {
-                      "parameters":  {
-                                         "rule":  {
-                                                      "interval":  [
-                                                                       {
-                                                                           "triggerAtHour":  8
-                                                                       }
-                                                                   ]
-                                                  }
-                                     },
-                      "id":  "3cf138b2-0ac3-4c27-a334-11beedbddb02",
-                      "name":  "Declencheur",
-                      "type":  "n8n-nodes-base.scheduleTrigger",
-                      "typeVersion":  1.1,
-                      "position":  [
-                                       32,
-                                       864
-                                   ],
-                      "notes":  "Se déclenche chaque matin 8h pour vérifier les non-répondants"
-                  },
-                  {
-                      "parameters":  {
-                                         "jsCode":  "const payload = $input.first().json;\nconst campaigns = Array.isArray(payload.campaigns) ? payload.campaigns : [];\nconst participants = [];\n\nfor (const campaign of campaigns) {\n  const campaignParticipants = Array.isArray(campaign.participants) ? campaign.participants : [];\n\n  for (const participant of campaignParticipants) {\n    participants.push({\n      json: {\n        ...participant,\n        campaign_id: participant.campaign_id || campaign.campaign_id,\n        campaign_name: participant.campaign_name || campaign.campaign_name,\n        company_name: participant.company_name || campaign.company_name,\n      },\n    });\n  }\n}\n\nreturn participants;"
-                                     },
-                      "id":  "70787110-1a7e-47c0-8d32-e6cdfe793319",
-                      "name":  "Filtrer non completes",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       704,
-                                       864
-                                   ],
-                      "notes":  "Transforme la reponse /automation/campaigns/pending-reminders en participants individuels."
-                  },
-                  {
-                      "parameters":  {
-                                         "jsCode":  "const env = typeof $env === \u0027undefined\u0027 ? {} : $env;\nconst minDays = Number(env.REMINDER_MIN_DAYS || 6);\nconst maxCount = Number(env.REMINDER_MAX_COUNT || 2);\nconst now = Date.now();\nconst result = [];\n\nfor (const item of $input.all()) {\n  const participant = item.json;\n\n  if (!participant.email || participant.status === \u0027completed\u0027) {\n    continue;\n  }\n\n  const reminderCount = Number(participant.reminder_count || 0);\n  if (Number.isFinite(maxCount) \u0026\u0026 maxCount \u003e= 0 \u0026\u0026 reminderCount \u003e= maxCount) {\n    continue;\n  }\n\n  const invitationDate = participant.invitation_sent_at ? new Date(participant.invitation_sent_at) : null;\n  if (!invitationDate || Number.isNaN(invitationDate.getTime())) {\n    continue;\n  }\n\n  const daysSinceInvitation = Math.floor((now - invitationDate.getTime()) / (1000 * 60 * 60 * 24));\n  if (daysSinceInvitation \u003c minDays) {\n    continue;\n  }\n\n  result.push({\n    json: {\n      ...participant,\n      jours_depuis_envoi: daysSinceInvitation,\n      eligible_relance: true,\n    },\n  });\n}\n\nreturn result;"
-                                     },
-                      "id":  "08a7d119-7a6c-4d77-9612-9a10d44f4ea4",
-                      "name":  "Calculer 6 jours",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       976,
-                                       864
-                                   ],
-                      "executeOnce":  false,
-                      "alwaysOutputData":  false,
-                      "notes":  "Calcule si l\u0027envoi initial date de 6 jours ou plus. Si non, l\u0027employé est ignoré."
-                  },
-                  {
-                      "parameters":  {
-                                         "jsCode":  "const participant = $(\u0027Calculer 6 jours\u0027).item.json;\nconst reminderResult = $input.first().json;\nconsole.log(`Relance envoyee a ${participant.nom} (${participant.email}) - ${participant.jours_depuis_envoi} jours depuis l\u0027invitation`);\n\nreturn [{\n  json: {\n    status: \u0027relance_envoyee\u0027,\n    participant_id: participant.participant_id,\n    nom: participant.nom,\n    email: participant.email,\n    jours_depuis_envoi: participant.jours_depuis_envoi,\n    reminder_marked: reminderResult.updated ?? true,\n    timestamp: new Date().toISOString()\n  }\n}];"
-                                     },
-                      "id":  "1f6b6489-b177-46b6-aa1c-0e8f29279e1b",
-                      "name":  "Log relance",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       1776,
-                                       864
-                                   ],
-                      "notes":  "Log de confirmation par employé relancé"
-                  },
-                  {
-                      "parameters":  {
-                                         "jsCode":  "// Log de confirmation\nconst info = $(\u0027Construire le rapport\u0027).first().json.campaignInfo;\nconsole.log(`À Rapport RPS généré et envoyé pour ${info.entreprise} - ${info.campagne}`);\nreturn [{ json: { status: \u0027success\u0027, message: `Rapport envoyé pour ${info.entreprise}`, timestamp: new Date().toISOString() } }];"
-                                     },
-                      "id":  "63501eec-f42a-43a3-9dc8-1c5262383fdd",
-                      "name":  "Log succes",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       2336,
-                                       448
-                                   ],
-                      "notes":  "Log de confirmation à peut être remplacé par une notification Slack ou autre."
-                  },
-                  {
-                      "parameters":  {
-                                         "httpMethod":  "POST",
-                                         "path":  "rps-analysis",
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "type":  "n8n-nodes-base.webhook",
-                      "typeVersion":  2.1,
-                      "position":  [
-                                       32,
-                                       464
-                                   ],
-                      "id":  "c1a458b4-282e-4dd8-a038-1dc2144d2a6f",
-                      "name":  "Webhook",
-                      "webhookId":  "a4a937ee-ce22-475a-b226-b7ff55c56e10"
-                  },
-                  {
-                      "parameters":  {
-                                         "method":  "PATCH",
-                                         "url":  "={{ (($env.BACKEND_API_URL || \u0027\u0027).replace(/\\/$/, \u0027\u0027).replace(/\\/api$/, \u0027\u0027)) + \u0027/api/participants/\u0027 + $(\u0027Calculer 6 jours\u0027).item.json.participant_id + \u0027/reminder\u0027 }}",
-                                         "sendHeaders":  true,
-                                         "headerParameters":  {
-                                                                  "parameters":  [
-                                                                                     {
-                                                                                         "name":  "Content-Type",
-                                                                                         "value":  "application/json"
-                                                                                     },
-                                                                                     {
-                                                                                         "name":  "x-api-key",
-                                                                                         "value":  "={{ $env.API_KEY }}"
-                                                                                     }
-                                                                                 ]
-                                                              },
-                                         "sendBody":  true,
-                                         "specifyBody":  "json",
-                                         "jsonBody":  "={{ { reminder_sent_at: new Date().toISOString() } }}",
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "type":  "n8n-nodes-base.httpRequest",
-                      "typeVersion":  4.3,
-                      "position":  [
-                                       1536,
-                                       864
-                                   ],
-                      "id":  "66c7ccdd-7ccb-4812-9576-acf082f8f1f4",
-                      "name":  "Marquer relance envoyee dans l\u0027application"
-                  },
-                  {
-                      "parameters":  {
-                                         "content":  "ANALYSE\n",
-                                         "height":  656,
-                                         "width":  2656
-                                     },
-                      "type":  "n8n-nodes-base.stickyNote",
-                      "typeVersion":  1,
-                      "position":  [
-                                       -96,
-                                       96
-                                   ],
-                      "id":  "306c436c-f32a-47f2-8e08-8b36151c3d51",
-                      "name":  "Sticky Note"
-                  },
-                  {
-                      "parameters":  {
-                                         "content":  "RELANCE\n",
-                                         "height":  304,
-                                         "width":  1808
-                                     },
-                      "type":  "n8n-nodes-base.stickyNote",
-                      "typeVersion":  1,
-                      "position":  [
-                                       -64,
-                                       768
-                                   ],
-                      "id":  "e051e732-12df-4905-86bf-2ecab4060bfa",
-                      "name":  "Sticky Note1"
-                  },
-                  {
-                      "parameters":  {
-                                         "resource":  "mail",
-                                         "fromEmail":  "={{ $env.SENDGRID_FROM_EMAIL || $env.FROM_EMAIL }}",
-                                         "toEmail":  "={{ $('Construire le rapport').first().json.campaignInfo.client_email || $env.REPORT_RECIPIENT_EMAIL }}",
-                                         "subject":  "={{ $('Construire le rapport').first().json.subject }}",
-                                         "contentValue":  "=Bonjour,\n\nVoici le rapport d\u0027analyse RPS.\n\nLien Drive : {{ $json.webViewLink || ($json.id ? \u0027https://drive.google.com/file/d/\u0027 + $json.id + \u0027/view\u0027 : \u0027Lien indisponible\u0027) }}\n\n{{ $(\u0027Construire le rapport\u0027).first().json.rapport }}\n\nCordialement,\n{{ $env.SENDGRID_FROM_NAME || \u0027Equipe RPS\u0027 }}",
-                                         "additionalFields":  {
-
-                                                              }
-                                     },
-                      "type":  "n8n-nodes-base.sendGrid",
-                      "typeVersion":  1,
-                      "position":  [
-                                       2112,
-                                       448
-                                   ],
-                      "id":  "a86ff911-d63e-44d5-afce-a6c2b30ab478",
-                      "name":  "Send an email",
-                      "credentials":  {
-                                          "sendGridApi":  {
-                                                              "id":  "tZTdtQobKeQYnDqy",
-                                                              "name":  "SendGrid account"
-                                                          }
-                                      }
-                  },
-                  {
-                      "parameters":  {
-                                         "resource":  "mail",
-                                         "fromEmail":  "={{ $env.SENDGRID_FROM_EMAIL || $env.FROM_EMAIL }}",
-                                         "toEmail":  "={{ $json.email }}",
-                                         "subject":  "=Rappel : Votre participation au sondage RPS est attendue",
-                                         "contentValue":  "=Bonjour {{ $json.nom }},\n\nNous vous rappelons que votre participation au sondage RPS est attendue.\n\nLien du questionnaire : {{ $json.survey_url }}\n\nMerci pour votre contribution.\n\nCordialement,\n{{ $env.SENDGRID_FROM_NAME || $env.FROM_NAME || \u0027l equipe RPS\u0027 }}",
-                                         "additionalFields":  {
-
-                                                              }
-                                     },
-                      "type":  "n8n-nodes-base.sendGrid",
-                      "typeVersion":  1,
-                      "position":  [
-                                       1248,
-                                       864
-                                   ],
-                      "id":  "df4319c8-6d64-4b37-8ac7-135dd40228e6",
-                      "name":  "Send an email1",
-                      "credentials":  {
-                                          "sendGridApi":  {
-                                                              "id":  "tZTdtQobKeQYnDqy",
-                                                              "name":  "SendGrid account"
-                                                          }
-                                      }
-                  },
-                  {
-                      "parameters":  {
-                                         "method":  "POST",
-                                         "url":  "={{ (($env.BACKEND_API_URL || \u0027\u0027).replace(/\\/$/, \u0027\u0027).replace(/\\/api$/, \u0027\u0027)) + \u0027/api/reports\u0027 }}",
-                                         "sendHeaders":  true,
-                                         "headerParameters":  {
-                                                                  "parameters":  [
-                                                                                     {
-                                                                                         "name":  "Content-Type",
-                                                                                         "value":  "application/json"
-                                                                                     },
-                                                                                     {
-                                                                                         "name":  "x-api-key",
-                                                                                         "value":  "={{ $env.API_KEY }}"
-                                                                                     }
-                                                                                 ]
-                                                              },
-                                         "sendBody":  true,
-                                         "specifyBody":  "json",
-                                         "jsonBody":  "={{ { campaign_id: Number($(\u0027Construire le rapport\u0027).first().json.campaignInfo.campaign_id), report_path: $json.webViewLink || $json.webContentLink || ($json.id ? \u0027https://drive.google.com/file/d/\u0027 + $json.id + \u0027/view\u0027 : \u0027drive\u0027) } }}",
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "type":  "n8n-nodes-base.httpRequest",
-                      "typeVersion":  4.3,
-                      "position":  [
-                                       1856,
-                                       656
-                                   ],
-                      "id":  "11cb6b0e-0b63-4433-8b1e-1ef0b69e741f",
-                      "name":  "Marquer rapport livre dans l\u0027application"
-                  },
-                  {
-                      "parameters":  {
-                                         "url":  "={{ (($env.BACKEND_API_URL || \u0027\u0027).replace(/\\/$/, \u0027\u0027).replace(/\\/api$/, \u0027\u0027)) + \u0027/api/automation/campaigns/pending-reminders\u0027 }}",
-                                         "sendHeaders":  true,
-                                         "headerParameters":  {
-                                                                  "parameters":  [
-                                                                                     {
-                                                                                         "name":  "x-api-key",
-                                                                                         "value":  "={{ $env.API_KEY }}"
-                                                                                     }
-                                                                                 ]
-                                                              },
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "type":  "n8n-nodes-base.httpRequest",
-                      "typeVersion":  4.3,
-                      "position":  [
-                                       352,
-                                       864
-                                   ],
-                      "id":  "8341186a-4de9-4861-8cc7-adeab986162f",
-                      "name":  "Lister relances en attente"
-                  },
-                  {
-                      "parameters":  {
-                                         "modelName":  "models/gemini-2.5-flash",
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "type":  "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-                      "typeVersion":  1.1,
-                      "position":  [
-                                       864,
-                                       608
-                                   ],
-                      "id":  "3ce6f52a-bd4e-4d8c-b027-3596b960b47e",
-                      "name":  "Google Gemini Chat Model",
-                      "credentials":  {
-                                          "googlePalmApi":  {
-                                                                "id":  "5XcordMqcNXwJ7lx",
-                                                                "name":  "Google Gemini(PaLM) Api account 2"
-                                                            }
-                                      }
-                  }
-              ],
-    "connections":  {
-                        "Formater les donnees":  {
-                                                     "main":  [
-                                                                  [
-                                                                      {
-                                                                          "node":  "AI Agent1",
-                                                                          "type":  "main",
-                                                                          "index":  0
-                                                                      }
-                                                                  ]
-                                                              ]
-                                                 },
-                        "Construire le rapport":  {
-                                                      "main":  [
-                                                                   [
-                                                                       {
-                                                                           "node":  "Enregistrement du rapport dans drive",
-                                                                           "type":  "main",
-                                                                           "index":  0
-                                                                       }
-                                                                   ]
-                                                               ]
-                                                  },
-                        "AI Agent1":  {
-                                          "main":  [
-                                                       [
-                                                           {
-                                                               "node":  "Construire le rapport",
-                                                               "type":  "main",
-                                                               "index":  0
-                                                           }
-                                                       ]
-                                                   ]
-                                      },
-                        "Enregistrement du rapport dans drive":  {
-                                                                     "main":  [
-                                                                                  [
-                                                                                      {
-                                                                                          "node":  "Send an email",
-                                                                                          "type":  "main",
-                                                                                          "index":  0
-                                                                                      },
-                                                                                      {
-                                                                                          "node":  "Marquer rapport livre dans l\u0027application",
-                                                                                          "type":  "main",
-                                                                                          "index":  0
-                                                                                      }
-                                                                                  ]
-                                                                              ]
-                                                                 },
-                        "Declencheur":  {
-                                            "main":  [
-                                                         [
-                                                             {
-                                                                 "node":  "Lister relances en attente",
-                                                                 "type":  "main",
-                                                                 "index":  0
-                                                             }
-                                                         ]
-                                                     ]
-                                        },
-                        "Filtrer non completes":  {
-                                                      "main":  [
-                                                                   [
-                                                                       {
-                                                                           "node":  "Calculer 6 jours",
-                                                                           "type":  "main",
-                                                                           "index":  0
-                                                                       }
-                                                                   ]
-                                                               ]
-                                                  },
-                        "Calculer 6 jours":  {
-                                                 "main":  [
-                                                              [
-                                                                  {
-                                                                      "node":  "Send an email1",
-                                                                      "type":  "main",
-                                                                      "index":  0
-                                                                  }
-                                                              ]
-                                                          ]
-                                             },
-                        "Webhook":  {
-                                        "main":  [
-                                                     [
-                                                         {
-                                                             "node":  "Formater les donnees",
-                                                             "type":  "main",
-                                                             "index":  0
-                                                         }
-                                                     ]
-                                                 ]
-                                    },
-                        "Marquer relance envoyee dans l\u0027application":  {
-                                                                                "main":  [
-                                                                                             [
-                                                                                                 {
-                                                                                                     "node":  "Log relance",
-                                                                                                     "type":  "main",
-                                                                                                     "index":  0
-                                                                                                 }
-                                                                                             ]
-                                                                                         ]
-                                                                            },
-                        "Send an email":  {
-                                              "main":  [
-                                                           [
-                                                               {
-                                                                   "node":  "Log succes",
-                                                                   "type":  "main",
-                                                                   "index":  0
-                                                               }
-                                                           ]
-                                                       ]
-                                          },
-                        "Send an email1":  {
-                                               "main":  [
-                                                            [
-                                                                {
-                                                                    "node":  "Marquer relance envoyee dans l\u0027application",
-                                                                    "type":  "main",
-                                                                    "index":  0
-                                                                }
-                                                            ]
-                                                        ]
-                                           },
-                        "Lister relances en attente":  {
-                                                           "main":  [
-                                                                        [
-                                                                            {
-                                                                                "node":  "Filtrer non completes",
-                                                                                "type":  "main",
-                                                                                "index":  0
-                                                                            }
-                                                                        ]
-                                                                    ]
-                                                       },
-                        "Google Gemini Chat Model":  {
-                                                         "ai_languageModel":  [
-                                                                                  [
-                                                                                      {
-                                                                                          "node":  "AI Agent1",
-                                                                                          "type":  "ai_languageModel",
-                                                                                          "index":  0
-                                                                                      }
-                                                                                  ]
-                                                                              ]
-                                                     }
-                    },
-    "pinData":  {
-
-                },
-    "meta":  {
-                 "instanceId":  "cac5ec5e2c6d46143700919509af35b019553a77230a6aee31f315409349fd75"
-             }
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst webhookBody = input.body \u0026\u0026 typeof input.body === \u0027object\u0027 \u0026\u0026 !Array.isArray(input.body)\n  ? input.body\n  : null;\n\nif (!webhookBody) {\n  throw new Error(\u0027Payload invalide: body objet requis.\u0027);\n}\n\nconst responses = webhookBody.body;\nif (!Array.isArray(responses) || responses.length === 0) {\n  throw new Error(\u0027Payload invalide: body.body doit etre un tableau de reponses non vide.\u0027);\n}\n\nconst campaignId = Number(webhookBody.campaign_id);\nif (!Number.isInteger(campaignId) || campaignId \u003c= 0) {\n  throw new Error(\u0027Payload invalide: campaign_id entier positif requis.\u0027);\n}\n\nconst companyName = String(input.company_name ?? webhookBody.company_name ?? \u0027\u0027).trim();\nif (!companyName) {\n  throw new Error(\u0027Payload invalide: company_name requis.\u0027);\n}\n\nconst campaignName = String(input.campaign_name ?? webhookBody.campaign_name ?? \u0027\u0027).trim();\nif (!campaignName) {\n  throw new Error(\u0027Payload invalide: campaign_name requis.\u0027);\n}\n\nconst clientEmail = String(webhookBody.client_email ?? input.user_email ?? input.client_email ?? \u0027\u0027).trim();\nif (!clientEmail) {\n  throw new Error(\u0027Payload invalide: client_email requis.\u0027);\n}\n\nconst questionKeys = [...new Set(\n  responses.flatMap((row) =\u003e Object.keys(row || {}).filter((key) =\u003e /^Q\\d+$/.test(key)))\n)].sort((a, b) =\u003e Number(a.slice(1)) - Number(b.slice(1)));\n\nconst formattedForAI = responses.map((row, index) =\u003e {\n  const identity = row[\u0027Nom et Prenom\u0027] || row[\u0027Nom et Prénom(s)\u0027] || row.nom || row.name || `Repondant ${index + 1}`;\n  const header = [`Repondant ${index + 1}`, identity, row.Fonction || row.fonction, row.Email || row.email]\n    .filter(Boolean)\n    .join(\u0027 - \u0027);\n  const answers = questionKeys.map((key) =\u003e `${key}: ${row[key] ?? \u0027\u0027}`).join(\u0027\\n\u0027);\n  return `${header}\\n${answers}`;\n}).join(\u0027\\n\\n---\\n\\n\u0027);\n\nreturn [{\n  json: {\n    campaignInfo: {\n      entreprise: companyName,\n      campagne: campaignName,\n      total_repondants: responses.length,\n      campaign_id: campaignId,\n      client_email: clientEmail,\n    },\n    openAnswers: responses,\n    formattedForAI,\n  },\n}];"
+      },
+      "id": "4a2a0164-7495-4637-b025-af19f04eb1cc",
+      "name": "Formater les donnees",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [608, 448],
+      "notes": "Nettoie et formate les réponses ouvertes pour l\u0027analyse IA. Adapter les noms de champs selon votre API."
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst analysis = input.output || input.text || input.response || Object.values(input)[0] || \u0027\u0027;\nconst campaignInfo = $(\u0027Formater les donnees\u0027).first().json.campaignInfo || {};\n\nconst now = new Date();\nconst dateStr = now.toLocaleDateString(\u0027fr-CA\u0027, { year: \u0027numeric\u0027, month: \u0027long\u0027, day: \u0027numeric\u0027 });\nconst fileDate = now.toISOString().split(\u0027T\u0027)[0];\nconst entreprise = campaignInfo.entreprise || \u0027Entreprise\u0027;\nconst campagne = campaignInfo.campagne || \u0027Campagne RPS\u0027;\nconst slug = `${entreprise}_${campagne}`\n  .normalize(\u0027NFD\u0027)\n  .replace(/[\\u0300-\\u036f]/g, \u0027\u0027)\n  .replace(/[^a-z0-9]+/gi, \u0027_\u0027)\n  .replace(/^_+|_+$/g, \u0027\u0027)\n  .slice(0, 80) || \u0027Rapport_RPS\u0027;\n\nconst rapport = `\n=================================================\nRAPPORT D\u0027ANALYSE RPS\n=================================================\nEntreprise    : ${entreprise}\nCampagne      : ${campagne}\nDate d\u0027analyse: ${dateStr}\nRepondants    : ${campaignInfo.total_repondants || 0}\n=================================================\n\n${analysis}\n\n=================================================\nRapport genere automatiquement par la plateforme RPS\nConfidentiel - Usage interne uniquement\n=================================================\n`.trim();\n\nreturn [{\n  json: {\n    rapport,\n    campaignInfo: {\n      ...campaignInfo,\n      entreprise,\n      campagne,\n    },\n    subject: `Rapport RPS - ${entreprise} - ${campagne}`,\n    filename: `${slug}_${fileDate}.txt`\n  }\n}];"
+      },
+      "id": "3c70ab7b-c626-4602-926a-ae6ab5ce3d01",
+      "name": "Construire le rapport",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1408, 448],
+      "notes": "Formate le rapport final avec en-tête et pied de page."
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyse les résultats RPS pour {{ $json.campaignInfo.entreprise }} - {{ $json.campaignInfo.campagne }}.\n\nContexte fourni par l'entreprise (utilise-le pour contextualiser l'analyse sans le présenter comme une réponse d'employé ni comme un fait vérifié):\n{{ $('Webhook').first().json.company_context || $('Webhook').first().json.body.company_context || 'Aucun contexte fourni' }}\n\nNombre de repondants: {{ $json.campaignInfo.total_repondants }}\n\nDonnées à analyser:\n{{ $json.formattedForAI }}",
+        "options": {
+          "systemMessage": "=Tu es un Expert Senior en Psychologie du Travail. Tu analyses les résultats d\u0027un sondage RPS à partir de réponses fermées et de réponses libres.\n\nMéthodologie d\u0027analyse :\n\n1. Réponses sur échelle d\u0027accord :\n\"Tout à fait d\u0027accord\" ou \"Plutôt d\u0027accord\" = score 4-5, facteur de protection ou satisfaction.\n\"Ni d\u0027accord, ni pas d\u0027accord\" = score 3, zone neutre ou ambivalente.\n\"Plutôt pas d\u0027accord\" ou \"Pas du tout d\u0027accord\" = score 1-2, alerte ou risque psychosocial.\n\n2. Réponses Oui / Partiellement / Non :\n\"Oui\" indique une présence claire du phénomène demandé. Interprète le sens selon la formulation de la question : si la question porte sur une ressource positive, c\u0027est un facteur de protection ; si elle porte sur une difficulté, c\u0027est un signal de risque.\n\"Partiellement\" indique une situation mitigée, fragile ou incomplète. Classe-la comme point de vigilance.\n\"Non\" indique une absence du phénomène demandé. Interprète aussi selon la formulation de la question : absence d\u0027une ressource positive = risque ; absence d\u0027une difficulté = protection.\nSi la formulation exacte de la question n\u0027est pas disponible et que seule la réponse est visible, décris la tendance sans conclure trop fortement sur son sens positif ou négatif.\n\n3. Réponses libres :\nAnalyse les verbatims qualitativement. Repère les thèmes récurrents, irritants, besoins exprimés, signaux faibles, contradictions et exemples concrets. Ne cite pas les personnes, n\u0027invente pas de verbatim et ne transforme pas une opinion isolée en tendance générale. Si un commentaire est isolé, précise qu\u0027il s\u0027agit d\u0027un signal ponctuel.\n\nRègles d\u0027analyse :\nCroise les réponses fermées et les réponses libres.\nDistingue tendance forte, tendance modérée et signal ponctuel.\nSi le nombre de répondants est faible, reste prudent dans les conclusions.\nNe pose aucun diagnostic médical.\nFormule des constats utiles pour l\u0027entreprise, puis des actions concrètes.\n\nConsignes de formatage :\nAUCUN formatage Markdown (pas de #, pas de *, pas de **).\nUtilise uniquement les titres de sections ci-dessous.\nDans chaque section, indique les tendances principales, les facteurs de protection, les risques et les éléments qualitatifs issus des réponses libres quand ils existent.\n\nStructure du Rapport :\n\nCharge de travail\n(Analyse la quantité, le rythme et la complexité perçue).\n\nOrganisation \u0026 Éthique\n(Analyse la clarté des rôles, les procédures et le respect des valeurs).\n\nAutonomie et Développement\n(Analyse la liberté de décision, l\u0027utilisation des compétences et les possibilités d\u0027évolution).\n\nReconnaissance \u0026 Conditions\n(Analyse le sentiment de justice, la valorisation du travail et les conditions matérielles ou organisationnelles).\n\nRelation et Soutien\n(Analyse l\u0027ambiance d\u0027équipe, la coopération et le soutien managérial).\n\nDemandes Émotionnelles \u0026 Valeurs\n(Analyse la charge mentale liée au public, aux tensions relationnelles et aux conflits d\u0027éthique).\n\nConséquence sur la santé et Équilibre\n(Analyse l\u0027impact déclaré sur le bien-être, la fatigue, le stress et la vie personnelle).\n\nAvis pour améliorer le bien être au travail\n(Propose 3 actions concrètes, réalistes et adaptées aux tendances observées dans l\u0027entreprise analysée)."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [1008, 448],
+      "id": "f50bc785-f149-40e0-9ad3-3d128d6a9a81",
+      "name": "AI Agent1",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "createFromText",
+        "content": "={{ $json.rapport }}",
+        "name": "={{ $json.filename }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultName": "/ (Root folder)"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1648, 448],
+      "id": "3a9eabbb-0405-411a-8494-9ff80187d6f3",
+      "name": "Enregistrement du rapport dans drive",
+      "retryOnFail": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "e7Bs31aKgGanb2uk",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "3cf138b2-0ac3-4c27-a334-11beedbddb02",
+      "name": "Declencheur",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [32, 864],
+      "notes": "Se déclenche chaque matin 8h pour vérifier les non-répondants"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $input.first().json;\nconst campaigns = Array.isArray(payload.campaigns) ? payload.campaigns : [];\nconst participants = [];\n\nfor (const campaign of campaigns) {\n  const campaignParticipants = Array.isArray(campaign.participants) ? campaign.participants : [];\n\n  for (const participant of campaignParticipants) {\n    participants.push({\n      json: {\n        ...participant,\n        campaign_id: participant.campaign_id || campaign.campaign_id,\n        campaign_name: participant.campaign_name || campaign.campaign_name,\n        company_name: participant.company_name || campaign.company_name,\n      },\n    });\n  }\n}\n\nreturn participants;"
+      },
+      "id": "70787110-1a7e-47c0-8d32-e6cdfe793319",
+      "name": "Filtrer non completes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [704, 864],
+      "notes": "Transforme la reponse /automation/campaigns/pending-reminders en participants individuels."
+    },
+    {
+      "parameters": {
+        "jsCode": "const env = typeof $env === \u0027undefined\u0027 ? {} : $env;\nconst minDays = Number(env.REMINDER_MIN_DAYS || 6);\nconst maxCount = Number(env.REMINDER_MAX_COUNT || 2);\nconst now = Date.now();\nconst result = [];\n\nfor (const item of $input.all()) {\n  const participant = item.json;\n\n  if (!participant.email || participant.status === \u0027completed\u0027) {\n    continue;\n  }\n\n  const reminderCount = Number(participant.reminder_count || 0);\n  if (Number.isFinite(maxCount) \u0026\u0026 maxCount \u003e= 0 \u0026\u0026 reminderCount \u003e= maxCount) {\n    continue;\n  }\n\n  const invitationDate = participant.invitation_sent_at ? new Date(participant.invitation_sent_at) : null;\n  if (!invitationDate || Number.isNaN(invitationDate.getTime())) {\n    continue;\n  }\n\n  const daysSinceInvitation = Math.floor((now - invitationDate.getTime()) / (1000 * 60 * 60 * 24));\n  if (daysSinceInvitation \u003c minDays) {\n    continue;\n  }\n\n  result.push({\n    json: {\n      ...participant,\n      jours_depuis_envoi: daysSinceInvitation,\n      eligible_relance: true,\n    },\n  });\n}\n\nreturn result;"
+      },
+      "id": "08a7d119-7a6c-4d77-9612-9a10d44f4ea4",
+      "name": "Calculer 6 jours",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [976, 864],
+      "executeOnce": false,
+      "alwaysOutputData": false,
+      "notes": "Calcule si l\u0027envoi initial date de 6 jours ou plus. Si non, l\u0027employé est ignoré."
+    },
+    {
+      "parameters": {
+        "jsCode": "const participant = $(\u0027Calculer 6 jours\u0027).item.json;\nconst reminderResult = $input.first().json;\nconsole.log(`Relance envoyee a ${participant.nom} (${participant.email}) - ${participant.jours_depuis_envoi} jours depuis l\u0027invitation`);\n\nreturn [{\n  json: {\n    status: \u0027relance_envoyee\u0027,\n    participant_id: participant.participant_id,\n    nom: participant.nom,\n    email: participant.email,\n    jours_depuis_envoi: participant.jours_depuis_envoi,\n    reminder_marked: reminderResult.updated ?? true,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "1f6b6489-b177-46b6-aa1c-0e8f29279e1b",
+      "name": "Log relance",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1776, 864],
+      "notes": "Log de confirmation par employé relancé"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log de confirmation\nconst info = $(\u0027Construire le rapport\u0027).first().json.campaignInfo;\nconsole.log(`À Rapport RPS généré et envoyé pour ${info.entreprise} - ${info.campagne}`);\nreturn [{ json: { status: \u0027success\u0027, message: `Rapport envoyé pour ${info.entreprise}`, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "63501eec-f42a-43a3-9dc8-1c5262383fdd",
+      "name": "Log succes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2336, 448],
+      "notes": "Log de confirmation à peut être remplacé par une notification Slack ou autre."
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rps-analysis",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [32, 464],
+      "id": "c1a458b4-282e-4dd8-a038-1dc2144d2a6f",
+      "name": "Webhook",
+      "webhookId": "a4a937ee-ce22-475a-b226-b7ff55c56e10"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ (($env.BACKEND_API_URL || \u0027\u0027).replace(/\\/$/, \u0027\u0027).replace(/\\/api$/, \u0027\u0027)) + \u0027/api/participants/\u0027 + $(\u0027Calculer 6 jours\u0027).item.json.participant_id + \u0027/reminder\u0027 }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { reminder_sent_at: new Date().toISOString() } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1536, 864],
+      "id": "66c7ccdd-7ccb-4812-9576-acf082f8f1f4",
+      "name": "Marquer relance envoyee dans l\u0027application"
+    },
+    {
+      "parameters": {
+        "content": "ANALYSE\n",
+        "height": 656,
+        "width": 2656
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-96, 96],
+      "id": "306c436c-f32a-47f2-8e08-8b36151c3d51",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "RELANCE\n",
+        "height": 304,
+        "width": 1808
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-64, 768],
+      "id": "e051e732-12df-4905-86bf-2ecab4060bfa",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "resource": "mail",
+        "fromEmail": "={{ $env.SENDGRID_FROM_EMAIL || $env.FROM_EMAIL }}",
+        "toEmail": "={{ $('Construire le rapport').first().json.campaignInfo.client_email || $env.REPORT_RECIPIENT_EMAIL }}",
+        "subject": "={{ $('Construire le rapport').first().json.subject }}",
+        "contentValue": "=Bonjour,\n\nVoici le rapport d\u0027analyse RPS.\n\nLien Drive : {{ $json.webViewLink || ($json.id ? \u0027https://drive.google.com/file/d/\u0027 + $json.id + \u0027/view\u0027 : \u0027Lien indisponible\u0027) }}\n\n{{ $(\u0027Construire le rapport\u0027).first().json.rapport }}\n\nCordialement,\n{{ $env.SENDGRID_FROM_NAME || \u0027Equipe RPS\u0027 }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
+      "position": [2112, 448],
+      "id": "a86ff911-d63e-44d5-afce-a6c2b30ab478",
+      "name": "Send an email",
+      "credentials": {
+        "sendGridApi": {
+          "id": "tZTdtQobKeQYnDqy",
+          "name": "SendGrid account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "mail",
+        "fromEmail": "={{ $env.SENDGRID_FROM_EMAIL || $env.FROM_EMAIL }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "=Rappel : Votre participation au sondage RPS est attendue",
+        "contentValue": "=Bonjour {{ $json.nom }},\n\nNous vous rappelons que votre participation au sondage RPS est attendue.\n\nLien du questionnaire : {{ $json.survey_url }}\n\nMerci pour votre contribution.\n\nCordialement,\n{{ $env.SENDGRID_FROM_NAME || $env.FROM_NAME || \u0027l equipe RPS\u0027 }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
+      "position": [1248, 864],
+      "id": "df4319c8-6d64-4b37-8ac7-135dd40228e6",
+      "name": "Send an email1",
+      "credentials": {
+        "sendGridApi": {
+          "id": "tZTdtQobKeQYnDqy",
+          "name": "SendGrid account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ (($env.BACKEND_API_URL || \u0027\u0027).replace(/\\/$/, \u0027\u0027).replace(/\\/api$/, \u0027\u0027)) + \u0027/api/reports\u0027 }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { campaign_id: Number($(\u0027Construire le rapport\u0027).first().json.campaignInfo.campaign_id), report_path: $json.webViewLink || $json.webContentLink || ($json.id ? \u0027https://drive.google.com/file/d/\u0027 + $json.id + \u0027/view\u0027 : \u0027drive\u0027) } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1856, 656],
+      "id": "11cb6b0e-0b63-4433-8b1e-1ef0b69e741f",
+      "name": "Marquer rapport livre dans l\u0027application"
+    },
+    {
+      "parameters": {
+        "url": "={{ (($env.BACKEND_API_URL || \u0027\u0027).replace(/\\/$/, \u0027\u0027).replace(/\\/api$/, \u0027\u0027)) + \u0027/api/automation/campaigns/pending-reminders\u0027 }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [352, 864],
+      "id": "8341186a-4de9-4861-8cc7-adeab986162f",
+      "name": "Lister relances en attente"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [864, 608],
+      "id": "3ce6f52a-bd4e-4d8c-b027-3596b960b47e",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "5XcordMqcNXwJ7lx",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Formater les donnees": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire le rapport": {
+      "main": [
+        [
+          {
+            "node": "Enregistrement du rapport dans drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Construire le rapport",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enregistrement du rapport dans drive": {
+      "main": [
+        [
+          {
+            "node": "Send an email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Marquer rapport livre dans l\u0027application",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Declencheur": {
+      "main": [
+        [
+          {
+            "node": "Lister relances en attente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrer non completes": {
+      "main": [
+        [
+          {
+            "node": "Calculer 6 jours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculer 6 jours": {
+      "main": [
+        [
+          {
+            "node": "Send an email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Formater les donnees",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marquer relance envoyee dans l\u0027application": {
+      "main": [
+        [
+          {
+            "node": "Log relance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send an email": {
+      "main": [
+        [
+          {
+            "node": "Log succes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send an email1": {
+      "main": [
+        [
+          {
+            "node": "Marquer relance envoyee dans l\u0027application",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lister relances en attente": {
+      "main": [
+        [
+          {
+            "node": "Filtrer non completes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "cac5ec5e2c6d46143700919509af35b019553a77230a6aee31f315409349fd75"
+  }
 }

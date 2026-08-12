@@ -174,6 +174,9 @@ export function SurveyBuilderDemo({
   const [sourceCompanyId, setSourceCompanyId] = useState<number | null>(null);
   const [sourceCampaignId, setSourceCampaignId] = useState<number | null>(null);
   const [newCompanyName, setNewCompanyName] = useState("");
+  const [companyContext, setCompanyContext] = useState(() =>
+    initialData.companies.find((company) => company.id === initialCompanyId)?.context ?? "",
+  );
   const [status, setStatus] = useState(mode === "create" ? "draft" : initialData.status);
   const [title, setTitle] = useState(() => (mode === "create" ? "" : initialData.title));
   const [description, setDescription] = useState(() =>
@@ -291,6 +294,11 @@ export function SurveyBuilderDemo({
     setSourceCompanyId(null);
     setSourceCampaignId(null);
     setNewCompanyName("");
+    setCompanyContext(
+      initialData.companies.find(
+        (company) => company.id === getInitialCompanyId(initialData, mode),
+      )?.context ?? "",
+    );
     setStatus(mode === "create" ? "draft" : initialData.status);
     setTitle(mode === "create" ? "" : initialData.title);
     setDescription(mode === "create" ? "" : initialData.description);
@@ -394,7 +402,7 @@ export function SurveyBuilderDemo({
       return;
     }
 
-    runMutation<{ id: number; name: string }>(
+    runMutation<{ id: number; name: string; context?: string | null }>(
       () =>
         getTrpcClient().adminSurveys.createCompany.mutate({
           name: trimmedName,
@@ -402,8 +410,12 @@ export function SurveyBuilderDemo({
       "Entreprise créée et sélectionnée.",
       undefined,
       (result) => {
-        setCompanies((current) => [...current, result]);
+        setCompanies((current) => [
+          ...current,
+          { ...result, context: result.context ?? "" },
+        ]);
         setCompanyId(result.id);
+        setCompanyContext(result.context ?? "");
         setCampaignId(null);
         setStatus("draft");
         setQuestions([]);
@@ -413,6 +425,34 @@ export function SurveyBuilderDemo({
         setHasSentInvitations(false);
         setParticipantCount(0);
         setNewCompanyName("");
+      },
+      false,
+    );
+  }
+
+  function saveCompanyContext() {
+    if (!companyId) {
+      setError("Choisis une entreprise avant d'enregistrer son contexte.");
+      return;
+    }
+
+    runMutation<{ id: number; name: string; context: string | null }>(
+      () =>
+        getTrpcClient().adminSurveys.updateCompanyContext.mutate({
+          companyId,
+          context: companyContext,
+        }),
+      "Contexte de l'entreprise enregistre.",
+      undefined,
+      (result) => {
+        setCompanies((current) =>
+          current.map((company) =>
+            company.id === result.id
+              ? { ...company, context: result.context ?? "" }
+              : company,
+          ),
+        );
+        setCompanyContext(result.context ?? "");
       },
       false,
     );
@@ -449,6 +489,9 @@ export function SurveyBuilderDemo({
 
   function handleCompanySelection(nextCompanyId: number) {
     setCompanyId(nextCompanyId);
+    setCompanyContext(
+      companies.find((company) => company.id === nextCompanyId)?.context ?? "",
+    );
 
     if (mode === "create") {
       setCampaignId(null);
@@ -495,6 +538,9 @@ export function SurveyBuilderDemo({
 
     setCampaignId(nextCampaign.id);
     setCompanyId(nextCampaign.companyId);
+    setCompanyContext(
+      companies.find((company) => company.id === nextCampaign.companyId)?.context ?? "",
+    );
     setStatus(nextCampaign.status);
     setTitle(nextCampaign.name);
     setDescription(nextCampaign.description);
@@ -1913,6 +1959,38 @@ export function SurveyBuilderDemo({
           </SecondaryButton>
         )}
       </div>
+
+      <section className="mt-6 border-y border-slate-200 py-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+              Contexte de l'entreprise
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Ce contexte est propre à {selectedCompanyName || "l'entreprise sélectionnée"}.
+            </p>
+          </div>
+          <SecondaryButton
+            disabled={isBusy || !companyId}
+            onClick={saveCompanyContext}
+            className="shrink-0 sm:w-auto"
+          >
+            {isBusy ? "Enregistrement..." : "Enregistrer le contexte"}
+          </SecondaryButton>
+        </div>
+        <label htmlFor="company-context" className="sr-only">
+          Contexte de l'entreprise
+        </label>
+        <textarea
+          id="company-context"
+          value={companyContext}
+          onChange={(event) => setCompanyContext(event.target.value)}
+          disabled={!companyId || isBusy}
+          rows={8}
+          placeholder="Saisir le contexte de l'entreprise..."
+          className="mt-4 min-h-48 w-full resize-y rounded-[8px] border border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+        />
+      </section>
 
       {/* Gestion des questions */}
       <div className="mt-4 sm:mt-6">

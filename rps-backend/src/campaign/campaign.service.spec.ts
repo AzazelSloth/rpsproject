@@ -198,6 +198,7 @@ describe('CampaignService', () => {
       'Campagne terminee',
       'Entreprise Test',
       'client@example.com',
+      '',
     );
   });
 
@@ -222,6 +223,7 @@ describe('CampaignService', () => {
       'Campagne active',
       'Entreprise Test',
       'client@example.com',
+      'Contexte organisationnel test',
     );
 
     expect(result).toEqual({
@@ -252,9 +254,11 @@ describe('CampaignService', () => {
         ],
         campaign_id: 1,
         client_email: 'client@example.com',
+        company_context: 'Contexte organisationnel test',
       },
       campaign_name: 'Campagne active',
       company_name: 'Entreprise Test',
+      company_context: 'Contexte organisationnel test',
       user_email: 'client@example.com',
     });
   });
