@@ -16,6 +16,9 @@ export class Company {
   @Column({ type: 'varchar', nullable: true })
   name: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  context: string | null;
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 

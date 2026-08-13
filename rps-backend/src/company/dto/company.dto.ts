@@ -30,4 +30,13 @@ export class UpdateCompanyDto {
   @MinLength(2)
   @MaxLength(150)
   name?: string;
+
+  @ApiProperty({
+    description: "Contexte propre a l'entreprise",
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  context?: string | null;
 }

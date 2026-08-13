@@ -1,6 +1,7 @@
 export type BackendCompany = {
   id: number;
   name: string;
+  context: string | null;
   created_at: string;
 };
 
