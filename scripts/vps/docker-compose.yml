@@ -25,7 +25,7 @@ services:
       SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL:-communications@laroche360.ca}
       SENDGRID_FROM_NAME: ${SENDGRID_FROM_NAME:-Laroche 360}
       SENDGRID_REPLY_TO: ${SENDGRID_REPLY_TO:-communications@laroche360.ca}
-      API_KEY: ${API_KEY:-}
+      API_KEY: ${API_KEY:?API_KEY is required}
 
       # n8n internal access
       N8N_BASE_URL: ${N8N_BASE_URL:-http://host.docker.internal:5678}
