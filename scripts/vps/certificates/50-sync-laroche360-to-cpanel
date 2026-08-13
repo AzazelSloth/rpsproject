@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+exec /usr/local/sbin/renew-laroche360-certificates --deploy-hook

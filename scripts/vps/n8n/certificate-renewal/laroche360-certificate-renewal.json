@@ -1,0 +1,84 @@
+{
+  "name": "SSL - Renouvellement automatique Laroche360",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "2156318b-ec6f-4970-b327-d41139fa90b3",
+      "name": "Déclenchement manuel",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "15 3 * * *"
+            }
+          ]
+        }
+      },
+      "id": "01fed3f5-d96d-474e-996b-ce5bc032cdb6",
+      "name": "Chaque jour à 03:15",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -420,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "command": "sudo /usr/local/sbin/renew-laroche360-certificates"
+      },
+      "id": "345898b4-aa7a-434b-b9f7-426a3b7975fc",
+      "name": "Renouveler et vérifier les certificats",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        -120,
+        80
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Déclenchement manuel": {
+      "main": [
+        [
+          {
+            "node": "Renouveler et vérifier les certificats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chaque jour à 03:15": {
+      "main": [
+        [
+          {
+            "node": "Renouveler et vérifier les certificats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "timezone": "America/Toronto",
+    "executionOrder": "v1"
+  },
+  "versionId": "d920706c-5368-4d0f-837f-a8c21090dde4",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
