@@ -1,6 +1,6 @@
 # P4 - Reponses aux questions techniques LoopIn
 
-**Etat analyse : 24 juillet 2026**
+## Etat analyse : 24 juillet 2026
 
 Ce document repond a partir du code, des fichiers de deploiement et du workflow n8n presents dans le depot. Il decrit l'etat technique observable, et non une certification juridique, une verification de la production ou une decision officielle de L360.
 
