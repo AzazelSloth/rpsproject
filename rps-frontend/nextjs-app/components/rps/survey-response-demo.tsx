@@ -5,6 +5,8 @@ import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
 import { getTrpcClient } from "@/lib/trpc/client";
 
+const PREFER_NOT_TO_ANSWER = "Je préfère ne pas répondre";
+
 export function SurveyResponseDemo({
   participantToken,
   employeeId,
@@ -182,7 +184,7 @@ export function SurveyResponseDemo({
                       onClick={() =>
                         setAnswers((current) => ({ ...current, [question.id]: String(value) }))
                       }
-                      className={`rounded-[12px] border px-4 py-3 text-sm font-semibold ${
+                      className={`rounded-[12px] border px-4 py-3 text-sm font-semibold transition hover:border-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
                         answers[question.id] === String(value)
                           ? "border-amber-400 bg-amber-50 text-amber-800"
                           : "border-slate-200 bg-white text-slate-600"
@@ -211,8 +213,8 @@ export function SurveyResponseDemo({
                     key={option}
                     className={
                       answers[question.id] === option
-                        ? "border-amber-400 bg-amber-50 text-amber-800"
-                        : ""
+                        ? "border !border-amber-400 !bg-amber-50 !text-amber-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                        : "border !border-slate-200 !bg-white !text-slate-700 hover:!border-amber-300 hover:!bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                     }
                     onClick={() =>
                       setAnswers((current) => ({ ...current, [question.id]: option }))
@@ -224,13 +226,40 @@ export function SurveyResponseDemo({
               </div>
             ) : (
               <textarea
-                value={answers[question.id] ?? ""}
+                value={
+                  answers[question.id] === PREFER_NOT_TO_ANSWER
+                    ? ""
+                    : (answers[question.id] ?? "")
+                }
                 onChange={(event) =>
                   setAnswers((current) => ({ ...current, [question.id]: event.target.value }))
                 }
+                disabled={answers[question.id] === PREFER_NOT_TO_ANSWER}
                 className="mt-4 min-h-32 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
               />
             )}
+            {question.type !== "section" ? (
+              <div className="mt-3">
+                <SecondaryButton
+                  className={
+                    answers[question.id] === PREFER_NOT_TO_ANSWER
+                      ? "border !border-slate-700 !bg-slate-700 !text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                      : "border !border-slate-200 !bg-white !text-slate-700 hover:!border-amber-300 hover:!bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                  }
+                  onClick={() =>
+                    setAnswers((current) => ({
+                      ...current,
+                      [question.id]:
+                        current[question.id] === PREFER_NOT_TO_ANSWER
+                          ? ""
+                          : PREFER_NOT_TO_ANSWER,
+                    }))
+                  }
+                >
+                  {PREFER_NOT_TO_ANSWER}
+                </SecondaryButton>
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
