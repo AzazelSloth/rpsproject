@@ -23,6 +23,10 @@ import {
 } from "@/lib/strapi/mappers";
 import { getStrapiSingle, isStrapiConfigured } from "@/lib/strapi/client";
 import type { StrapiReportTemplate } from "@/lib/strapi/types";
+import {
+  getValidScaleResponseValues,
+  isAnsweredResponseState,
+} from "@/lib/responses/response-state";
 
 export class RepositoryDataError extends Error {
   constructor(message: string) {
@@ -669,10 +673,12 @@ function mapBackendQuestion(entry: BackendQuestion): SurveyQuestion {
       : "Question du questionnaire RPS",
     options:
       type === "choice"
-        ? entry.choice_options?.filter(Boolean).length
+        ? entry.choice_options
           ? entry.choice_options.filter(Boolean)
           : defaultOptions
-        : undefined,
+        : type === "scale"
+          ? entry.choice_options?.filter(Boolean)
+          : undefined,
     orderIndex: entry.order_index ?? 0,
     sectionId: entry.section?.id ?? null,
   };
@@ -752,11 +758,20 @@ function formatCampaignCreationDate(createdAt?: string | null) {
   });
 }
 
-function computeStressScore(responses: Pick<BackendResponse, "answer" | "question">[]) {
-  const scaleValues = responses
-    .filter((response) => normalizeQuestionType(response.question?.question_type) === "scale")
-    .map((response) => Number(response.answer))
-    .filter((value) => Number.isFinite(value) && value >= 1 && value <= 5);
+function computeStressScore(
+  responses: Pick<BackendResponse, "answer" | "question" | "response_state">[],
+) {
+  const scaleValues = getValidScaleResponseValues(
+    responses
+      .filter(
+        (response) =>
+          normalizeQuestionType(response.question?.question_type) === "scale",
+      )
+      .map((response) => ({
+        answer: response.answer,
+        responseState: response.response_state,
+      })),
+  );
 
   if (!scaleValues.length) {
     return 0;
@@ -1098,6 +1113,7 @@ function filterResponsesForCampaign(
     const employeeId = response.employee?.id;
     return Boolean(
       employeeId &&
+        isAnsweredResponseState(response.response_state) &&
         questionIds.has(response.question.id) &&
         participantIds.has(employeeId),
     );

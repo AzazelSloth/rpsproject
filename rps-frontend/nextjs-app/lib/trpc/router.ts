@@ -209,7 +209,8 @@ const adminSurveysRouter = t.router({
 				question_text: input.title,
 				question_type: input.type,
 				rps_dimension: input.type,
-				choice_options: input.type === "choice" ? input.options : undefined,
+				choice_options:
+					input.type === "choice" || input.type === "scale" ? input.options : undefined,
 				order_index: input.orderIndex,
 			});
 		}),
@@ -232,7 +233,8 @@ const adminSurveysRouter = t.router({
 				section_id: input.sectionId ?? null,
 				question_type: input.type,
 				rps_dimension: input.type,
-				choice_options: input.type === "choice" ? input.options : undefined,
+				choice_options:
+					input.type === "choice" || input.type === "scale" ? input.options : undefined,
 				order_index: input.orderIndex,
 			});
 		}),
@@ -430,7 +432,8 @@ const surveyResponsesRouter = t.router({
 				answers: z.array(
 					z.object({
 						questionId: z.number().int().positive(),
-						answer: z.string().min(1),
+						answer: z.string().min(1).nullable(),
+						responseState: z.enum(["answered", "declined"]),
 					}),
 				),
 			}),
@@ -445,17 +448,11 @@ const surveyResponsesRouter = t.router({
 				});
 			}
 
-			if (!input.answers.length) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "answers est requis.",
-				});
-			}
-
 			await postBackend(`/campaign-participants/token/${input.participantToken}/submit`, {
 				responses: input.answers.map((answer) => ({
 					question_id: answer.questionId,
 					answer: answer.answer,
+					response_state: answer.responseState,
 				})),
 			});
 

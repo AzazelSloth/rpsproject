@@ -2,10 +2,14 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
+import {
+  buildSurveySubmissionAnswers,
+  isPreferNotToAnswer,
+  PREFER_NOT_TO_ANSWER,
+  togglePreferNotToAnswer,
+} from "@/components/rps/survey-response-answer";
 import type { SurveyQuestion } from "@/lib/strapi/mappers";
 import { getTrpcClient } from "@/lib/trpc/client";
-
-const PREFER_NOT_TO_ANSWER = "Je préfère ne pas répondre";
 
 export function SurveyResponseDemo({
   participantToken,
@@ -55,17 +59,10 @@ export function SurveyResponseDemo({
     setSubmitError(null);
 
     startTransition(async () => {
-      const payloadAnswers = answerableQuestions
-        .map((question) => ({
-          questionId: Number(question.id),
-          answer: (answers[question.id] ?? "").trim(),
-        }))
-        .filter((entry) => entry.answer);
-
-      if (payloadAnswers.length !== answerableQuestions.length) {
-        setSubmitError("Merci de répondre à toutes les questions avant l'envoi.");
-        return;
-      }
+      const payloadAnswers = buildSurveySubmissionAnswers(
+        answerableQuestions.map((question) => question.id),
+        answers,
+      );
 
       try {
         await getTrpcClient().surveyResponses.submit.mutate({
@@ -195,13 +192,16 @@ export function SurveyResponseDemo({
                   ))}
                 </div>
                 <div className="mt-3 grid gap-2 text-xs text-slate-500 sm:grid-cols-5">
-                  {[
-                    "Pas du tout d'accord",
-                    "Plutôt pas d'accord",
-                    "Ni d'accord, ni pas d'accord",
-                    "Plutôt d'accord",
-                    "Tout à fait d'accord",
-                  ].map((label) => (
+                  {(question.options?.length === 5
+                    ? question.options
+                    : [
+                        "Pas du tout d'accord",
+                        "Plutôt pas d'accord",
+                        "Ni d'accord, ni pas d'accord",
+                        "Plutôt d'accord",
+                        "Tout à fait d'accord",
+                      ]
+                  ).map((label) => (
                     <span key={label}>{label}</span>
                   ))}
                 </div>
@@ -227,14 +227,14 @@ export function SurveyResponseDemo({
             ) : (
               <textarea
                 value={
-                  answers[question.id] === PREFER_NOT_TO_ANSWER
+                  isPreferNotToAnswer(answers[question.id])
                     ? ""
                     : (answers[question.id] ?? "")
                 }
                 onChange={(event) =>
                   setAnswers((current) => ({ ...current, [question.id]: event.target.value }))
                 }
-                disabled={answers[question.id] === PREFER_NOT_TO_ANSWER}
+                disabled={isPreferNotToAnswer(answers[question.id])}
                 className="mt-4 min-h-32 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
               />
             )}
@@ -242,17 +242,14 @@ export function SurveyResponseDemo({
               <div className="mt-3">
                 <SecondaryButton
                   className={
-                    answers[question.id] === PREFER_NOT_TO_ANSWER
+                    isPreferNotToAnswer(answers[question.id])
                       ? "border !border-slate-700 !bg-slate-700 !text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                       : "border !border-slate-200 !bg-white !text-slate-700 hover:!border-amber-300 hover:!bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                   }
                   onClick={() =>
                     setAnswers((current) => ({
                       ...current,
-                      [question.id]:
-                        current[question.id] === PREFER_NOT_TO_ANSWER
-                          ? ""
-                          : PREFER_NOT_TO_ANSWER,
+                      [question.id]: togglePreferNotToAnswer(current[question.id]),
                     }))
                   }
                 >

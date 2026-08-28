@@ -4,6 +4,11 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, GripHorizontal } from "lucide-react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
+import {
+  AGREEMENT_SCALE_OPTIONS,
+  QUESTION_SUGGESTION_SECTIONS,
+  type QuestionSuggestion,
+} from "@/components/rps/question-suggestions";
 import type {
   CampaignParticipantRecord,
   SurveyBuilderData,
@@ -14,13 +19,10 @@ import { getTrpcClient } from "@/lib/trpc/client";
 import { parseApiError } from "@/lib/error-handler";
 
 const defaultChoiceOptions = ["Oui", "Partiellement", "Non"];
-const scaleAnswerGuide = [
-  { value: 1, label: "Pas du tout d'accord" },
-  { value: 2, label: "Plutôt pas d'accord" },
-  { value: 3, label: "Neutre" },
-  { value: 4, label: "Plutôt d'accord" },
-  { value: 5, label: "Tout à fait d'accord" },
-];
+const scaleAnswerGuide = AGREEMENT_SCALE_OPTIONS.map((label, index) => ({
+  value: index + 1,
+  label,
+}));
 
 function devLog(...args: unknown[]) {
   if (process.env.NODE_ENV === "development") {
@@ -121,6 +123,7 @@ const templateByType: Record<SurveyQuestionType, SurveyQuestion> = {
     type: "scale",
     title: "Comment jugez-vous votre niveau d'énergie au travail ?",
     helpText: "Question échelle 1 à 5",
+    options: [...AGREEMENT_SCALE_OPTIONS],
     orderIndex: 99,
   },
   choice: {
@@ -196,6 +199,7 @@ export function SurveyBuilderDemo({
           .sort((a, b) => a.orderIndex - b.orderIndex)
           .map(ensureQuestionOptions),
   );
+  const [suggestionSectionId, setSuggestionSectionId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -1182,6 +1186,7 @@ export function SurveyBuilderDemo({
             { ...template, id: temporaryId, documentId: temporaryId, sectionId: null },
           ]),
         (result) => {
+          setSuggestionSectionId(result.id);
           setQuestions((current) =>
             current.map((question) =>
               question.id === temporaryId
@@ -1238,6 +1243,73 @@ export function SurveyBuilderDemo({
     );
   }
 
+  function addSuggestedQuestion(suggestion: QuestionSuggestion) {
+    if (!canEditQuestions) {
+      setError("Impossible d'ajouter des questions quand le sondage est actif.");
+      return;
+    }
+
+    if (!campaignId) {
+      setError("Le sondage doit exister avant d'ajouter des questions.");
+      return;
+    }
+
+    const targetSectionExists = questions.some(
+      (question) =>
+        question.type === "section" &&
+        getSectionBackendId(question) === suggestionSectionId,
+    );
+
+    if (!suggestionSectionId || !targetSectionExists) {
+      setError("Choisis d'abord la section dans laquelle ajouter la suggestion.");
+      return;
+    }
+
+    const temporaryId = `tmp-suggestion-${Date.now()}`;
+    const options = suggestion.options ? [...suggestion.options] : undefined;
+
+    runMutation<{ id: number }>(
+      () =>
+        getTrpcClient().adminSurveys.createQuestion.mutate({
+          campaignId,
+          sectionId: suggestionSectionId,
+          title: suggestion.title,
+          type: suggestion.type,
+          options,
+          orderIndex: questions.length,
+        }),
+      "Question suggérée ajoutée.",
+      () =>
+        setQuestions((current) => [
+          ...current,
+          {
+            id: temporaryId,
+            documentId: temporaryId,
+            type: suggestion.type,
+            title: suggestion.title,
+            helpText: "Question du questionnaire RPS",
+            options,
+            orderIndex: current.length,
+            sectionId: suggestionSectionId,
+          },
+        ]),
+      (result) => {
+        setQuestions((current) =>
+          current.map((question) =>
+            question.id === temporaryId
+              ? {
+                  ...question,
+                  id: String(result.id),
+                  documentId: `question-${result.id}`,
+                }
+              : question,
+          ),
+        );
+      },
+      mode === "edit",
+    );
+  }
+
   function updateQuestion(index: number, updates: Partial<SurveyQuestion>) {
     setQuestions((current) =>
       current.map((question, currentIndex) => {
@@ -1251,12 +1323,18 @@ export function SurveyBuilderDemo({
         };
 
         if (updates.type === "choice") {
-          nextQuestion.options = question.options?.length
+          nextQuestion.options = question.type === "choice" && question.options?.length
             ? question.options
             : [...defaultChoiceOptions];
         }
 
-        if (updates.type && updates.type !== "choice") {
+        if (updates.type === "scale") {
+          nextQuestion.options = question.type === "scale" && question.options?.length === 5
+            ? question.options
+            : [...AGREEMENT_SCALE_OPTIONS];
+        }
+
+        if (updates.type && updates.type !== "choice" && updates.type !== "scale") {
           nextQuestion.options = undefined;
         }
 
@@ -1272,7 +1350,11 @@ export function SurveyBuilderDemo({
           return question;
         }
 
-        const options = [...(question.options ?? [...defaultChoiceOptions])];
+        const fallbackOptions =
+          question.type === "scale"
+            ? [...AGREEMENT_SCALE_OPTIONS]
+            : [...defaultChoiceOptions];
+        const options = [...(question.options ?? fallbackOptions)];
         options[optionIndex] = value;
         return { ...question, options };
       }),
@@ -1332,6 +1414,11 @@ export function SurveyBuilderDemo({
       return;
     }
 
+    if (question.type === "scale" && sanitizedOptions.length !== 5) {
+      setError("L'échelle doit contenir cinq libellés.");
+      return;
+    }
+
     runMutation(
       () =>
         getTrpcClient().adminSurveys.updateQuestion.mutate({
@@ -1339,7 +1426,10 @@ export function SurveyBuilderDemo({
           sectionId: question.sectionId ?? null,
           title: trimmedQuestionTitle,
           type: question.type === "section" ? "text" : question.type,
-          options: question.type === "choice" ? sanitizedOptions : undefined,
+          options:
+            question.type === "choice" || question.type === "scale"
+              ? sanitizedOptions
+              : undefined,
           orderIndex: index,
         }),
       question.type === "section" ? "Section mise à jour." : "Question mise à jour.",
@@ -2058,7 +2148,68 @@ export function SurveyBuilderDemo({
           </p>
         )}
 
-        <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-5">
+        <div className="mt-4 grid gap-4 sm:mt-6 lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
+          <aside className="rounded-[16px] border border-slate-200 bg-slate-50 p-4 lg:sticky lg:top-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+              Suggestions de questions
+            </p>
+            <select
+              value={suggestionSectionId ?? ""}
+              onChange={(event) =>
+                setSuggestionSectionId(Number(event.target.value) || null)
+              }
+              disabled={!campaignId || !canEditQuestions}
+              className="mt-3 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none disabled:bg-slate-100"
+            >
+              <option value="">Choisir la section de destination</option>
+              {questions
+                .filter((question) => question.type === "section")
+                .map((section) => {
+                  const sectionId = getSectionBackendId(section);
+                  return sectionId ? (
+                    <option key={section.id} value={sectionId}>
+                      {section.title}
+                    </option>
+                  ) : null;
+                })}
+            </select>
+
+            <div className="mt-4 max-h-[70vh] space-y-3 overflow-y-auto pr-1">
+              {QUESTION_SUGGESTION_SECTIONS.map((suggestionSection) => (
+                <details
+                  key={suggestionSection.number}
+                  className="rounded-[12px] border border-slate-200 bg-white p-3"
+                >
+                  <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+                    Section {suggestionSection.number} · {suggestionSection.title}
+                    {suggestionSection.optional ? (
+                      <span className="ml-2 text-xs font-medium text-slate-500">Facultative</span>
+                    ) : null}
+                  </summary>
+                  <div className="mt-3 space-y-2">
+                    {suggestionSection.questions.map((suggestion) => (
+                      <button
+                        key={suggestion.title}
+                        type="button"
+                        disabled={
+                          isBusy ||
+                          !campaignId ||
+                          !canEditQuestions ||
+                          !suggestionSectionId
+                        }
+                        onClick={() => addSuggestedQuestion(suggestion)}
+                        className="w-full rounded-[10px] border border-slate-200 bg-white px-3 py-3 text-left text-xs leading-5 text-slate-700 transition hover:border-amber-300 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {suggestion.title}
+                      </button>
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </aside>
+
+          <div className="space-y-4 sm:space-y-5">
           {buildSurveySectionCards(questions).map((group) => {
             const section = group.section;
             const sectionQuestionCount = group.questions.length;
@@ -2215,13 +2366,23 @@ export function SurveyBuilderDemo({
                           Le répondant choisit une note de 1 à 5 pour indiquer son niveau d&apos;accord.
                         </p>
                         <div className="mt-3 grid gap-2 grid-cols-2 sm:grid-cols-5">
-                          {scaleAnswerGuide.map((item) => (
+                          {(question.options?.length === 5
+                            ? question.options
+                            : scaleAnswerGuide.map((item) => item.label)
+                          ).map((label, optionIndex) => (
                             <div
-                              key={`scale-guide-${item.value}`}
+                              key={`scale-guide-${optionIndex + 1}`}
                               className="rounded-[12px] border border-sky-200 bg-white px-3 py-3 text-center"
                             >
-                              <p className="text-base font-bold text-sky-800">{item.value}</p>
-                              <p className="mt-1 text-xs text-slate-600">{item.label}</p>
+                              <p className="text-base font-bold text-sky-800">{optionIndex + 1}</p>
+                              <input
+                                value={label}
+                                onChange={(event) =>
+                                  updateChoiceOption(index, optionIndex, event.target.value)
+                                }
+                                disabled={!canEditQuestions}
+                                className="mt-2 w-full rounded-[8px] border border-sky-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
+                              />
                             </div>
                           ))}
                         </div>
@@ -2279,6 +2440,7 @@ export function SurveyBuilderDemo({
               </div>
             );
           })}
+          </div>
         </div>
       </div>
 
@@ -2351,19 +2513,22 @@ export function SurveyBuilderDemo({
 
                     {question.type === "scale" ? (
                       <div className="mt-4 space-y-3">
-                        {scaleAnswerGuide.map((item) => (
+                        {(question.options?.length === 5
+                          ? question.options
+                          : scaleAnswerGuide.map((item) => item.label)
+                        ).map((label, optionIndex) => (
                           <label
-                            key={`${question.id}-scale-preview-${item.value}`}
+                            key={`${question.id}-scale-preview-${optionIndex + 1}`}
                             className="flex items-center gap-3 text-sm text-slate-700"
                           >
                             <input
                               type="radio"
                               readOnly
-                              checked={item.value === 1}
+                              checked={false}
                               className="h-4 w-4 accent-amber-600"
                             />
                             <span>
-                              {item.value} - {item.label}
+                              {optionIndex + 1} - {label}
                             </span>
                           </label>
                         ))}
@@ -2380,7 +2545,7 @@ export function SurveyBuilderDemo({
                             <input
                               type="radio"
                               readOnly
-                              checked={optionIndex === 0}
+                              checked={false}
                               className="h-4 w-4 accent-amber-600"
                             />
                             <span>{option}</span>
@@ -2699,7 +2864,7 @@ function mapBackendCampaignQuestions(campaign: BackendCampaign): SurveyQuestion[
         ? `Dimension analysee: ${question.rps_dimension}`
         : "Question du questionnaire RPS",
       options:
-        type === "choice"
+        type === "choice" || type === "scale"
           ? question.choice_options?.filter(Boolean)
           : undefined,
       orderIndex: question.order_index ?? 0,
@@ -3119,6 +3284,16 @@ function validateCsvFormat(rawCsv: string): { valid: boolean; errors: string[]; 
 }
 
 function ensureQuestionOptions(question: SurveyQuestion): SurveyQuestion {
+  if (question.type === "scale") {
+    return {
+      ...question,
+      options:
+        sanitizeOptions(question.options).length === 5
+          ? sanitizeOptions(question.options)
+          : [...AGREEMENT_SCALE_OPTIONS],
+    };
+  }
+
   if (question.type !== "choice") {
     return question;
   }

@@ -5,14 +5,15 @@ type SurveySubmissionPayload = {
   participantToken?: string | null;
   answers: Array<{
     questionId: number;
-    answer: string;
+    answer: string | null;
+    responseState: "answered" | "declined";
   }>;
 };
 
 export async function POST(request: Request) {
   const payload = (await request.json()) as SurveySubmissionPayload;
 
-  if (!payload.participantToken || !payload.answers?.length) {
+  if (!payload.participantToken || !payload.answers) {
     return NextResponse.json(
       { message: "Les identifiants de l'employé ou du participant et les réponses sont requis." },
       { status: 400 },
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
       responses: payload.answers.map((answer) => ({
         question_id: answer.questionId,
         answer: answer.answer,
+        response_state: answer.responseState,
       })),
     });
 

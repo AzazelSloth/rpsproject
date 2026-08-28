@@ -6,7 +6,8 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:survey-response": "node --experimental-strip-types --test components/rps/survey-response-answer.test.ts components/rps/question-suggestions.test.ts lib/responses/response-state.test.ts"
   },
   "dependencies": {
     "@trpc/client": "^11.16.0",

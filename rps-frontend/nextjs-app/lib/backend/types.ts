@@ -58,7 +58,8 @@ export type BackendEmployee = {
 
 export type BackendResponse = {
   id: number;
-  answer: string;
+  answer: string | null;
+  response_state: "answered" | "declined";
   created_at: string;
   employee?: Pick<BackendEmployee, "id" | "first_name" | "last_name" | "email" | "department">;
   question: BackendQuestion;
