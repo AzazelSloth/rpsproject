@@ -201,6 +201,8 @@ export function SurveyBuilderDemo({
           .map(ensureQuestionOptions),
   );
   const [suggestionSectionId, setSuggestionSectionId] = useState<number | null>(null);
+  const [selectedSuggestionTitles, setSelectedSuggestionTitles] = useState<string[]>([]);
+  const [isSuggestionDrawerOpen, setIsSuggestionDrawerOpen] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -1244,7 +1246,37 @@ export function SurveyBuilderDemo({
     );
   }
 
-  function addSuggestedQuestion(suggestion: QuestionSuggestion) {
+  function isSuggestionAlreadyAdded(suggestion: QuestionSuggestion) {
+    const normalizedTitle = suggestion.title.trim().toLocaleLowerCase("fr");
+    return questions.some(
+      (question) =>
+        question.type !== "section" &&
+        question.sectionId === suggestionSectionId &&
+        question.title.trim().toLocaleLowerCase("fr") === normalizedTitle,
+    );
+    setSuggestionSectionId(null);
+    setSelectedSuggestionTitles([]);
+    setIsSuggestionDrawerOpen(false);
+  }
+
+  function toggleSuggestedQuestion(suggestion: QuestionSuggestion) {
+    if (!suggestionSectionId) {
+      setError("Choisis d'abord la section dans laquelle ajouter la suggestion.");
+      return;
+    }
+    if (isSuggestionAlreadyAdded(suggestion)) {
+      setError("La question existe déjà pour cette section");
+      return;
+    }
+    setError(null);
+    setSelectedSuggestionTitles((current) =>
+      current.includes(suggestion.title)
+        ? current.filter((title) => title !== suggestion.title)
+        : [...current, suggestion.title],
+    );
+  }
+
+  function addSelectedSuggestedQuestions() {
     if (!canEditQuestions) {
       setError("Impossible d'ajouter des questions quand le sondage est actif.");
       return;
@@ -1266,46 +1298,54 @@ export function SurveyBuilderDemo({
       return;
     }
 
-    const temporaryId = `tmp-suggestion-${Date.now()}`;
-    const options = suggestion.options ? [...suggestion.options] : undefined;
+    const selectedSuggestions = QUESTION_SUGGESTION_SECTIONS.flatMap(
+      (section) => section.questions,
+    ).filter((suggestion) => selectedSuggestionTitles.includes(suggestion.title));
 
-    runMutation<{ id: number }>(
+    if (!selectedSuggestions.length) {
+      setError("Sélectionne au moins une question à ajouter.");
+      return;
+    }
+
+    if (selectedSuggestions.some(isSuggestionAlreadyAdded)) {
+      setError("La question existe déjà pour cette section");
+      return;
+    }
+
+    const targetSectionId = suggestionSectionId;
+
+    runMutation<{ id: number }[]>(
       () =>
-        getTrpcClient().adminSurveys.createQuestion.mutate({
-          campaignId,
-          sectionId: suggestionSectionId,
-          title: suggestion.title,
-          type: suggestion.type,
-          options,
-          orderIndex: questions.length,
-        }),
-      "Question suggérée ajoutée.",
-      () =>
+        Promise.all(
+          selectedSuggestions.map((suggestion, index) =>
+            getTrpcClient().adminSurveys.createQuestion.mutate({
+              campaignId,
+              sectionId: targetSectionId,
+              title: suggestion.title,
+              type: suggestion.type,
+              options: suggestion.options ? [...suggestion.options] : undefined,
+              orderIndex: questions.length + index,
+            }),
+          ),
+        ),
+      `${selectedSuggestions.length} question${selectedSuggestions.length > 1 ? "s" : ""} ajoutée${selectedSuggestions.length > 1 ? "s" : ""} à la section.`,
+      undefined,
+      (results) => {
         setQuestions((current) => [
           ...current,
-          {
-            id: temporaryId,
-            documentId: temporaryId,
+          ...selectedSuggestions.map((suggestion, index) => ({
+            id: String(results[index].id),
+            documentId: `question-${results[index].id}`,
             type: suggestion.type,
             title: suggestion.title,
             helpText: "Question du questionnaire RPS",
-            options,
-            orderIndex: current.length,
-            sectionId: suggestionSectionId,
-          },
-        ]),
-      (result) => {
-        setQuestions((current) =>
-          current.map((question) =>
-            question.id === temporaryId
-              ? {
-                  ...question,
-                  id: String(result.id),
-                  documentId: `question-${result.id}`,
-                }
-              : question,
-          ),
-        );
+            options: suggestion.options ? [...suggestion.options] : undefined,
+            orderIndex: current.length + index,
+            sectionId: targetSectionId,
+          })),
+        ]);
+        setSelectedSuggestionTitles([]);
+        if (mode === "edit") setIsSuggestionDrawerOpen(false);
       },
       mode === "edit",
     );
@@ -2120,6 +2160,15 @@ export function SurveyBuilderDemo({
           >
             Ajouter texte libre
           </SecondaryButton>
+          {mode === "edit" ? (
+            <SecondaryButton
+              disabled={isBusy || !campaignId || !canEditQuestions}
+              onClick={() => setIsSuggestionDrawerOpen(true)}
+              className="sm:w-auto"
+            >
+              Suggestions de questions
+            </SecondaryButton>
+          ) : null}
         </div>
 
         {feedback && (
@@ -2149,16 +2198,39 @@ export function SurveyBuilderDemo({
           </p>
         )}
 
-        <div className="mt-4 grid gap-4 sm:mt-6 lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
-          <aside className="rounded-[16px] border border-slate-200 bg-slate-50 p-4 lg:sticky lg:top-4">
+        <div className={`mt-4 grid gap-4 sm:mt-6 lg:items-start ${mode === "create" ? "lg:grid-cols-[22rem_minmax(0,1fr)]" : "lg:grid-cols-1"}`}>
+          {mode === "create" || isSuggestionDrawerOpen ? (
+          <aside className={mode === "edit"
+            ? "fixed inset-y-0 right-0 z-50 w-full max-w-md overflow-y-auto border-l border-slate-200 bg-white p-5 shadow-2xl"
+            : "rounded-[16px] border border-slate-200 bg-slate-50 p-4 lg:sticky lg:top-4"
+          }>
+            <div className="flex items-start justify-between gap-3">
+              <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
               Suggestions de questions
             </p>
+                <p className="mt-2 text-xs leading-5 text-slate-600">
+                  Choisissez une section, cochez les questions souhaitées, puis ajoutez-les au sondage.
+                </p>
+              </div>
+              {mode === "edit" ? (
+                <button
+                  type="button"
+                  onClick={() => setIsSuggestionDrawerOpen(false)}
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600"
+                  aria-label="Fermer les suggestions"
+                >
+                  Fermer
+                </button>
+              ) : null}
+            </div>
             <select
               value={suggestionSectionId ?? ""}
-              onChange={(event) =>
-                setSuggestionSectionId(Number(event.target.value) || null)
-              }
+              onChange={(event) => {
+                setSuggestionSectionId(Number(event.target.value) || null);
+                setSelectedSuggestionTitles([]);
+                setError(null);
+              }}
               disabled={!campaignId || !canEditQuestions}
               className="mt-3 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none disabled:bg-slate-100"
             >
@@ -2188,7 +2260,10 @@ export function SurveyBuilderDemo({
                     ) : null}
                   </summary>
                   <div className="mt-3 space-y-2">
-                    {suggestionSection.questions.map((suggestion) => (
+                    {suggestionSection.questions.map((suggestion) => {
+                      const alreadyAdded = isSuggestionAlreadyAdded(suggestion);
+                      const isSelected = selectedSuggestionTitles.includes(suggestion.title);
+                      return (
                       <button
                         key={suggestion.title}
                         type="button"
@@ -2198,17 +2273,39 @@ export function SurveyBuilderDemo({
                           !canEditQuestions ||
                           !suggestionSectionId
                         }
-                        onClick={() => addSuggestedQuestion(suggestion)}
-                        className="w-full rounded-[10px] border border-slate-200 bg-white px-3 py-3 text-left text-xs leading-5 text-slate-700 transition hover:border-amber-300 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => toggleSuggestedQuestion(suggestion)}
+                        className={`w-full rounded-[10px] border px-3 py-3 text-left text-xs leading-5 transition disabled:cursor-not-allowed disabled:opacity-50 ${isSelected ? "border-amber-400 bg-amber-50 text-slate-800" : "border-slate-200 bg-white text-slate-700 hover:border-amber-300 hover:bg-amber-50"}`}
                       >
-                        {suggestion.title}
+                        <span className="flex items-start gap-2">
+                          <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${isSelected ? "border-amber-600 bg-amber-600 text-white" : "border-slate-300 bg-white"}`}>
+                            {isSelected ? "✓" : ""}
+                          </span>
+                          <span>
+                            <span className="block">{suggestion.title}</span>
+                            <span className="mt-1 block text-[11px] font-semibold text-sky-700">
+                              {alreadyAdded ? "Déjà ajoutée" : suggestion.type === "scale" ? "Échelle 1 à 5" : suggestion.type === "choice" ? "Question à choix" : "Texte libre"}
+                            </span>
+                          </span>
+                        </span>
                       </button>
-                    ))}
+                    );})}
                   </div>
                 </details>
               ))}
             </div>
+            <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
+              <span className="text-sm font-semibold text-slate-700">
+                {selectedSuggestionTitles.length} question{selectedSuggestionTitles.length > 1 ? "s" : ""} sélectionnée{selectedSuggestionTitles.length > 1 ? "s" : ""}
+              </span>
+              <PrimaryButton
+                disabled={isBusy || !suggestionSectionId || selectedSuggestionTitles.length === 0}
+                onClick={addSelectedSuggestedQuestions}
+              >
+                Ajouter à la section
+              </PrimaryButton>
+            </div>
           </aside>
+          ) : null}
 
           <div className="space-y-4 sm:space-y-5">
           {buildSurveySectionCards(questions).map((group) => {

@@ -9,24 +9,24 @@ import {
 @Entity({ name: 'users' })
 export class User {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ type: 'varchar', nullable: true })
-  name: string | null;
+  name!: string | null;
 
   @Column({ type: 'varchar', unique: true, nullable: true })
-  email: string | null;
+  email!: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  password: string | null;
+  password!: string | null;
 
   @Index('IDX_users_password_reset_token_hash')
   @Column({ type: 'varchar', nullable: true })
-  password_reset_token_hash: string | null;
+  password_reset_token_hash!: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  password_reset_expires_at: Date | null;
+  password_reset_expires_at!: Date | null;
 
   @CreateDateColumn({ type: 'timestamp' })
-  created_at: Date;
+  created_at!: Date;
 }

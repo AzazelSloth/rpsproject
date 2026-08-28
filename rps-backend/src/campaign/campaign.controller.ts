@@ -28,7 +28,7 @@ export class CampaignController {
   @Post()
   @UseGuards(AuthGuard)
   @ApiBody({ type: CreateCampaignDto })
-  @ApiResponse({ status: 201, description: 'Campagne créée avec succès' })
+  @ApiResponse({ status: 201, description: 'Sondage créé avec succès' })
   @ApiResponse({ status: 400, description: 'Données invalides' })
   create(@Body() createCampaignDto: CreateCampaignDto) {
     return this.campaignService.create(createCampaignDto);
@@ -49,7 +49,7 @@ export class CampaignController {
   @Patch(':id')
   @UseGuards(AuthGuard)
   @ApiBody({ type: UpdateCampaignDto })
-  @ApiResponse({ status: 200, description: 'Campagne mise à jour avec succès' })
+  @ApiResponse({ status: 200, description: 'Sondage mis à jour avec succès' })
   @ApiResponse({ status: 400, description: 'Données invalides' })
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -60,21 +60,21 @@ export class CampaignController {
 
   @Post(':id/activate')
   @UseGuards(AuthGuard)
-  @ApiResponse({ status: 200, description: 'Campagne activée avec succès' })
+  @ApiResponse({ status: 200, description: 'Sondage activé avec succès' })
   activate(@Param('id', ParseIntPipe) id: number) {
     return this.campaignService.activate(id);
   }
 
   @Post(':id/terminate')
   @UseGuards(AuthGuard)
-  @ApiResponse({ status: 200, description: 'Campagne terminée avec succès' })
+  @ApiResponse({ status: 200, description: 'Sondage terminé avec succès' })
   terminate(@Param('id', ParseIntPipe) id: number) {
     return this.campaignService.terminate(id);
   }
 
   @Post(':id/archive')
   @UseGuards(AuthGuard)
-  @ApiResponse({ status: 200, description: 'Campagne archivée avec succès' })
+  @ApiResponse({ status: 200, description: 'Sondage archivé avec succès' })
   archive(@Param('id', ParseIntPipe) id: number) {
     return this.campaignService.archive(id);
   }
@@ -118,7 +118,7 @@ export class CampaignController {
   ) {
     if (!isTestSurveyDeleteAllowedEmail(req.user.email)) {
       throw new ForbiddenException(
-        "Vous n'etes pas autorise a supprimer ce sondage.",
+        "Vous n'êtes pas autorisé à supprimer ce sondage.",
       );
     }
 

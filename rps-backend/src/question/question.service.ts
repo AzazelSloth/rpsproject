@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { throwPersistenceError } from '../common/database-error.util';
 import { Campaign } from '../campaign/campaign.entity';
 import {
@@ -37,6 +37,19 @@ export class QuestionService {
       createQuestionDto.section_id,
       campaign.id,
     );
+    const existingQuestion = await this.questionRepository.findOne({
+      where: {
+        campaign: { id: campaign.id },
+        section: section ? { id: section.id } : IsNull(),
+        question_text: createQuestionDto.question_text,
+      },
+    });
+
+    if (existingQuestion) {
+      throw new BadRequestException(
+        'La question existe déjà pour cette section',
+      );
+    }
 
     const question = this.questionRepository.create({
       question_text: createQuestionDto.question_text,

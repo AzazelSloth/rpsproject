@@ -11,20 +11,20 @@ import { Employee } from '../employee/employee.entity';
 @Entity({ name: 'companies' })
 export class Company {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ type: 'varchar', nullable: true })
-  name: string | null;
+  name!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  context: string | null;
+  context!: string | null;
 
   @CreateDateColumn({ type: 'timestamp' })
-  created_at: Date;
+  created_at!: Date;
 
   @OneToMany(() => Campaign, (campaign) => campaign.company)
-  campaigns: Campaign[];
+  campaigns!: Campaign[];
 
   @OneToMany(() => Employee, (employee) => employee.company)
-  employees: Employee[];
+  employees!: Employee[];
 }

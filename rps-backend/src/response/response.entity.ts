@@ -17,31 +17,31 @@ export enum SurveyResponseState {
 @Entity({ name: 'responses' })
 export class SurveyResponse {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => Employee, (employee) => employee.responses, {
     nullable: false,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'employee_id' })
-  employee: Employee;
+  employee!: Employee;
 
   @ManyToOne(() => Question, (question) => question.responses, {
     nullable: false,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'question_id' })
-  question: Question;
+  question!: Question;
 
   @Column('text', { nullable: true })
-  answer: string | null;
+  answer!: string | null;
 
   @Column({ type: 'varchar', length: 20, default: SurveyResponseState.ANSWERED })
-  response_state: SurveyResponseState;
+  response_state!: SurveyResponseState;
 
   @CreateDateColumn({ type: 'timestamp' })
-  created_at: Date;
+  created_at!: Date;
 
   @Column('timestamp', { nullable: true })
-  deleted_at: Date | null;
+  deleted_at!: Date | null;
 }

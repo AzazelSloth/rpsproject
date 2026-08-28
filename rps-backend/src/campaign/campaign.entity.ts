@@ -16,42 +16,42 @@ import { Report } from '../report/report.entity';
 @Entity({ name: 'campaigns' })
 export class Campaign {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => Company, (company) => company.campaigns, {
     nullable: false,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'company_id' })
-  company: Company;
+  company!: Company;
 
   @Column({ type: 'varchar', nullable: true })
-  name: string | null;
+  name!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  description: string | null;
+  description!: string | null;
 
   @Column({ type: 'date', nullable: true })
-  start_date: Date;
+  start_date!: Date;
 
   @Column({ type: 'date', nullable: true })
-  end_date: Date;
+  end_date!: Date;
 
   @Column({ type: 'varchar', default: 'active', nullable: true })
-  status: string | null;
+  status!: string | null;
 
   @CreateDateColumn({ type: 'timestamp' })
-  created_at: Date;
+  created_at!: Date;
 
   @OneToMany(() => Question, (question) => question.campaign)
-  questions: Question[];
+  questions!: Question[];
 
   @OneToMany(() => QuestionSection, (section) => section.campaign)
-  question_sections: QuestionSection[];
+  question_sections!: QuestionSection[];
 
   @OneToMany(() => Report, (report) => report.campaign)
-  reports: Report[];
+  reports!: Report[];
 
   @OneToMany(() => CampaignParticipant, (participant) => participant.campaign)
-  participants: CampaignParticipant[];
+  participants!: CampaignParticipant[];
 }

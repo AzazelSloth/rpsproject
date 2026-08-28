@@ -11,18 +11,18 @@ import { Campaign } from '../campaign/campaign.entity';
 @Entity({ name: 'reports' })
 export class Report {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => Campaign, (campaign) => campaign.reports, {
     nullable: false,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'campaign_id' })
-  campaign: Campaign;
+  campaign!: Campaign;
 
   @Column('text', { nullable: true })
-  report_path: string;
+  report_path!: string;
 
   @CreateDateColumn({ type: 'timestamp' })
-  created_at: Date;
+  created_at!: Date;
 }

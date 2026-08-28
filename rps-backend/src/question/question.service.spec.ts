@@ -9,12 +9,14 @@ describe('QuestionService scale options', () => {
   let service: QuestionService;
   let questionRepository: {
     create: jest.Mock;
+    findOne: jest.Mock;
     save: jest.Mock;
   };
 
   beforeEach(async () => {
     questionRepository = {
       create: jest.fn().mockImplementation((value) => value),
+      findOne: jest.fn().mockResolvedValue(null),
       save: jest.fn().mockImplementation((value) => Promise.resolve(value)),
     };
 
@@ -63,5 +65,20 @@ describe('QuestionService scale options', () => {
         choice_options: options,
       }),
     );
+  });
+
+  it('refuse une question déjà présente dans la section', async () => {
+    questionRepository.findOne.mockResolvedValue({ id: 12 });
+
+    await expect(
+      service.create({
+        campaign_id: 4,
+        section_id: 8,
+        question_text: 'Question existante',
+        question_type: 'scale',
+      }),
+    ).rejects.toThrow('La question existe déjà pour cette section');
+
+    expect(questionRepository.save).not.toHaveBeenCalled();
   });
 });

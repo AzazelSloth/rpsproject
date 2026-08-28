@@ -2,7 +2,7 @@
 import { DataSource } from 'typeorm';
 import { HealthController } from './health.controller';
 
-type HealthControllerWithLogger = HealthController & {
+type HealthControllerWithLogger = {
   logger: { error: jest.Mock };
 };
 
@@ -110,7 +110,10 @@ describe('HealthController', () => {
       createDataSourceMock(jest.fn().mockRejectedValue(new Error('db down'))),
     );
     jest
-      .spyOn((controller as HealthControllerWithLogger).logger, 'error')
+      .spyOn(
+        (controller as unknown as HealthControllerWithLogger).logger,
+        'error',
+      )
       .mockImplementation();
 
     await expect(controller.getHealth()).resolves.toMatchObject({

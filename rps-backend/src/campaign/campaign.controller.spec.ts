@@ -152,7 +152,7 @@ describe('CampaignController', () => {
     try {
       expect(() =>
         controller.remove(5, { user: { sub: 1, email: 'other@test.com' } } as never),
-      ).toThrow("Vous n'etes pas autorise a supprimer ce sondage.");
+      ).toThrow("Vous n'êtes pas autorisé à supprimer ce sondage.");
     } finally {
       process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS = previousAllowedEmails;
     }
