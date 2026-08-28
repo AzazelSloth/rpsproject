@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsInt,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -25,12 +26,22 @@ export class CreateResponseDto {
   @ApiProperty({
     description: 'Réponse à la question',
     example: 'Ceci est ma réponse',
+    required: false,
+    nullable: true,
   })
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(4000)
-  @IsNotEmpty()
-  answer: string;
+  answer?: string | null;
+
+  @ApiProperty({
+    description: 'État de la réponse',
+    enum: ['answered', 'declined'],
+    required: false,
+  })
+  @IsOptional()
+  @IsIn(['answered', 'declined'])
+  response_state?: 'answered' | 'declined';
 }
 
 export class UpdateResponseDto {
@@ -59,5 +70,14 @@ export class UpdateResponseDto {
   @IsString()
   @MinLength(1)
   @MaxLength(4000)
-  answer?: string;
+  answer?: string | null;
+
+  @ApiProperty({
+    description: 'État de la réponse',
+    enum: ['answered', 'declined'],
+    required: false,
+  })
+  @IsOptional()
+  @IsIn(['answered', 'declined'])
+  response_state?: 'answered' | 'declined';
 }

@@ -7,7 +7,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, IsNull, Repository } from 'typeorm';
-import { SurveyResponse } from '../response/response.entity';
+import {
+  SurveyResponse,
+  SurveyResponseState,
+} from '../response/response.entity';
 import { throwPersistenceError } from '../common/database-error.util';
 import { Company } from '../company/company.entity';
 import { getN8nWebhookUrl } from '../n8n/n8n.config';
@@ -374,6 +377,7 @@ export class CampaignService {
           campaign: { id: campaignId },
         },
         deleted_at: IsNull(),
+        response_state: SurveyResponseState.ANSWERED,
       },
       relations: ['employee', 'question'],
       order: { employee: { id: 'ASC' }, question: { order_index: 'ASC' } },
@@ -382,6 +386,10 @@ export class CampaignService {
     const employeeMap = new Map<number, Record<string, string>>();
 
     for (const response of responses) {
+      if (response.response_state === SurveyResponseState.DECLINED) {
+        continue;
+      }
+
       const employee = response.employee;
       if (!employee) continue;
 

@@ -17,7 +17,10 @@ import {
 } from '../email/sendgrid-mail.service';
 import { Employee } from '../employee/employee.entity';
 import { Question } from '../question/question.entity';
-import { SurveyResponse } from '../response/response.entity';
+import {
+  SurveyResponse,
+  SurveyResponseState,
+} from '../response/response.entity';
 import {
   CampaignParticipant,
   CampaignParticipantStatus,
@@ -280,11 +283,31 @@ export class CampaignParticipantService {
   }
 
   async submitByToken(token: string, payload: SubmitCampaignResponsesDto) {
-    if (!payload.responses?.length) {
-      throw new BadRequestException('At least one response is required');
-    }
+    const submittedResponses = payload.responses ?? [];
+    const normalizedResponses = submittedResponses.map((item) => {
+      const legacyDeclinedAnswer = item.answer?.trim() === 'Je préfère ne pas répondre';
+      const responseState =
+        item.response_state === SurveyResponseState.DECLINED || legacyDeclinedAnswer
+          ? SurveyResponseState.DECLINED
+          : SurveyResponseState.ANSWERED;
+      const answer = responseState === SurveyResponseState.DECLINED
+        ? null
+        : item.answer?.trim() || null;
 
-    const questionIds = payload.responses.map((item) => item.question_id);
+      if (responseState === SurveyResponseState.ANSWERED && !answer) {
+        throw new BadRequestException(
+          'An answered response must contain a value',
+        );
+      }
+
+      return {
+        question_id: item.question_id,
+        answer,
+        response_state: responseState,
+      };
+    });
+
+    const questionIds = normalizedResponses.map((item) => item.question_id);
     const uniqueQuestionIds = new Set(questionIds);
 
     if (uniqueQuestionIds.size !== questionIds.length) {
@@ -316,10 +339,12 @@ export class CampaignParticipantService {
         );
       }
 
-      const questions = await questionRepository.find({
-        where: { id: In(questionIds) },
-        relations: { campaign: true },
-      });
+      const questions = questionIds.length
+        ? await questionRepository.find({
+            where: { id: In(questionIds) },
+            relations: { campaign: true },
+          })
+        : [];
 
       if (questions.length !== questionIds.length) {
         throw new BadRequestException('One or more questions do not exist');
@@ -335,13 +360,15 @@ export class CampaignParticipantService {
         );
       }
 
-      const existingResponses = await responseRepository.find({
-        where: {
-          employee: { id: participant.employee.id },
-          question: { id: In(questionIds) },
-          deleted_at: IsNull(),
-        },
-      });
+      const existingResponses = questionIds.length
+        ? await responseRepository.find({
+            where: {
+              employee: { id: participant.employee.id },
+              question: { id: In(questionIds) },
+              deleted_at: IsNull(),
+            },
+          })
+        : [];
 
       if (existingResponses.length > 0) {
         throw new BadRequestException(
@@ -352,28 +379,31 @@ export class CampaignParticipantService {
       const questionById = new Map(
         questions.map((question) => [question.id, question]),
       );
-      const responses = payload.responses.map((item) =>
+      const responses = normalizedResponses.map((item) =>
         responseRepository.create({
           employee: participant.employee,
           question: questionById.get(item.question_id),
           answer: item.answer,
+          response_state: item.response_state,
         }),
       );
 
-      try {
-        await responseRepository.save(responses);
-      } catch (error) {
-        throwPersistenceError(error, {
-          defaultMessage: 'Failed to save responses',
-          duplicateMessage:
-            'One or more questions have already been answered by this employee',
-          constraintMessages: {
-            IDX_responses_employee_question_active:
+      if (responses.length) {
+        try {
+          await responseRepository.save(responses);
+        } catch (error) {
+          throwPersistenceError(error, {
+            defaultMessage: 'Failed to save responses',
+            duplicateMessage:
               'One or more questions have already been answered by this employee',
-            UQ_responses_employee_question:
-              'One or more questions have already been answered by this employee',
-          },
-        });
+            constraintMessages: {
+              IDX_responses_employee_question_active:
+                'One or more questions have already been answered by this employee',
+              UQ_responses_employee_question:
+                'One or more questions have already been answered by this employee',
+            },
+          });
+        }
       }
 
       participant.completed_at = new Date();
@@ -394,6 +424,12 @@ export class CampaignParticipantService {
         participant_id: participant.id,
         completed_at: participant.completed_at,
         response_count: responses.length,
+        answered_response_count: normalizedResponses.filter(
+          (item) => item.response_state === SurveyResponseState.ANSWERED,
+        ).length,
+        declined_response_count: normalizedResponses.filter(
+          (item) => item.response_state === SurveyResponseState.DECLINED,
+        ).length,
       };
     });
   }

@@ -44,7 +44,8 @@ export class QuestionService {
       rps_dimension: createQuestionDto.rps_dimension,
       order_index: createQuestionDto.order_index ?? 0,
       choice_options:
-        createQuestionDto.question_type === 'choice'
+        createQuestionDto.question_type === 'choice' ||
+        createQuestionDto.question_type === 'scale'
           ? (createQuestionDto.choice_options?.filter(Boolean) ?? [])
           : null,
       campaign,
@@ -104,7 +105,7 @@ export class QuestionService {
 
     if (updateQuestionDto.choice_options !== undefined) {
       question.choice_options =
-        question.question_type === 'choice'
+        question.question_type === 'choice' || question.question_type === 'scale'
           ? updateQuestionDto.choice_options.filter(Boolean)
           : null;
     }
@@ -120,7 +121,10 @@ export class QuestionService {
       );
     }
 
-    if (question.question_type !== 'choice') {
+    if (
+      question.question_type !== 'choice' &&
+      question.question_type !== 'scale'
+    ) {
       question.choice_options = null;
     }
 

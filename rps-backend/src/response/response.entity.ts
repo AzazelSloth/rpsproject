@@ -9,6 +9,11 @@ import {
 import { Employee } from '../employee/employee.entity';
 import { Question } from '../question/question.entity';
 
+export enum SurveyResponseState {
+  ANSWERED = 'answered',
+  DECLINED = 'declined',
+}
+
 @Entity({ name: 'responses' })
 export class SurveyResponse {
   @PrimaryGeneratedColumn()
@@ -29,7 +34,10 @@ export class SurveyResponse {
   question: Question;
 
   @Column('text', { nullable: true })
-  answer: string;
+  answer: string | null;
+
+  @Column({ type: 'varchar', length: 20, default: SurveyResponseState.ANSWERED })
+  response_state: SurveyResponseState;
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;

@@ -9,7 +9,7 @@ import { throwPersistenceError } from '../common/database-error.util';
 import { Employee } from '../employee/employee.entity';
 import { Question } from '../question/question.entity';
 import { CreateResponseDto, UpdateResponseDto } from './dto/response.dto';
-import { SurveyResponse } from './response.entity';
+import { SurveyResponse, SurveyResponseState } from './response.entity';
 
 @Injectable()
 export class ResponseService {
@@ -32,8 +32,22 @@ export class ResponseService {
 
     await this.assertNoActiveDuplicateResponse(employee.id, question.id);
 
+    const responseState =
+      createResponseDto.response_state === SurveyResponseState.DECLINED
+        ? SurveyResponseState.DECLINED
+        : SurveyResponseState.ANSWERED;
+    const answer =
+      responseState === SurveyResponseState.DECLINED
+        ? null
+        : createResponseDto.answer?.trim() || null;
+
+    if (responseState === SurveyResponseState.ANSWERED && !answer) {
+      throw new BadRequestException('An answered response must contain a value');
+    }
+
     const response = this.responseRepository.create({
-      answer: createResponseDto.answer,
+      answer,
+      response_state: responseState,
       employee,
       question,
     });
@@ -92,6 +106,16 @@ export class ResponseService {
 
     if (updateResponseDto.answer !== undefined) {
       response.answer = updateResponseDto.answer;
+    }
+
+    if (updateResponseDto.response_state !== undefined) {
+      response.response_state = updateResponseDto.response_state as SurveyResponseState;
+    }
+
+    if (response.response_state === SurveyResponseState.DECLINED) {
+      response.answer = null;
+    } else if (!response.answer?.trim()) {
+      throw new BadRequestException('An answered response must contain a value');
     }
 
     if (updateResponseDto.employee_id !== undefined) {

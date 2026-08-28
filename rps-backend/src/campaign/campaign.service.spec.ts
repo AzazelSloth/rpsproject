@@ -7,7 +7,10 @@ import {
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Company } from '../company/company.entity';
-import { SurveyResponse } from '../response/response.entity';
+import {
+  SurveyResponse,
+  SurveyResponseState,
+} from '../response/response.entity';
 import { Campaign } from './campaign.entity';
 import { CampaignService } from './campaign.service';
 
@@ -84,6 +87,7 @@ describe('CampaignService', () => {
     responseRepository.find.mockResolvedValue([
       {
         answer: '4',
+        response_state: SurveyResponseState.ANSWERED,
         employee: {
           id: 7,
           company_name: null,
@@ -94,6 +98,21 @@ describe('CampaignService', () => {
         },
         question: {
           order_index: 1,
+        },
+      },
+      {
+        answer: null,
+        response_state: SurveyResponseState.DECLINED,
+        employee: {
+          id: 7,
+          company_name: null,
+          email: 'test@example.com',
+          first_name: 'Ada',
+          last_name: 'Lovelace',
+          department: 'R&D',
+        },
+        question: {
+          order_index: 2,
         },
       },
     ]);
@@ -115,6 +134,7 @@ describe('CampaignService', () => {
             campaign: { id: 12 },
           },
           deleted_at: expect.any(Object),
+          response_state: SurveyResponseState.ANSWERED,
         }),
       }),
     );

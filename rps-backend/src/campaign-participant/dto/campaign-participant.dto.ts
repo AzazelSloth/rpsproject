@@ -7,6 +7,7 @@ import {
   IsDate,
   IsEmail,
   IsInt,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -66,12 +67,21 @@ export class SubmitCampaignResponseItemDto {
   @IsNotEmpty()
   question_id: number;
 
-  @ApiProperty({ description: 'Reponse a la question', example: 'Ma reponse' })
+  @ApiProperty({ description: 'Reponse a la question', example: 'Ma reponse', required: false, nullable: true })
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(4000)
-  @IsNotEmpty()
-  answer: string;
+  answer?: string | null;
+
+  @ApiProperty({
+    description: 'Etat explicite de la reponse',
+    enum: ['answered', 'declined'],
+    required: false,
+    default: 'answered',
+  })
+  @IsOptional()
+  @IsIn(['answered', 'declined'])
+  response_state?: 'answered' | 'declined';
 }
 
 export class SubmitCampaignResponsesDto {
@@ -80,7 +90,6 @@ export class SubmitCampaignResponsesDto {
     type: [SubmitCampaignResponseItemDto],
   })
   @IsArray()
-  @ArrayNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => SubmitCampaignResponseItemDto)
   responses: SubmitCampaignResponseItemDto[];
