@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, GripHorizontal } from "lucide-react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
+import { PREFER_NOT_TO_ANSWER } from "@/components/rps/survey-response-answer";
 import {
   AGREEMENT_SCALE_OPTIONS,
   QUESTION_SUGGESTION_SECTIONS,
@@ -2561,6 +2562,12 @@ export function SurveyBuilderDemo({
                         placeholder="Reponse libre"
                       />
                     ) : null}
+
+                    <div className="mt-3">
+                      <span className="inline-flex rounded-[12px] border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">
+                        {PREFER_NOT_TO_ANSWER}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
