@@ -48,7 +48,7 @@ export default async function SurveyResponseTokenPage({
           ) : null}
         </div>
 
-        {surveyData.completedAt ? (
+        {surveyData.completedAt && !surveyData.conclusionText ? (
           <Card className="mx-auto mb-6 max-w-3xl border border-emerald-200 bg-emerald-50 p-5">
             <p className="text-sm font-semibold text-emerald-800">
               Ce sondage a déjà été completé.
@@ -56,7 +56,7 @@ export default async function SurveyResponseTokenPage({
           </Card>
         ) : null}
 
-        {!surveyData.completedAt ? (
+        {!surveyData.completedAt || surveyData.conclusionText ? (
           <SurveyResponseDemo
             participantToken={surveyData.participantToken}
             employeeId={surveyData.employeeId}
@@ -64,6 +64,8 @@ export default async function SurveyResponseTokenPage({
             employeeTitle={surveyData.employeeTitle}
             companyName={surveyData.companyName}
             campaignName={surveyData.campaignName}
+            introductionText={surveyData.introductionText}
+            conclusionText={surveyData.conclusionText}
             status={surveyData.status}
             completedAt={surveyData.completedAt}
             questions={surveyData.questions}

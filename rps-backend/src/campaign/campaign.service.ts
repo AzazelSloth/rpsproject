@@ -54,6 +54,8 @@ export class CampaignService {
     const campaign = this.campaignRepository.create({
       name: createCampaignDto.name,
       description: createCampaignDto.description ?? null,
+      introduction_text: createCampaignDto.introduction_text?.trim() || null,
+      conclusion_text: createCampaignDto.conclusion_text?.trim() || null,
       start_date: createCampaignDto.start_date,
       end_date: createCampaignDto.end_date,
       status,
@@ -156,6 +158,15 @@ export class CampaignService {
 
     if (updateCampaignDto.description !== undefined) {
       campaign.description = updateCampaignDto.description;
+    }
+
+    if (updateCampaignDto.introduction_text !== undefined) {
+      campaign.introduction_text =
+        updateCampaignDto.introduction_text.trim() || null;
+    }
+
+    if (updateCampaignDto.conclusion_text !== undefined) {
+      campaign.conclusion_text = updateCampaignDto.conclusion_text.trim() || null;
     }
 
     if (updateCampaignDto.start_date !== undefined) {
@@ -300,6 +311,14 @@ export class CampaignService {
     if (!targetCampaign) {
       throw new NotFoundException(`Campaign ${targetCampaignId} not found`);
     }
+
+    if (!targetCampaign.introduction_text && sourceCampaign.introduction_text) {
+      targetCampaign.introduction_text = sourceCampaign.introduction_text;
+    }
+    if (!targetCampaign.conclusion_text && sourceCampaign.conclusion_text) {
+      targetCampaign.conclusion_text = sourceCampaign.conclusion_text;
+    }
+    await campaignRepository.save(targetCampaign);
 
     const sectionBySourceId = new Map<number, QuestionSection>();
     const sourceSections = [...(sourceCampaign.question_sections ?? [])].sort(

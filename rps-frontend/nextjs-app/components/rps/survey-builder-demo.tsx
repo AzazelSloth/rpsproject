@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, GripHorizontal } from "lucide-react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
+import { ConfirmationModal } from "@/components/rps/confirmation-modal";
 import {
   AGREEMENT_SCALE_OPTIONS,
   QUESTION_SUGGESTION_SECTIONS,
@@ -19,6 +20,9 @@ import { getTrpcClient } from "@/lib/trpc/client";
 import { parseApiError } from "@/lib/error-handler";
 
 const defaultChoiceOptions = ["Oui", "Partiellement", "Non"];
+// Désactivé à la demande du client. Passer à true pour réafficher les suggestions
+// dans les écrans de création et de modification sans restaurer le composant.
+const SHOW_QUESTION_SUGGESTIONS = false;
 const scaleAnswerGuide = AGREEMENT_SCALE_OPTIONS.map((label, index) => ({
   value: index + 1,
   label,
@@ -185,6 +189,12 @@ export function SurveyBuilderDemo({
   const [description, setDescription] = useState(() =>
     mode === "create" ? "" : initialData.description,
   );
+  const [introductionText, setIntroductionText] = useState(() =>
+    mode === "create" ? "" : initialData.introductionText,
+  );
+  const [conclusionText, setConclusionText] = useState(() =>
+    mode === "create" ? "" : initialData.conclusionText,
+  );
   const [startDate, setStartDate] = useState(() =>
     mode === "create" ? "" : toDateInputValue(initialData.startDate),
   );
@@ -220,6 +230,7 @@ export function SurveyBuilderDemo({
   const [hasDownloadedLinks, setHasDownloadedLinks] = useState(false);
   const [hasSentInvitations, setHasSentInvitations] = useState(false);
   const [isSendingInvitations, setIsSendingInvitations] = useState(false);
+  const [isInvitationConfirmationOpen, setIsInvitationConfirmationOpen] = useState(false);
   const [isPreparingImport, setIsPreparingImport] = useState(false);
   const [participantCount, setParticipantCount] = useState(
     mode === "create" ? 0 : initialData.participantCount,
@@ -306,6 +317,8 @@ export function SurveyBuilderDemo({
     setStatus(mode === "create" ? "draft" : initialData.status);
     setTitle(mode === "create" ? "" : initialData.title);
     setDescription(mode === "create" ? "" : initialData.description);
+    setIntroductionText(mode === "create" ? "" : initialData.introductionText);
+    setConclusionText(mode === "create" ? "" : initialData.conclusionText);
     setStartDate(mode === "create" ? "" : toDateInputValue(initialData.startDate));
     setEndDate(mode === "create" ? "" : toDateInputValue(initialData.endDate));
     setQuestions(
@@ -522,6 +535,8 @@ export function SurveyBuilderDemo({
     setStatus("draft");
     setTitle("");
     setDescription("");
+    setIntroductionText("");
+    setConclusionText("");
     setStartDate("");
     setEndDate("");
     setQuestions([]);
@@ -548,6 +563,8 @@ export function SurveyBuilderDemo({
     setStatus(nextCampaign.status);
     setTitle(nextCampaign.name);
     setDescription(nextCampaign.description);
+    setIntroductionText(nextCampaign.introductionText);
+    setConclusionText(nextCampaign.conclusionText);
     setStartDate(toDateInputValue(nextCampaign.startDate));
     setEndDate(toDateInputValue(nextCampaign.endDate));
     setQuestions(
@@ -588,6 +605,8 @@ export function SurveyBuilderDemo({
             companyId: selectedCompanyId,
             title: effectiveCampaignTitle,
             description: trimmedDescription || undefined,
+            introductionText,
+            conclusionText,
             startDate,
             endDate,
           }),
@@ -604,6 +623,8 @@ export function SurveyBuilderDemo({
                     ...campaign,
                     name: effectiveCampaignTitle,
                     description: trimmedDescription,
+                    introductionText,
+                    conclusionText,
                     status: result?.status ?? campaign.status,
                     companyId: selectedCompanyId,
                     startDate,
@@ -625,6 +646,8 @@ export function SurveyBuilderDemo({
             companyId: selectedCompanyId,
             title: effectiveCampaignTitle,
             description: trimmedDescription || undefined,
+            introductionText,
+            conclusionText,
             startDate,
             endDate,
             sourceCampaignId: templateMode === "existing" ? sourceCampaignId : undefined,
@@ -633,9 +656,13 @@ export function SurveyBuilderDemo({
       undefined,
       (result) => {
         const copiedQuestions = mapBackendCampaignQuestions(result);
+        const savedIntroductionText = result.introduction_text?.trim() ?? introductionText;
+        const savedConclusionText = result.conclusion_text?.trim() ?? conclusionText;
         setCampaignId(result.id);
         setStatus(result.status ?? "preparation");
         setQuestions(copiedQuestions);
+        setIntroductionText(savedIntroductionText);
+        setConclusionText(savedConclusionText);
         setCampaigns((current) =>
           current.some((campaign) => campaign.id === result.id)
             ? current
@@ -645,6 +672,8 @@ export function SurveyBuilderDemo({
                   id: result.id,
                   name: effectiveCampaignTitle,
                   description: trimmedDescription,
+                  introductionText: savedIntroductionText,
+                  conclusionText: savedConclusionText,
                   status: result.status ?? "preparation",
                   companyId: selectedCompanyId,
                   startDate,
@@ -699,15 +728,21 @@ export function SurveyBuilderDemo({
         companyId: selectedCompanyId,
         title: effectiveCampaignTitle,
         description: trimmedDescription,
+        introductionText,
+        conclusionText,
         startDate,
         endDate,
         sourceCampaignId: templateMode === "existing" ? sourceCampaignId : undefined,
       });
       const copiedQuestions = mapBackendCampaignQuestions(result);
+      const savedIntroductionText = result.introduction_text?.trim() ?? introductionText;
+      const savedConclusionText = result.conclusion_text?.trim() ?? conclusionText;
 
       setCampaignId(result.id);
       setStatus(result.status ?? "preparation");
       setQuestions(copiedQuestions);
+      setIntroductionText(savedIntroductionText);
+      setConclusionText(savedConclusionText);
       setCampaigns((current) =>
         current.some((campaign) => campaign.id === result.id)
           ? current
@@ -717,6 +752,8 @@ export function SurveyBuilderDemo({
                 id: result.id,
                 name: effectiveCampaignTitle,
                 description: trimmedDescription,
+                introductionText: savedIntroductionText,
+                conclusionText: savedConclusionText,
                 status: result.status ?? "preparation",
                 companyId: selectedCompanyId,
                 startDate,
@@ -1612,23 +1649,23 @@ export function SurveyBuilderDemo({
     changeCampaignStatus("activateCampaign");
   }
 
-  async function handleDeploymentStep() {
+  function handleDeploymentStep() {
     if (!campaignId) {
       setError("Enregistrez d'abord le sondage avant l'envoi.");
       return;
     }
 
-    const forceResend = mode === "edit";
+    setIsInvitationConfirmationOpen(true);
+  }
 
-    if (
-      forceResend &&
-      !confirm(
-        "Renvoyer les invitations aux employes qui n'ont pas encore repondu ? Le lien affichera le contenu actuel du sondage.",
-      )
-    ) {
+  async function sendInvitationsConfirmed() {
+    if (!campaignId) {
+      setIsInvitationConfirmationOpen(false);
       return;
     }
 
+    const forceResend = mode === "edit";
+    setIsInvitationConfirmationOpen(false);
     setIsSendingInvitations(true);
     setFeedback(null);
     setError(null);
@@ -1706,6 +1743,37 @@ export function SurveyBuilderDemo({
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <ConfirmationModal
+        open={isInvitationConfirmationOpen}
+        eyebrow={mode === "edit" ? "Renvoi des courriels" : "Envoi des courriels"}
+        title={mode === "edit" ? "Renvoyer les invitations ?" : "Envoyer les invitations ?"}
+        confirmLabel={mode === "edit" ? "Renvoyer les courriels" : "Envoyer les courriels"}
+        pendingLabel="Envoi..."
+        pending={isSendingInvitations}
+        onCancel={() => setIsInvitationConfirmationOpen(false)}
+        onConfirm={() => void sendInvitationsConfirmed()}
+      >
+        <p>
+          {mode === "edit"
+            ? "Êtes-vous sûr de vouloir renvoyer les invitations aux employés qui n’ont pas encore répondu ?"
+            : "Êtes-vous sûr de vouloir envoyer les invitations aux employés importés dans ce sondage ?"}
+        </p>
+        <div className="mt-4 rounded-[14px] border border-slate-200 bg-white px-5 py-4">
+          <p className="font-bold text-slate-950">{effectiveCampaignTitle || "Sondage"}</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Entreprise : <strong className="text-slate-950">{selectedCompanyName || "Entreprise"}</strong>
+          </p>
+          <p className="mt-1 text-sm text-slate-600">
+            Participants : <strong className="text-slate-950">{participantCount}</strong>
+          </p>
+        </div>
+        {mode === "edit" ? (
+          <p className="mt-4 text-sm text-amber-800">
+            Le courriel contiendra le lien vers la version actuelle du sondage.
+          </p>
+        ) : null}
+      </ConfirmationModal>
+
       <Card className="overflow-hidden border border-slate-200 bg-white p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -2050,6 +2118,56 @@ export function SurveyBuilderDemo({
         )}
       </div>
 
+      <section className="mt-6 rounded-[16px] border border-slate-200 bg-[#fbfbfc] p-5 sm:p-6">
+        <div className="max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+            Parcours de l&apos;employé
+          </p>
+          <h2 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold text-slate-950">
+            Introduction et conclusion
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Ces textes sont propres à ce sondage. L&apos;introduction apparaît avant les questions et la conclusion après l&apos;envoi des réponses.
+          </p>
+        </div>
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          <div>
+            <label htmlFor="survey-introduction" className="text-sm font-semibold text-slate-800">
+              Texte d&apos;introduction
+            </label>
+            <textarea
+              id="survey-introduction"
+              value={introductionText}
+              onChange={(event) => setIntroductionText(event.target.value)}
+              maxLength={10000}
+              rows={8}
+              placeholder="Saisir le texte présenté avant le questionnaire..."
+              className="mt-2 min-h-48 w-full resize-y rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+            />
+            <p className="mt-1 text-right text-xs text-slate-400">
+              {introductionText.length}/10 000
+            </p>
+          </div>
+          <div>
+            <label htmlFor="survey-conclusion" className="text-sm font-semibold text-slate-800">
+              Texte de conclusion
+            </label>
+            <textarea
+              id="survey-conclusion"
+              value={conclusionText}
+              onChange={(event) => setConclusionText(event.target.value)}
+              maxLength={10000}
+              rows={8}
+              placeholder="Saisir le texte présenté après l’envoi des réponses..."
+              className="mt-2 min-h-48 w-full resize-y rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+            />
+            <p className="mt-1 text-right text-xs text-slate-400">
+              {conclusionText.length}/10 000
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="mt-6 border-y border-slate-200 py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-xl">
@@ -2148,7 +2266,12 @@ export function SurveyBuilderDemo({
           </p>
         )}
 
-        <div className="mt-4 grid gap-4 sm:mt-6 lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
+        <div
+          className={`mt-4 grid gap-4 sm:mt-6 lg:items-start ${
+            SHOW_QUESTION_SUGGESTIONS ? "lg:grid-cols-[22rem_minmax(0,1fr)]" : "grid-cols-1"
+          }`}
+        >
+          {SHOW_QUESTION_SUGGESTIONS ? (
           <aside className="rounded-[16px] border border-slate-200 bg-slate-50 p-4 lg:sticky lg:top-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
               Suggestions de questions
@@ -2208,6 +2331,7 @@ export function SurveyBuilderDemo({
               ))}
             </div>
           </aside>
+          ) : null}
 
           <div className="space-y-4 sm:space-y-5">
           {buildSurveySectionCards(questions).map((group) => {
@@ -2465,6 +2589,29 @@ export function SurveyBuilderDemo({
             <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
           </div>
 
+          <div className="rounded-[12px] sm:rounded-[16px] border border-amber-200 bg-amber-50/60 p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                Introduction
+              </p>
+              <span className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-semibold text-amber-700">
+                Avant les questions
+              </span>
+            </div>
+            {introductionText.trim() ? (
+              <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                {introductionText.trim()}
+              </p>
+            ) : (
+              <p className="mt-4 text-sm italic text-slate-500">
+                Aucun texte d&apos;introduction renseigné.
+              </p>
+            )}
+            <span className="mt-5 inline-flex rounded-[10px] bg-[#111827] px-4 py-2 text-xs font-semibold text-white">
+              Commencer le sondage
+            </span>
+          </div>
+
           {previewSection ? (
             <div
               className={`rounded-[12px] sm:rounded-[16px] border p-4 sm:p-5 ${
@@ -2591,6 +2738,29 @@ export function SurveyBuilderDemo({
               Ajoutez une section puis des questions pour afficher l'aperçu.
             </div>
           )}
+
+          <div className="rounded-[12px] sm:rounded-[16px] border border-emerald-200 bg-emerald-50/70 p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                Conclusion
+              </p>
+              <span className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700">
+                Après l&apos;envoi
+              </span>
+            </div>
+            <p className="mt-3 text-lg font-bold text-slate-950">
+              Merci pour votre participation
+            </p>
+            {conclusionText.trim() ? (
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                {conclusionText.trim()}
+              </p>
+            ) : (
+              <p className="mt-3 text-sm italic text-slate-500">
+                Aucun texte de conclusion renseigné.
+              </p>
+            )}
+          </div>
         </div>
       </Card>
 

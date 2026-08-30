@@ -31,6 +31,12 @@ export class Campaign {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  introduction_text: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  conclusion_text: string | null;
+
   @Column({ type: 'date', nullable: true })
   start_date: Date;
 
