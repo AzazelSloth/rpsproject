@@ -12,6 +12,7 @@ import {
   Info,
 } from "lucide-react";
 import { Card, Pill } from "@/components/rps/ui";
+import { ConfirmationModal } from "@/components/rps/confirmation-modal";
 import { appFetch } from "@/lib/api";
 import type {
   EmployeeManagementData,
@@ -92,6 +93,11 @@ export function EmployeesTableDemo({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [manualReminderConfirmation, setManualReminderConfirmation] = useState<{
+    campaignId: number;
+    companyId: number;
+    pendingCount: number;
+  } | null>(null);
   const [surveyDetails, setSurveyDetails] = useState<any>(null);
   const [surveyDetailsError, setSurveyDetailsError] = useState<string | null>(null);
   const [loadingSurveyDetails, setLoadingSurveyDetails] = useState(false);
@@ -274,9 +280,16 @@ export function EmployeesTableDemo({
       return;
     }
 
-    if (!confirm(`Relancer ${pendingCount} employé(s) n'ayant pas encore répondu ?`)) {
+    setManualReminderConfirmation({ campaignId, companyId, pendingCount });
+  }
+
+  async function sendManualReminderConfirmed() {
+    if (!manualReminderConfirmation) {
       return;
     }
+
+    const { campaignId, companyId } = manualReminderConfirmation;
+    setManualReminderConfirmation(null);
 
     setError(null);
     setFeedback(null);
@@ -342,6 +355,41 @@ export function EmployeesTableDemo({
 
   return (
     <div className="space-y-6">
+      <ConfirmationModal
+        open={manualReminderConfirmation !== null}
+        eyebrow="Relance manuelle"
+        title="Forcer l’envoi des courriels de relance ?"
+        confirmLabel="Forcer la relance"
+        pendingLabel="Envoi..."
+        pending={isPending}
+        onCancel={() => setManualReminderConfirmation(null)}
+        onConfirm={() => void sendManualReminderConfirmed()}
+      >
+        <p>
+          Êtes-vous sûr de vouloir envoyer immédiatement un courriel de relance aux employés qui n’ont pas encore répondu ?
+        </p>
+        <div className="mt-4 rounded-[14px] border border-slate-200 bg-white px-5 py-4">
+          <p className="font-bold text-slate-950">{selectedSurveyTitle || "Sondage"}</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Entreprise :{" "}
+            <strong className="text-slate-950">
+              {companies.find(
+                (company) => company.id === manualReminderConfirmation?.companyId,
+              )?.name ?? "Entreprise"}
+            </strong>
+          </p>
+          <p className="mt-1 text-sm text-slate-600">
+            Participants à relancer :{" "}
+            <strong className="text-slate-950">
+              {manualReminderConfirmation?.pendingCount ?? 0}
+            </strong>
+          </p>
+        </div>
+        <p className="mt-4 text-sm font-medium text-amber-800">
+          Cette action force la relance sans attendre le délai automatique habituel.
+        </p>
+      </ConfirmationModal>
+
       <div className="grid gap-5">
         <Card className="p-4 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">

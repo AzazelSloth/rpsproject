@@ -75,6 +75,8 @@ const adminSurveysRouter = t.router({
 				companyId: z.number().int().positive(),
 				title: z.string().min(1),
 				description: z.string().max(1000).optional(),
+				introductionText: z.string().max(10000).optional(),
+				conclusionText: z.string().max(10000).optional(),
 				startDate: z.string().optional(),
 				endDate: z.string().optional(),
 				sourceCampaignId: z.number().int().positive().optional().nullable(),
@@ -88,6 +90,8 @@ const adminSurveysRouter = t.router({
 					company_id: number;
 					name: string;
 					description?: string;
+					introduction_text?: string;
+					conclusion_text?: string;
 					start_date?: string;
 					end_date?: string;
 					source_campaign_id?: number;
@@ -96,6 +100,8 @@ const adminSurveysRouter = t.router({
 				company_id: input.companyId,
 				name: input.title,
 				description: input.description || undefined,
+				introduction_text: input.introductionText || undefined,
+				conclusion_text: input.conclusionText || undefined,
 				start_date: input.startDate || undefined,
 				end_date: input.endDate || undefined,
 				source_campaign_id: input.sourceCampaignId || undefined,
@@ -109,6 +115,8 @@ const adminSurveysRouter = t.router({
 				companyId: z.number().int().positive(),
 				title: z.string().min(1),
 				description: z.string().max(1000).optional(),
+				introductionText: z.string().max(10000).optional(),
+				conclusionText: z.string().max(10000).optional(),
 				startDate: z.string().optional(),
 				endDate: z.string().optional(),
 			}),
@@ -121,6 +129,8 @@ const adminSurveysRouter = t.router({
 					company_id: number;
 					name: string;
 					description?: string;
+					introduction_text?: string;
+					conclusion_text?: string;
 					start_date?: string;
 					end_date?: string;
 				}
@@ -128,6 +138,8 @@ const adminSurveysRouter = t.router({
 				company_id: input.companyId,
 				name: input.title,
 				description: input.description || undefined,
+				introduction_text: input.introductionText ?? "",
+				conclusion_text: input.conclusionText ?? "",
 				start_date: input.startDate || undefined,
 				end_date: input.endDate || undefined,
 			});

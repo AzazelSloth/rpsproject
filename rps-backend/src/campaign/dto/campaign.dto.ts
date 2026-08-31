@@ -47,6 +47,18 @@ export class CreateCampaignDto {
   @MaxLength(1000)
   description?: string;
 
+  @ApiProperty({ description: "Texte affiche avant le questionnaire", required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  introduction_text?: string;
+
+  @ApiProperty({ description: "Texte affiche apres le questionnaire", required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  conclusion_text?: string;
+
   @ApiProperty({
     description: 'Date de début de la campagne',
     required: false,
@@ -113,6 +125,18 @@ export class UpdateCampaignDto {
   @IsString()
   @MaxLength(1000)
   description?: string;
+
+  @ApiProperty({ description: "Texte affiche avant le questionnaire", required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  introduction_text?: string;
+
+  @ApiProperty({ description: "Texte affiche apres le questionnaire", required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  conclusion_text?: string;
 
   @ApiProperty({ description: 'Date de début de la campagne', required: false })
   @IsOptional()

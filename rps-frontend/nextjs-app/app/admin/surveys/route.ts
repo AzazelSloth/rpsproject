@@ -15,6 +15,8 @@ type CreateCampaignPayload = {
   companyId: number;
   title: string;
   description?: string;
+  introductionText?: string;
+  conclusionText?: string;
   startDate?: string;
   endDate?: string;
   sourceCampaignId?: number | null;
@@ -26,6 +28,8 @@ type UpdateCampaignPayload = {
   companyId: number;
   title: string;
   description?: string;
+  introductionText?: string;
+  conclusionText?: string;
   startDate?: string;
   endDate?: string;
 };
@@ -131,6 +135,8 @@ export async function POST(request: Request) {
           company_id: payload.companyId,
           name: payload.title,
           description: payload.description || undefined,
+          introduction_text: payload.introductionText || undefined,
+          conclusion_text: payload.conclusionText || undefined,
           start_date: payload.startDate || undefined,
           end_date: payload.endDate || undefined,
           source_campaign_id: payload.sourceCampaignId || undefined,
@@ -143,6 +149,8 @@ export async function POST(request: Request) {
           company_id: payload.companyId,
           name: payload.title,
           description: payload.description || undefined,
+          introduction_text: payload.introductionText ?? "",
+          conclusion_text: payload.conclusionText ?? "",
           start_date: payload.startDate || undefined,
           end_date: payload.endDate || undefined,
         });

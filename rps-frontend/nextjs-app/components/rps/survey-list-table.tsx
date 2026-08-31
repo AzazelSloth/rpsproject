@@ -28,6 +28,7 @@ export function SurveyListTable({
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingSurveyId, setDeletingSurveyId] = useState<number | null>(null);
+  const [surveyPendingDeletion, setSurveyPendingDeletion] = useState<SurveyOption | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const filteredSurveys = useMemo(() => {
@@ -45,19 +46,12 @@ export function SurveyListTable({
   }, [searchQuery, statusFilter, surveys]);
 
   async function deleteSurvey(survey: SurveyOption) {
-    const confirmed = window.confirm(
-      `Supprimer définitivement le sondage "${survey.title}" ? Cette action supprimera aussi les données liées à ce sondage.`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     setDeleteError(null);
     setDeletingSurveyId(survey.id);
 
     try {
       await getTrpcClient().adminSurveys.deleteCampaign.mutate({ campaignId: survey.id });
+      setSurveyPendingDeletion(null);
       router.refresh();
     } catch (error) {
       setDeleteError(formatTrpcError(error));
@@ -67,6 +61,7 @@ export function SurveyListTable({
   }
 
   return (
+    <>
     <Card className="overflow-hidden">
       <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 sm:flex-row sm:justify-end">
        
@@ -162,7 +157,10 @@ export function SurveyListTable({
                         <button
                           type="button"
                           disabled={deletingSurveyId === survey.id}
-                          onClick={() => void deleteSurvey(survey)}
+                          onClick={() => {
+                            setDeleteError(null);
+                            setSurveyPendingDeletion(survey);
+                          }}
                           className="inline-flex items-center justify-center rounded-[12px] border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {deletingSurveyId === survey.id ? "Suppression..." : "Supprimer"}
@@ -188,6 +186,80 @@ export function SurveyListTable({
         </table>
       </div>
     </Card>
+    {surveyPendingDeletion ? (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6"
+        role="presentation"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget && deletingSurveyId === null) {
+            setSurveyPendingDeletion(null);
+          }
+        }}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-survey-title"
+          aria-describedby="delete-survey-description"
+          className="w-full max-w-lg overflow-hidden rounded-[24px] border border-slate-200 bg-[#fffdf9] shadow-2xl"
+        >
+          <div className="border-b border-slate-200 px-6 py-5 sm:px-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+              Confirmation de suppression
+            </p>
+            <h2
+              id="delete-survey-title"
+              className="mt-2 font-[family-name:var(--font-manrope)] text-2xl font-bold text-slate-950"
+            >
+              Supprimer ce sondage ?
+            </h2>
+          </div>
+
+          <div className="px-6 py-6 sm:px-8">
+            <p id="delete-survey-description" className="leading-7 text-slate-600">
+              Êtes-vous sûr de vouloir supprimer le sondage suivant ?
+            </p>
+            <div className="mt-4 rounded-[14px] border border-slate-200 bg-white px-5 py-4">
+              <p className="font-bold text-slate-950">{surveyPendingDeletion.title}</p>
+              <p className="mt-2 text-sm text-slate-600">
+                Entreprise :{" "}
+                <strong className="font-bold text-slate-950">
+                  {surveyPendingDeletion.companyName}
+                </strong>
+              </p>
+            </div>
+
+            {deleteError ? (
+              <p className="mt-4 rounded-[12px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                {deleteError}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-6 py-5 sm:flex-row sm:justify-end sm:px-8">
+            <button
+              type="button"
+              disabled={deletingSurveyId !== null}
+              onClick={() => setSurveyPendingDeletion(null)}
+              className="inline-flex items-center justify-center rounded-[12px] border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              disabled={deletingSurveyId !== null}
+              onClick={() => void deleteSurvey(surveyPendingDeletion)}
+              className="inline-flex items-center justify-center rounded-[12px] border border-red-600 bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(220,38,38,0.18)] transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {deletingSurveyId === surveyPendingDeletion.id
+                ? "Suppression..."
+                : "Supprimer définitivement"}
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null}
+    </>
   );
 }
 

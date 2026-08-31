@@ -71,6 +71,8 @@ type SurveyResponseData = {
   employeeTitle: string;
   companyName: string;
   campaignName: string;
+  introductionText: string;
+  conclusionText: string;
   status: string;
   completedAt: string | null;
   questions: SurveyQuestion[];
@@ -112,6 +114,8 @@ export type SurveyBuilderData = {
     id: number;
     name: string;
     description: string;
+    introductionText: string;
+    conclusionText: string;
     status: string;
     companyId: number | null;
     startDate: string;
@@ -120,6 +124,8 @@ export type SurveyBuilderData = {
   }[];
   title: string;
   description: string;
+  introductionText: string;
+  conclusionText: string;
   status: string;
   startDate: string;
   endDate: string;
@@ -295,6 +301,8 @@ export async function getSurveyBuilderData(
         id: campaign.id,
         name: mappedCampaign.title,
         description: mappedCampaign.description,
+        introductionText: mappedCampaign.introductionText,
+        conclusionText: mappedCampaign.conclusionText,
         status: mappedCampaign.status,
         companyId: campaign.company?.id ?? null,
         startDate: mappedCampaign.startDate ?? "",
@@ -317,6 +325,8 @@ export async function getSurveyBuilderData(
         campaigns: campaignOptions,
         title: mappedCampaign.title,
         description: mappedCampaign.description,
+        introductionText: mappedCampaign.introductionText,
+        conclusionText: mappedCampaign.conclusionText,
         status: mappedCampaign.status,
         startDate: mappedCampaign.startDate ?? "",
         endDate: mappedCampaign.endDate ?? "",
@@ -333,6 +343,8 @@ export async function getSurveyBuilderData(
       campaigns: campaignOptions,
       title: "",
       description: "",
+      introductionText: "",
+      conclusionText: "",
       status: "draft",
       startDate: "",
       endDate: "",
@@ -505,6 +517,8 @@ export async function getSurveyResponseData(
           employeeTitle: "",
           companyName: "",
           campaignName: "",
+          introductionText: "",
+          conclusionText: "",
           status: "not-found",
           completedAt: null,
           questions: [],
@@ -534,6 +548,8 @@ export async function getSurveyResponseData(
       employeeTitle: employeeEntries[0]?.department ?? "Collaborateur",
       companyName: currentCampaign.companyName,
       campaignName: currentCampaign.title,
+      introductionText: currentCampaign.introductionText,
+      conclusionText: currentCampaign.conclusionText,
       status: "pending",
       completedAt: null,
       questions: currentCampaign.questions,
@@ -585,6 +601,8 @@ function mapBackendQuestionnaire(entry: BackendQuestionnaire): SurveyResponseDat
     employeeTitle: entry.employee.department ?? "Collaborateur",
     companyName: entry.campaign.company?.name ?? "Entreprise",
     campaignName: entry.campaign.name,
+    introductionText: entry.campaign.introduction_text?.trim() ?? "",
+    conclusionText: entry.campaign.conclusion_text?.trim() ?? "",
     status: entry.status,
     completedAt: entry.completed_at,
     questions: mapBackendSurveyItems(entry.sections, entry.questions),
@@ -619,6 +637,8 @@ function mapBackendCampaign(entry: BackendCampaign) {
     description:
       entry.description ??
       "Description du sondage ici. Ce champ peut etre utilise pour fournir des instructions ou des informations supplementaires aux participants.",
+    introductionText: entry.introduction_text?.trim() ?? "",
+    conclusionText: entry.conclusion_text?.trim() ?? "",
     status: mapCampaignStatus(entry.status),
     startDate: entry.start_date ?? "",
     endDate: entry.end_date ?? "",

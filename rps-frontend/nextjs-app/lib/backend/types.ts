@@ -28,6 +28,8 @@ export type BackendCampaign = {
   id: number;
   name: string;
   description?: string | null;
+  introduction_text?: string | null;
+  conclusion_text?: string | null;
   start_date: string | null;
   end_date: string | null;
   status: string;
@@ -86,6 +88,8 @@ export type BackendQuestionnaire = {
   campaign: {
     id: number;
     name: string;
+    introduction_text?: string | null;
+    conclusion_text?: string | null;
     status: string;
     start_date: string | null;
     end_date: string | null;

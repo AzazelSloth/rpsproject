@@ -222,6 +222,8 @@ export class CampaignParticipantService {
       campaign: {
         id: participant.campaign.id,
         name: participant.campaign.name,
+        introduction_text: participant.campaign.introduction_text,
+        conclusion_text: participant.campaign.conclusion_text,
         status: participant.campaign.status,
         start_date: participant.campaign.start_date,
         end_date: participant.campaign.end_date,

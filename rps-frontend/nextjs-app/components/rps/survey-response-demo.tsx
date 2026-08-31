@@ -18,6 +18,8 @@ export function SurveyResponseDemo({
   employeeTitle,
   companyName,
   campaignName,
+  introductionText,
+  conclusionText,
   status,
   completedAt,
   questions,
@@ -28,11 +30,14 @@ export function SurveyResponseDemo({
   employeeTitle?: string;
   companyName?: string;
   campaignName?: string;
+  introductionText?: string;
+  conclusionText?: string;
   status?: string;
   completedAt?: string | null;
   questions: SurveyQuestion[];
 }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [hasStarted, setHasStarted] = useState(() => !introductionText?.trim());
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -88,6 +93,28 @@ export function SurveyResponseDemo({
         <p className="text-sm font-semibold text-emerald-800">
           Ce sondage a déjà  été complété.
         </p>
+      </Card>
+    );
+  }
+
+  if (!hasStarted && introductionText?.trim()) {
+    return (
+      <Card className="mx-auto max-w-3xl p-6 sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
+          Introduction
+        </p>
+        <h1 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold text-slate-950">
+          {campaignName || "Sondage RPS"}
+        </h1>
+        {companyName ? (
+          <p className="mt-2 text-sm font-semibold text-slate-500">{companyName}</p>
+        ) : null}
+        <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+          {introductionText.trim()}
+        </p>
+        <PrimaryButton className="mt-8 sm:w-auto" onClick={() => setHasStarted(true)}>
+          Commencer le sondage
+        </PrimaryButton>
       </Card>
     );
   }
@@ -259,6 +286,17 @@ export function SurveyResponseDemo({
             ) : null}
           </div>
         ))}
+
+        {conclusionText?.trim() ? (
+          <div className="rounded-[12px] border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
+              Conclusion
+            </p>
+            <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+              {conclusionText.trim()}
+            </p>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
