@@ -49,7 +49,10 @@ export function SurveyResponseDemo({
   );
   const surveySections = useMemo(() => buildSurveySections(questions), [questions]);
   const currentSection = surveySections[currentSectionIndex] ?? surveySections[0];
-  const isLastSection = currentSectionIndex === surveySections.length - 1;
+  const hasConclusionPage = Boolean(conclusionText?.trim());
+  const totalSteps = surveySections.length + (hasConclusionPage ? 1 : 0);
+  const isConclusionStep = hasConclusionPage && currentSectionIndex === surveySections.length;
+  const isFinalStep = currentSectionIndex === totalSteps - 1;
 
   const completion = useMemo(() => {
     if (!answerableQuestions.length) {
@@ -182,22 +185,22 @@ export function SurveyResponseDemo({
           </div>
         </div>
 
-        {surveySections.length > 1 ? (
+        {totalSteps > 1 ? (
           <nav aria-label="Sections du sondage" className="rounded-[12px] bg-slate-50 p-4">
             <div className="flex items-center justify-between gap-4 text-sm font-semibold text-slate-700">
-              <span>Section {currentSectionIndex + 1} sur {surveySections.length}</span>
-              <span>{currentSection?.title}</span>
+              <span>Étape {currentSectionIndex + 1} sur {totalSteps}</span>
+              <span>{isConclusionStep ? "Conclusion" : currentSection?.title}</span>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
               <div
                 className="h-full rounded-full bg-amber-400 transition-all"
-                style={{ width: `${((currentSectionIndex + 1) / surveySections.length) * 100}%` }}
+                style={{ width: `${((currentSectionIndex + 1) / totalSteps) * 100}%` }}
               />
             </div>
           </nav>
         ) : null}
 
-        {currentSection?.items.map(({ question, originalIndex }) => (
+        {!isConclusionStep ? currentSection?.items.map(({ question, originalIndex }) => (
           <div
             key={question.id}
             className={`rounded-[12px] border p-5 ${
@@ -304,9 +307,9 @@ export function SurveyResponseDemo({
               </div>
             ) : null}
           </div>
-        ))}
+        )) : null}
 
-        {isLastSection && conclusionText?.trim() ? (
+        {isConclusionStep && conclusionText?.trim() ? (
           <div className="rounded-[12px] border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
               Conclusion
@@ -326,7 +329,7 @@ export function SurveyResponseDemo({
         >
           Précédente
         </SecondaryButton>
-        {isLastSection ? <PrimaryButton
+        {isFinalStep ? <PrimaryButton
           className="sm:w-auto"
           disabled={isPending || !answerableQuestions.length}
           onClick={handleSubmit}
@@ -338,7 +341,7 @@ export function SurveyResponseDemo({
               : "Envoyer mes réponses"}
         </PrimaryButton> : <PrimaryButton
           className="sm:w-auto"
-          onClick={() => setCurrentSectionIndex((index) => Math.min(surveySections.length - 1, index + 1))}
+          onClick={() => setCurrentSectionIndex((index) => Math.min(totalSteps - 1, index + 1))}
         >
           Suivante
         </PrimaryButton>}

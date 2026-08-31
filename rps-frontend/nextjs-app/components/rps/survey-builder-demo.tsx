@@ -216,9 +216,7 @@ export function SurveyBuilderDemo({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [importCsv, setImportCsv] = useState(
-    "Nom,Prénom,Adresse courriel,Fonction\nLefebvre,Anne,anne.lefebvre@test.com,gestionnaire\nTremblay,Marc,marc.tremblay@test.com,cadre",
-  );
+  const [importCsv, setImportCsv] = useState("");
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [importFeedback, setImportFeedback] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -1657,7 +1655,18 @@ export function SurveyBuilderDemo({
     runMutation<{ status?: string }>(
       () => {
         if (action === "activateCampaign") {
-          return getTrpcClient().adminSurveys.activateCampaign.mutate({ campaignId });
+          return getTrpcClient().adminSurveys.updateCampaign.mutate({
+            campaignId,
+            companyId: companyId!,
+            title: effectiveCampaignTitle,
+            description: trimmedDescription || undefined,
+            introductionText,
+            conclusionText,
+            startDate,
+            endDate,
+          }).then(() =>
+            getTrpcClient().adminSurveys.activateCampaign.mutate({ campaignId }),
+          );
         }
 
         if (action === "terminateCampaign") {
@@ -2843,7 +2852,7 @@ export function SurveyBuilderDemo({
                 Conclusion
               </p>
               <span className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700">
-                Après l&apos;envoi
+                Avant l&apos;envoi · page finale
               </span>
             </div>
             <p className="mt-3 text-lg font-bold text-slate-950">
