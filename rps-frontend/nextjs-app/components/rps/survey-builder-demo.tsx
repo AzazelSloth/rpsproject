@@ -1078,6 +1078,9 @@ export function SurveyBuilderDemo({
 
     setImportError(null);
     setImportFeedback(null);
+    setImportSuccess(null);
+    setHasDownloadedLinks(false);
+    setHasSentInvitations(false);
 
     startTransition(async () => {
       try {
