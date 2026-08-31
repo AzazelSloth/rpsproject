@@ -103,7 +103,7 @@ export function SurveyResponseDemo({
           Introduction
         </p>
         <h1 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold text-slate-950">
-          {campaignName || "Sondage RPS"}
+          {campaignName || "Sondage"}
         </h1>
         {companyName ? (
           <p className="mt-2 text-sm font-semibold text-slate-500">{companyName}</p>
@@ -123,10 +123,10 @@ export function SurveyResponseDemo({
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
-            Sondage RPS
+            Sondage
           </p>
-          <h1 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold">
-            {campaignName || "Sondage RPS"}
+          <h1 className="font-[family-name:var(--font-manrope)] text-3xl font-extrabold">
+            {campaignName || "Sondage"}
           </h1>
           {employeeName ? (
             <p className="mt-2 text-sm text-slate-500">Attribué à {employeeName}</p>
