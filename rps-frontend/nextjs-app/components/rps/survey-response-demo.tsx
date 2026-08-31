@@ -39,6 +39,7 @@ export function SurveyResponseDemo({
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [hasStarted, setHasStarted] = useState(() => !introductionText?.trim());
   const [submitted, setSubmitted] = useState(false);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const isCompleted = Boolean(completedAt) || submitted;
@@ -46,6 +47,9 @@ export function SurveyResponseDemo({
     () => questions.filter((question) => question.type !== "section"),
     [questions],
   );
+  const surveySections = useMemo(() => buildSurveySections(questions), [questions]);
+  const currentSection = surveySections[currentSectionIndex] ?? surveySections[0];
+  const isLastSection = currentSectionIndex === surveySections.length - 1;
 
   const completion = useMemo(() => {
     if (!answerableQuestions.length) {
@@ -178,7 +182,22 @@ export function SurveyResponseDemo({
           </div>
         </div>
 
-        {questions.map((question, index) => (
+        {surveySections.length > 1 ? (
+          <nav aria-label="Sections du sondage" className="rounded-[12px] bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-4 text-sm font-semibold text-slate-700">
+              <span>Section {currentSectionIndex + 1} sur {surveySections.length}</span>
+              <span>{currentSection?.title}</span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-amber-400 transition-all"
+                style={{ width: `${((currentSectionIndex + 1) / surveySections.length) * 100}%` }}
+              />
+            </div>
+          </nav>
+        ) : null}
+
+        {currentSection?.items.map(({ question, originalIndex }) => (
           <div
             key={question.id}
             className={`rounded-[12px] border p-5 ${
@@ -192,7 +211,7 @@ export function SurveyResponseDemo({
             <p className="text-sm font-semibold">
               {question.type === "section"
                 ? question.title
-                : `${getQuestionNumber(questions, index)}. ${question.title}`}
+                : `${getQuestionNumber(questions, originalIndex)}. ${question.title}`}
             </p>
 
             {question.type === "section" ? (
@@ -287,7 +306,7 @@ export function SurveyResponseDemo({
           </div>
         ))}
 
-        {conclusionText?.trim() ? (
+        {isLastSection && conclusionText?.trim() ? (
           <div className="rounded-[12px] border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
               Conclusion
@@ -299,8 +318,15 @@ export function SurveyResponseDemo({
         ) : null}
       </div>
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <PrimaryButton
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <SecondaryButton
+          className="sm:w-auto"
+          disabled={currentSectionIndex === 0 || isPending}
+          onClick={() => setCurrentSectionIndex((index) => Math.max(0, index - 1))}
+        >
+          Précédente
+        </SecondaryButton>
+        {isLastSection ? <PrimaryButton
           className="sm:w-auto"
           disabled={isPending || !answerableQuestions.length}
           onClick={handleSubmit}
@@ -310,7 +336,12 @@ export function SurveyResponseDemo({
             : isPending
               ? "Envoi en cours..."
               : "Envoyer mes réponses"}
-        </PrimaryButton>
+        </PrimaryButton> : <PrimaryButton
+          className="sm:w-auto"
+          onClick={() => setCurrentSectionIndex((index) => Math.min(surveySections.length - 1, index + 1))}
+        >
+          Suivante
+        </PrimaryButton>}
         {submitted ? (
           <span className="text-sm font-medium text-emerald-700">
             Réponses enregistrées.
@@ -321,6 +352,45 @@ export function SurveyResponseDemo({
         ) : null}
       </div>
     </Card>
+  );
+}
+
+function buildSurveySections(questions: SurveyQuestion[]) {
+  const sections: Array<{
+    id: string;
+    title: string;
+    items: Array<{ question: SurveyQuestion; originalIndex: number }>;
+  }> = [];
+  const sectionById = new Map<number, (typeof sections)[number]>();
+  let generalSection: (typeof sections)[number] | null = null;
+
+  questions.forEach((question, originalIndex) => {
+    if (question.type === "section") {
+      const section = {
+        id: question.id,
+        title: question.title,
+        items: [{ question, originalIndex }],
+      };
+      sections.push(section);
+      if (question.sectionId) sectionById.set(question.sectionId, section);
+      return;
+    }
+
+    const section = question.sectionId ? sectionById.get(question.sectionId) : undefined;
+    if (section) {
+      section.items.push({ question, originalIndex });
+      return;
+    }
+
+    if (!generalSection) {
+      generalSection = { id: "general", title: "Questions générales", items: [] };
+      sections.unshift(generalSection);
+    }
+    generalSection.items.push({ question, originalIndex });
+  });
+
+  return sections.filter((section) =>
+    section.items.some(({ question }) => question.type !== "section"),
   );
 }
 
