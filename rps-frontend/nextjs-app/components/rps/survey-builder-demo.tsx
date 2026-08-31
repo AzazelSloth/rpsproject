@@ -2193,7 +2193,7 @@ export function SurveyBuilderDemo({
             Introduction et conclusion
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Ces textes sont propres à ce sondage. L&apos;introduction apparaît avant les questions et la conclusion après l&apos;envoi des réponses.
+            Ces textes sont propres à ce sondage. L&apos;introduction apparaît avant les questions et la conclusion après la dernière section, avant l&apos;envoi des réponses.
           </p>
         </div>
         <div className="mt-5 grid gap-5 lg:grid-cols-2">
@@ -2224,7 +2224,7 @@ export function SurveyBuilderDemo({
               onChange={(event) => setConclusionText(event.target.value)}
               maxLength={10000}
               rows={8}
-              placeholder="Saisir le texte présenté après l’envoi des réponses..."
+              placeholder="Saisir le texte présenté après la dernière section, avant l’envoi des réponses..."
               className="mt-2 min-h-48 w-full resize-y rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
             />
             <p className="mt-1 text-right text-xs text-slate-400">

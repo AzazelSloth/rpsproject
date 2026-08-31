@@ -54,15 +54,6 @@ export function SurveyResponseDemo({
   const isConclusionStep = hasConclusionPage && currentSectionIndex === surveySections.length;
   const isFinalStep = currentSectionIndex === totalSteps - 1;
 
-  const completion = useMemo(() => {
-    if (!answerableQuestions.length) {
-      return 0;
-    }
-
-    const completed = answerableQuestions.filter((question) => (answers[question.id] ?? "").trim()).length;
-    return Math.round((completed / answerableQuestions.length) * 100);
-  }, [answers, answerableQuestions]);
-
   function handleSubmit() {
     if (isCompleted) {
       return;
@@ -139,9 +130,6 @@ export function SurveyResponseDemo({
           {employeeName ? (
             <p className="mt-2 text-sm text-slate-500">Attribué à {employeeName}</p>
           ) : null}
-        </div>
-        <div className="rounded-[12px] bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
-          Progression {completion}%
         </div>
       </div>
 
