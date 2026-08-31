@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, GripHorizontal } from "lucide-react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
+import { ConfirmationModal } from "@/components/rps/confirmation-modal";
+import { PREFER_NOT_TO_ANSWER } from "@/components/rps/survey-response-answer";
 import {
   AGREEMENT_SCALE_OPTIONS,
   QUESTION_SUGGESTION_SECTIONS,
@@ -2275,7 +2277,7 @@ export function SurveyBuilderDemo({
           >
             Ajouter texte libre
           </SecondaryButton>
-          {mode === "edit" ? (
+          {SHOW_QUESTION_SUGGESTIONS && mode === "edit" ? (
             <SecondaryButton
               disabled={isBusy || !campaignId || !canEditQuestions}
               onClick={() => setIsSuggestionDrawerOpen(true)}
@@ -2313,11 +2315,18 @@ export function SurveyBuilderDemo({
           </p>
         )}
 
-        <div className="mt-4 grid gap-4 sm:mt-6 lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
+        <div
+          className={`mt-4 grid gap-4 sm:mt-6 lg:items-start ${
+            SHOW_QUESTION_SUGGESTIONS ? "lg:grid-cols-[22rem_minmax(0,1fr)]" : "grid-cols-1"
+          }`}
+        >
+          {SHOW_QUESTION_SUGGESTIONS ? (
           <aside className="rounded-[16px] border border-slate-200 bg-slate-50 p-4 lg:sticky lg:top-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-              Suggestions de questions
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                  Suggestions de questions
+                </p>
                 <p className="mt-2 text-xs leading-5 text-slate-600">
                   Choisissez une section, cochez les questions souhaitées, puis ajoutez-les au sondage.
                 </p>
