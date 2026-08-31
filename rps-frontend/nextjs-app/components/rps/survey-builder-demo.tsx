@@ -183,7 +183,9 @@ export function SurveyBuilderDemo({
   const [sourceCampaignId, setSourceCampaignId] = useState<number | null>(null);
   const [newCompanyName, setNewCompanyName] = useState("");
   const [companyContext, setCompanyContext] = useState(() =>
-    initialData.companies.find((company) => company.id === initialCompanyId)?.context ?? "",
+    mode === "create"
+      ? ""
+      : initialData.companies.find((company) => company.id === initialCompanyId)?.context ?? "",
   );
   const [status, setStatus] = useState(mode === "create" ? "draft" : initialData.status);
   const [title, setTitle] = useState(() => (mode === "create" ? "" : initialData.title));
@@ -311,9 +313,11 @@ export function SurveyBuilderDemo({
     setSourceCampaignId(null);
     setNewCompanyName("");
     setCompanyContext(
-      initialData.companies.find(
-        (company) => company.id === getInitialCompanyId(initialData, mode),
-      )?.context ?? "",
+      mode === "create"
+        ? ""
+        : initialData.companies.find(
+            (company) => company.id === getInitialCompanyId(initialData, mode),
+          )?.context ?? "",
     );
     setStatus(mode === "create" ? "draft" : initialData.status);
     setTitle(mode === "create" ? "" : initialData.title);
@@ -497,7 +501,9 @@ export function SurveyBuilderDemo({
   function handleCompanySelection(nextCompanyId: number) {
     setCompanyId(nextCompanyId);
     setCompanyContext(
-      companies.find((company) => company.id === nextCompanyId)?.context ?? "",
+      mode === "create"
+        ? ""
+        : companies.find((company) => company.id === nextCompanyId)?.context ?? "",
     );
 
     if (mode === "create") {
@@ -3111,7 +3117,7 @@ export function SurveyBuilderDemo({
 
 function getInitialCompanyId(initialData: SurveyBuilderData, mode: SurveyBuilderMode) {
   if (mode === "create") {
-    return initialData.companies[0]?.id ?? null;
+    return null;
   }
 
   return initialData.companyId;
