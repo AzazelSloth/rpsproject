@@ -6,6 +6,7 @@ import { AlertTriangle, CheckCircle2, GripHorizontal } from "lucide-react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import { ConfirmationModal } from "@/components/rps/confirmation-modal";
 import { PREFER_NOT_TO_ANSWER } from "@/components/rps/survey-response-answer";
+import { SurveyPrivacyFooter } from "@/components/rps/survey-privacy-footer";
 import {
   AGREEMENT_SCALE_OPTIONS,
   QUESTION_SUGGESTION_SECTIONS,
@@ -2834,6 +2835,10 @@ export function SurveyBuilderDemo({
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="mt-5">
+                <SurveyPrivacyFooter />
               </div>
 
               <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

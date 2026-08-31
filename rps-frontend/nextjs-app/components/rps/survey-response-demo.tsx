@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
+import { SurveyPrivacyFooter } from "@/components/rps/survey-privacy-footer";
 import {
   buildSurveySubmissionAnswers,
   isPreferNotToAnswer,
@@ -307,6 +308,8 @@ export function SurveyResponseDemo({
             </p>
           </div>
         ) : null}
+
+        <SurveyPrivacyFooter />
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
