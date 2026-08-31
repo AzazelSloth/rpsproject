@@ -1642,9 +1642,8 @@ export function SurveyBuilderDemo({
       return;
     }
 
-    if (!confirm("Es-tu sûr que toutes les questions du sondage sont correctes avant activation ?")) {
-      return;
-    }
+    // Confirmation d'activation désactivée : elle n'a pas été demandée par le client.
+    // L'appel d'activation existant est conservé sans étape intermédiaire.
 
     changeCampaignStatus("activateCampaign");
   }

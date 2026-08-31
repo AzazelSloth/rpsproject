@@ -87,22 +87,6 @@ export function SurveyResponseDemo({
     });
   }
 
-  if (isCompleted && conclusionText?.trim()) {
-    return (
-      <Card className="mx-auto max-w-3xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
-          Sondage terminé
-        </p>
-        <h1 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold text-slate-950">
-          Merci pour votre participation
-        </h1>
-        <p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-          {conclusionText.trim()}
-        </p>
-      </Card>
-    );
-  }
-
   if (isCompleted) {
     return (
       <Card className="mx-auto max-w-3xl border border-emerald-200 bg-emerald-50 p-5">
@@ -302,6 +286,17 @@ export function SurveyResponseDemo({
             ) : null}
           </div>
         ))}
+
+        {conclusionText?.trim() ? (
+          <div className="rounded-[12px] border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
+              Conclusion
+            </p>
+            <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+              {conclusionText.trim()}
+            </p>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
