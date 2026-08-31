@@ -117,6 +117,10 @@ export function getTrpcErrorMessage(error: TRPCClientError<any>): string {
     return "Cette question existe déjà dans cette section. Veuillez choisir ou rédiger une autre question.";
   }
 
+  if (/campaign needs at least one question before activation/i.test(message)) {
+    return "Rédigez et enregistrez au moins une question avant d'activer le sondage.";
+  }
+
   switch (code) {
     case 'INTERNAL_SERVER_ERROR':
       // Check message for specific issues

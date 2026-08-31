@@ -1235,18 +1235,45 @@ export function SurveyBuilderDemo({
       return;
     }
 
-    setError(null);
-    setFeedback("Rédigez la question, puis cliquez sur enregistrer.");
-    setQuestions((current) => [
-      ...current,
-      {
-        ...template,
-        id: temporaryId,
-        documentId: temporaryId,
-        title: "",
-        sectionId: getSectionIdBeforeIndex(current, current.length),
-      },
-    ]);
+    const sectionId = getSectionIdBeforeIndex(questions, questions.length);
+    const uniqueTitle = getUniqueQuestionTitle(questions, sectionId, template.title);
+
+    runMutation<{ id: number }>(
+      () =>
+        getTrpcClient().adminSurveys.createQuestion.mutate({
+          campaignId,
+          sectionId,
+          title: uniqueTitle,
+          type,
+          options: template.options,
+          orderIndex: questions.length,
+        }),
+      "Question ajoutée. Vous pouvez maintenant modifier son texte.",
+      () =>
+        setQuestions((current) => [
+          ...current,
+          {
+            ...template,
+            id: temporaryId,
+            documentId: temporaryId,
+            title: uniqueTitle,
+            sectionId,
+          },
+        ]),
+      (result) =>
+        setQuestions((current) =>
+          current.map((question) =>
+            question.id === temporaryId
+              ? {
+                  ...question,
+                  id: String(result.id),
+                  documentId: `question-${result.id}`,
+                }
+              : question,
+          ),
+        ),
+      mode === "edit",
+    );
   }
 
   function isSuggestionAlreadyAdded(suggestion: QuestionSuggestion) {
@@ -1475,39 +1502,6 @@ export function SurveyBuilderDemo({
     if (duplicateInSection) {
       setError(
         "Cette question existe déjà dans cette section. Veuillez choisir ou rédiger une autre question.",
-      );
-      return;
-    }
-
-    if (!Number.isFinite(Number(question.id))) {
-      runMutation<{ id: number }>(
-        () =>
-          getTrpcClient().adminSurveys.createQuestion.mutate({
-            campaignId: campaignId!,
-            sectionId: question.sectionId ?? null,
-            title: trimmedQuestionTitle,
-            type: question.type === "section" ? "text" : question.type,
-            options:
-              question.type === "choice" || question.type === "scale"
-                ? sanitizedOptions
-                : undefined,
-            orderIndex: index,
-          }),
-        "Question ajoutée.",
-        undefined,
-        (result) =>
-          setQuestions((current) =>
-            current.map((candidate) =>
-              candidate.id === question.id
-                ? {
-                    ...candidate,
-                    id: String(result.id),
-                    documentId: `question-${result.id}`,
-                  }
-                : candidate,
-            ),
-          ),
-        mode === "edit",
       );
       return;
     }
@@ -3598,6 +3592,31 @@ function ensureQuestionOptions(question: SurveyQuestion): SurveyQuestion {
       ? sanitizeOptions(question.options)
       : [...defaultChoiceOptions],
   };
+}
+
+function getUniqueQuestionTitle(
+  questions: SurveyQuestion[],
+  sectionId: number | null,
+  baseTitle: string,
+) {
+  const existingTitles = new Set(
+    questions
+      .filter(
+        (question) => question.type !== "section" && question.sectionId === sectionId,
+      )
+      .map((question) => question.title.trim().toLocaleLowerCase("fr")),
+  );
+
+  if (!existingTitles.has(baseTitle.trim().toLocaleLowerCase("fr"))) {
+    return baseTitle;
+  }
+
+  let suffix = 2;
+  while (existingTitles.has(`${baseTitle} (${suffix})`.toLocaleLowerCase("fr"))) {
+    suffix += 1;
+  }
+
+  return `${baseTitle} (${suffix})`;
 }
 
 function toDateInputValue(value: string) {
