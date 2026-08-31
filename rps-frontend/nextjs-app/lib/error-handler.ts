@@ -113,6 +113,10 @@ export function getTrpcErrorMessage(error: TRPCClientError<any>): string {
   const message = error.message;
   const backendMessage = getBackendMessage(message);
 
+  if (/question existe d[ée]j[àa].*section/i.test(message)) {
+    return "Cette question existe déjà dans cette section. Veuillez choisir ou rédiger une autre question.";
+  }
+
   switch (code) {
     case 'INTERNAL_SERVER_ERROR':
       // Check message for specific issues

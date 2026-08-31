@@ -378,19 +378,8 @@ export function SurveyBuilderDemo({
           router.refresh();
         }
       } catch (caughtError) {
-        let errorMessage = "La mise à jour du sondage a échoué. Vérifiez le backend.";
-        
-        if (caughtError instanceof Error) {
-          if (caughtError.message.includes("fetch") || caughtError.message.includes("Backend")) {
-            errorMessage = "Impossible de joindre le serveur. Vérifiez que le backend est démarré.";
-          } else if (caughtError.message.includes("Délai")) {
-            errorMessage = caughtError.message;
-          } else {
-            errorMessage = caughtError.message;
-          }
-        }
-        
-        setError(errorMessage);
+        const errorInfo = parseApiError(caughtError);
+        setError(errorInfo.userMessage);
       } finally {
         mutationInFlightRef.current = false;
         setIsMutating(false);
@@ -1246,42 +1235,18 @@ export function SurveyBuilderDemo({
       return;
     }
 
-    runMutation<{ id: number }>(
-      () =>
-        getTrpcClient().adminSurveys.createQuestion.mutate({
-          campaignId,
-          sectionId: getSectionIdBeforeIndex(questions, questions.length),
-          title: template.title,
-          type,
-          options: template.options,
-          orderIndex: questions.length,
-        }),
-      "Question ajoutée.",
-      () =>
-        setQuestions((current) => [
-          ...current,
-          {
-            ...template,
-            id: temporaryId,
-            documentId: temporaryId,
-            sectionId: getSectionIdBeforeIndex(current, current.length),
-          },
-        ]),
-      (result) => {
-        setQuestions((current) =>
-          current.map((question) =>
-            question.id === temporaryId
-              ? {
-                  ...question,
-                  id: String(result.id),
-                  documentId: `question-${result.id}`,
-                }
-              : question,
-          ),
-        );
+    setError(null);
+    setFeedback("Rédigez la question, puis cliquez sur enregistrer.");
+    setQuestions((current) => [
+      ...current,
+      {
+        ...template,
+        id: temporaryId,
+        documentId: temporaryId,
+        title: "",
+        sectionId: getSectionIdBeforeIndex(current, current.length),
       },
-      mode === "edit",
-    );
+    ]);
   }
 
   function isSuggestionAlreadyAdded(suggestion: QuestionSuggestion) {
@@ -1495,6 +1460,55 @@ export function SurveyBuilderDemo({
 
     if (question.type === "scale" && sanitizedOptions.length !== 5) {
       setError("L'échelle doit contenir cinq libellés.");
+      return;
+    }
+
+    const normalizedTitle = trimmedQuestionTitle.toLocaleLowerCase("fr");
+    const duplicateInSection = questions.some(
+      (candidate) =>
+        candidate.id !== question.id &&
+        candidate.type !== "section" &&
+        candidate.sectionId === question.sectionId &&
+        candidate.title.trim().toLocaleLowerCase("fr") === normalizedTitle,
+    );
+
+    if (duplicateInSection) {
+      setError(
+        "Cette question existe déjà dans cette section. Veuillez choisir ou rédiger une autre question.",
+      );
+      return;
+    }
+
+    if (!Number.isFinite(Number(question.id))) {
+      runMutation<{ id: number }>(
+        () =>
+          getTrpcClient().adminSurveys.createQuestion.mutate({
+            campaignId: campaignId!,
+            sectionId: question.sectionId ?? null,
+            title: trimmedQuestionTitle,
+            type: question.type === "section" ? "text" : question.type,
+            options:
+              question.type === "choice" || question.type === "scale"
+                ? sanitizedOptions
+                : undefined,
+            orderIndex: index,
+          }),
+        "Question ajoutée.",
+        undefined,
+        (result) =>
+          setQuestions((current) =>
+            current.map((candidate) =>
+              candidate.id === question.id
+                ? {
+                    ...candidate,
+                    id: String(result.id),
+                    documentId: `question-${result.id}`,
+                  }
+                : candidate,
+            ),
+          ),
+        mode === "edit",
+      );
       return;
     }
 
