@@ -1,16 +1,19 @@
-const PRIVACY_RESOURCES_URL = "#";
+const PRIVACY_RESOURCES_URL = "https://laroche360.odoo.com/ressources-d-aide";
+const PRIVACY_URL = "https://laroche360.odoo.com/confidentialite";
 
 export function SurveyPrivacyFooter() {
   return (
     <footer className="border-t border-slate-200 pt-4 text-center text-xs leading-5 text-slate-500">
-      Voici les ressources confidentialité, pour savoir plus{" "}
       <a
         href={PRIVACY_RESOURCES_URL}
-        className="font-semibold text-slate-700 underline underline-offset-2"
+        className="underline-offset-2 hover:underline"
       >
-        cliquez-ici
+        Ressources d'aide
       </a>
-      .
+      {" · "}
+      <a href={PRIVACY_URL} className="underline-offset-2 hover:underline">
+        Confidentialité
+      </a>
     </footer>
   );
 }
