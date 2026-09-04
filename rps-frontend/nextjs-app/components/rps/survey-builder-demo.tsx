@@ -2729,6 +2729,9 @@ export function SurveyBuilderDemo({
             <span className="mt-5 inline-flex rounded-[10px] bg-[#111827] px-4 py-2 text-xs font-semibold text-white">
               Commencer le sondage
             </span>
+            <div className="mt-5">
+              <SurveyPrivacyFooter />
+            </div>
           </div>
 
           {previewSection ? (
@@ -2889,6 +2892,9 @@ export function SurveyBuilderDemo({
                 Aucun texte de conclusion renseigné.
               </p>
             )}
+            <div className="mt-5">
+              <SurveyPrivacyFooter />
+            </div>
           </div>
         </div>
       </Card>

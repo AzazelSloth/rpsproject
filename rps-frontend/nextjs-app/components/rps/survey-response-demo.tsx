@@ -92,6 +92,9 @@ export function SurveyResponseDemo({
         <p className="text-sm font-semibold text-emerald-800">
           Ce sondage a déjà  été complété.
         </p>
+        <div className="mt-5">
+          <SurveyPrivacyFooter />
+        </div>
       </Card>
     );
   }
@@ -114,6 +117,9 @@ export function SurveyResponseDemo({
         <PrimaryButton className="mt-8 sm:w-auto" onClick={() => setHasStarted(true)}>
           Commencer le sondage
         </PrimaryButton>
+        <div className="mt-8">
+          <SurveyPrivacyFooter />
+        </div>
       </Card>
     );
   }
