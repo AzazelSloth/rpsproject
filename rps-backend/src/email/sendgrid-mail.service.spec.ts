@@ -111,6 +111,28 @@ describe('SendGridMailService', () => {
     );
   });
 
+  it('formats survey dates in full French words', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 202 }));
+
+    await new SendGridMailService().sendSurveyInvitations([
+      {
+        ...recipient,
+        start_date: '2026-09-02',
+        end_date: '2026-09-30',
+      },
+    ]);
+
+    const invitationBody = getFetchBody(fetchMock, 0);
+    expect(
+      invitationBody.personalizations[0].dynamic_template_data,
+    ).toMatchObject({
+      startDate: '2 septembre 2026',
+      endDate: '30 septembre 2026',
+    });
+  });
+
   it('normalizes a SendGrid template id without d-prefix', async () => {
     process.env.SENDGRID_INVITATION_TEMPLATE_ID =
       '29ae7d6438ff4c24b8b179a840fd15a4';
