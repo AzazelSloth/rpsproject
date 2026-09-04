@@ -7,7 +7,7 @@ export function SurveyPrivacyFooter() {
       <a
         href={PRIVACY_RESOURCES_URL}
         target="_blank"
-        className="underline-offset-2 hover:underline"
+        className="underline-offset-2 hover:!underline"
       >
         Ressources d'aide
       </a>
@@ -15,7 +15,7 @@ export function SurveyPrivacyFooter() {
       <a
         href={PRIVACY_URL}
         target="_blank"
-        className="underline-offset-2 hover:underline"
+        className="underline-offset-2 hover:!underline"
       >
         Confidentialité
       </a>
