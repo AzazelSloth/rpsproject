@@ -33,7 +33,9 @@ export function getTrpcClient() {
               appFetch(String(url), {
                 ...options,
                 // 2 minutes timeout for large imports
-                signal: AbortSignal.timeout(120000),
+                signal: AbortSignal.timeout(
+                  String(url).includes("surveyResponses.saveDraft") ? 15000 : 120000,
+                ),
               })
             );
           },

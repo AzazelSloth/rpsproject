@@ -1,3 +1,5 @@
+import type { BackendSurveyDraft } from "@/lib/responses/survey-draft";
+
 export type BackendCompany = {
   id: number;
   name: string;
@@ -75,6 +77,8 @@ export type BackendReport = {
 };
 
 export type BackendQuestionnaire = {
+  draft?: BackendSurveyDraft | null;
+  draft_revision?: number;
   token: string;
   status: string;
   completed_at: string | null;
@@ -106,7 +110,7 @@ export type BackendQuestionnaire = {
 export type BackendCampaignParticipant = {
   id: number;
   participation_token: string;
-  status: "pending" | "reminded" | "completed";
+  status: "pending" | "in_progress" | "reminded" | "completed";
   invitation_sent_at: string | null;
   reminder_sent_at: string | null;
   completed_at: string | null;
@@ -125,6 +129,7 @@ export type BackendCampaignProgress = {
   total_participants: number;
   completed_participants: number;
   pending_participants: number;
+  in_progress_participants: number;
   reminded_participants: number;
   participation_rate: number;
   participants: BackendCampaignParticipant[];

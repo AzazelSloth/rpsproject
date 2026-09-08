@@ -14,9 +14,20 @@ import { Employee } from '../employee/employee.entity';
 
 export enum CampaignParticipantStatus {
   PENDING = 'pending',
+  IN_PROGRESS = 'in_progress',
   REMINDED = 'reminded',
   COMPLETED = 'completed',
 }
+
+export type ParticipationDraft = {
+  responses: Array<{
+    question_id: number;
+    answer: string | null;
+    response_state: 'answered' | 'declined';
+  }>;
+  current_section: number;
+  started: boolean;
+};
 
 @Entity({ name: 'campaign_participants' })
 @Unique(['campaign', 'employee'])
@@ -58,6 +69,13 @@ export class CampaignParticipant {
 
   @Column({ type: 'timestamp', nullable: true })
   completed_at!: Date | null;
+
+  // Draft answers are only selected by the respondent's token routes.
+  @Column({ type: 'jsonb', nullable: true, select: false })
+  draft!: ParticipationDraft | null;
+
+  @Column({ type: 'int', default: 0, select: false })
+  draft_revision!: number;
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at!: Date;

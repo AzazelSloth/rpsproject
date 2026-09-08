@@ -3218,6 +3218,7 @@ function toAbsoluteSurveyUrl(value: string) {
 }
 
 function formatParticipantStatus(status?: string) {
+  if (status === "in_progress") return "En cours";
   if (status === "completed") {
     return "Complété";
   }

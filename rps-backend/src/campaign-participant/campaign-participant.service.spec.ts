@@ -20,6 +20,7 @@ describe('CampaignParticipantService survey submission', () => {
   let service: CampaignParticipantService;
   let participantRepository: {
     findOne: jest.Mock;
+    find: jest.Mock;
     save: jest.Mock;
   };
   let questionRepository: { find: jest.Mock };
@@ -29,6 +30,7 @@ describe('CampaignParticipantService survey submission', () => {
     save: jest.Mock;
   };
   let employeeRepository: { save: jest.Mock };
+  let campaignRepository: { findOne: jest.Mock };
 
   beforeEach(async () => {
     const participant = {
@@ -43,6 +45,7 @@ describe('CampaignParticipantService survey submission', () => {
 
     participantRepository = {
       findOne: jest.fn().mockResolvedValue(participant),
+      find: jest.fn().mockResolvedValue([participant]),
       save: jest.fn().mockImplementation((value) => Promise.resolve(value)),
     };
     questionRepository = {
@@ -50,12 +53,13 @@ describe('CampaignParticipantService survey submission', () => {
     };
     responseRepository = {
       find: jest.fn().mockResolvedValue([]),
-      create: jest.fn().mockImplementation((value) => value),
+      create: jest.fn().mockImplementation((value: unknown) => value),
       save: jest.fn().mockImplementation((value) => Promise.resolve(value)),
     };
     employeeRepository = {
       save: jest.fn().mockImplementation((value) => Promise.resolve(value)),
     };
+    campaignRepository = { findOne: jest.fn() };
 
     const manager = {
       getRepository: jest.fn((entity) => {
@@ -67,7 +71,10 @@ describe('CampaignParticipantService survey submission', () => {
       }),
     };
     const dataSource = {
-      transaction: jest.fn((callback) => callback(manager)),
+      transaction: jest.fn(
+        (callback: (transactionManager: typeof manager) => unknown) =>
+          callback(manager),
+      ),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -91,7 +98,7 @@ describe('CampaignParticipantService survey submission', () => {
         },
         {
           provide: getRepositoryToken(Campaign),
-          useValue: {},
+          useValue: campaignRepository,
         },
         { provide: DataSource, useValue: dataSource },
         { provide: SendGridMailService, useValue: {} },
@@ -187,5 +194,153 @@ describe('CampaignParticipantService survey submission', () => {
         declined_response_count: 0,
       }),
     );
+  });
+
+  const draftPayload = () => ({
+    revision: 0,
+    current_section: 1,
+    started: true,
+    responses: [
+      {
+        question_id: 31,
+        answer: ' unfinished ',
+        response_state: 'answered' as const,
+      },
+    ],
+  });
+
+  it('saves a draft separately without completing or publishing any responses', async () => {
+    const result = await service.saveDraftByToken(
+      'participant-token',
+      draftPayload(),
+    );
+    expect(result).toMatchObject({
+      saved: true,
+      revision: 1,
+      completed: false,
+    });
+    expect(participantRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: CampaignParticipantStatus.IN_PROGRESS,
+        completed_at: null,
+        draft: expect.objectContaining({
+          current_section: 1,
+          responses: [
+            {
+              question_id: 31,
+              answer: ' unfinished ',
+              response_state: 'answered',
+            },
+          ],
+        }),
+      }),
+    );
+    expect(responseRepository.save).not.toHaveBeenCalled();
+    expect(employeeRepository.save).not.toHaveBeenCalled();
+    expect(participantRepository.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lock: { mode: 'pessimistic_write', tables: ['campaign_participants'] },
+      }),
+    );
+  });
+
+  it('returns the current draft on a stale revision without overwriting it', async () => {
+    const participant =
+      (await participantRepository.findOne()) as CampaignParticipant;
+    participant.draft_revision = 5;
+    participant.draft = { responses: [], current_section: 2, started: true };
+    const result = await service.saveDraftByToken(
+      'participant-token',
+      draftPayload(),
+    );
+    expect(result).toMatchObject({
+      saved: false,
+      revision: 5,
+      draft: participant.draft,
+    });
+    expect(participantRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects missing tokens, duplicate questions and foreign campaign questions', async () => {
+    participantRepository.findOne.mockResolvedValueOnce(null);
+    await expect(
+      service.saveDraftByToken('missing', draftPayload()),
+    ).rejects.toThrow('Participation link not found');
+    const payload = draftPayload();
+    await expect(
+      service.saveDraftByToken('participant-token', {
+        ...payload,
+        responses: [...payload.responses, ...payload.responses],
+      }),
+    ).rejects.toThrow('Each question can only be answered once');
+    questionRepository.find.mockResolvedValueOnce([]);
+    await expect(
+      service.saveDraftByToken('participant-token', payload),
+    ).rejects.toThrow('must belong');
+    expect(participantRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('keeps an unfinished participation eligible for reminders with the same token', async () => {
+    await service.saveDraftByToken('participant-token', draftPayload());
+    const result = await service.getCampaignProgress(12);
+    expect(result).toMatchObject({
+      completed_participants: 0,
+      in_progress_participants: 1,
+      participation_rate: 0,
+    });
+    // Both reminder listing paths exclude only completed participants.
+    const participant =
+      (await participantRepository.findOne()) as CampaignParticipant;
+    participant.employee.first_name = 'Test';
+    participant.employee.email = 'test@example.com';
+    campaignRepository.findOne = jest.fn().mockResolvedValue({
+      id: 12,
+      name: 'Survey',
+      company: { name: 'Company' },
+    });
+    const reminders = await service.getPendingReminders(12);
+    expect(reminders.participants).toHaveLength(1);
+    expect(reminders.participants[0]).toMatchObject({ status: 'in_progress' });
+    expect(reminders.participants[0].survey_url).toContain(
+      '/survey-response/participant-token',
+    );
+  });
+
+  it('final submission clears the draft and subsequent autosaves cannot reopen it', async () => {
+    await service.saveDraftByToken('participant-token', draftPayload());
+    await service.submitByToken('participant-token', {
+      draft_revision: 1,
+      responses: [{ question_id: 31, answer: 'final answer' }],
+    });
+    const participant =
+      (await participantRepository.findOne()) as CampaignParticipant;
+    expect(participant).toMatchObject({
+      status: 'completed',
+      draft: null,
+      draft_revision: 2,
+    });
+    expect(responseRepository.save).toHaveBeenCalledWith([
+      expect.objectContaining({ answer: 'final answer' }),
+    ]);
+    const result = await service.saveDraftByToken('participant-token', {
+      ...draftPayload(),
+      revision: 2,
+    });
+    expect(result).toMatchObject({
+      saved: false,
+      completed: true,
+      draft: null,
+    });
+  });
+
+  it('refuses final submission from a stale session before creating responses', async () => {
+    await service.saveDraftByToken('participant-token', draftPayload());
+    await expect(
+      service.submitByToken('participant-token', {
+        draft_revision: 0,
+        responses: [{ question_id: 31, answer: 'stale' }],
+      }),
+    ).rejects.toThrow('another session');
+    expect(responseRepository.save).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsDate,
@@ -67,7 +68,12 @@ export class SubmitCampaignResponseItemDto {
   @IsNotEmpty()
   question_id: number;
 
-  @ApiProperty({ description: 'Reponse a la question', example: 'Ma reponse', required: false, nullable: true })
+  @ApiProperty({
+    description: 'Reponse a la question',
+    example: 'Ma reponse',
+    required: false,
+    nullable: true,
+  })
   @IsOptional()
   @IsString()
   @MaxLength(4000)
@@ -85,11 +91,35 @@ export class SubmitCampaignResponseItemDto {
 }
 
 export class SubmitCampaignResponsesDto {
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  draft_revision?: number;
+
   @ApiProperty({
     description: 'Liste des reponses au sondage',
     type: [SubmitCampaignResponseItemDto],
   })
   @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SubmitCampaignResponseItemDto)
+  responses: SubmitCampaignResponseItemDto[];
+}
+
+export class SaveCampaignDraftDto {
+  @IsInt()
+  @Min(0)
+  revision: number;
+
+  @IsInt()
+  @Min(0)
+  current_section: number;
+
+  @IsBoolean()
+  started: boolean;
+
+  @IsArray()
+  @ArrayMaxSize(1000)
   @ValidateNested({ each: true })
   @Type(() => SubmitCampaignResponseItemDto)
   responses: SubmitCampaignResponseItemDto[];

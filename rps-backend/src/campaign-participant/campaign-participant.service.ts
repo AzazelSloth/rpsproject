@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -32,6 +33,7 @@ import {
   MarkParticipantReminderDto,
   SendCampaignInvitationsDto,
   SendCampaignRemindersDto,
+  SaveCampaignDraftDto,
   SubmitCampaignResponsesDto,
   UpdateCampaignParticipantDto,
 } from './dto/campaign-participant.dto';
@@ -190,6 +192,14 @@ export class CampaignParticipantService {
 
   async getQuestionnaireByToken(token: string) {
     const participant = await this.campaignParticipantRepository.findOne({
+      select: {
+        id: true,
+        participation_token: true,
+        status: true,
+        completed_at: true,
+        draft: true,
+        draft_revision: true,
+      },
       where: {
         participation_token: token,
         employee: { deleted_at: IsNull() },
@@ -212,6 +222,8 @@ export class CampaignParticipantService {
       token: participant.participation_token,
       status: participant.status,
       completed_at: participant.completed_at,
+      draft: participant.completed_at ? null : (participant.draft ?? null),
+      draft_revision: participant.draft_revision ?? 0,
       employee: {
         id: participant.employee.id,
         first_name: participant.employee.first_name,
@@ -229,13 +241,15 @@ export class CampaignParticipantService {
         end_date: participant.campaign.end_date,
         company: participant.campaign.company,
       },
-      sections: [...(participant.campaign.question_sections ?? [])].sort((a, b) => {
-        if (a.order_index === b.order_index) {
-          return a.id - b.id;
-        }
+      sections: [...(participant.campaign.question_sections ?? [])].sort(
+        (a, b) => {
+          if (a.order_index === b.order_index) {
+            return a.id - b.id;
+          }
 
-        return a.order_index - b.order_index;
-      }),
+          return a.order_index - b.order_index;
+        },
+      ),
       questions: [...participant.campaign.questions].sort((a, b) => {
         if (a.order_index === b.order_index) {
           return a.id - b.id;
@@ -262,7 +276,8 @@ export class CampaignParticipantService {
         updateCampaignParticipantDto.reminder_sent_at;
       if (
         participant.reminder_sent_at &&
-        participant.status !== CampaignParticipantStatus.COMPLETED
+        participant.status !== CampaignParticipantStatus.COMPLETED &&
+        participant.status !== CampaignParticipantStatus.IN_PROGRESS
       ) {
         participant.status = CampaignParticipantStatus.REMINDED;
       }
@@ -284,17 +299,98 @@ export class CampaignParticipantService {
     }
   }
 
+  async saveDraftByToken(token: string, payload: SaveCampaignDraftDto) {
+    return this.dataSource.transaction(async (manager) => {
+      const repository = manager.getRepository(CampaignParticipant);
+      const participant = await repository.findOne({
+        select: {
+          id: true,
+          status: true,
+          completed_at: true,
+          draft: true,
+          draft_revision: true,
+        },
+        where: {
+          participation_token: token,
+          employee: { deleted_at: IsNull() },
+        },
+        relations: { campaign: true },
+        lock: { mode: 'pessimistic_write', tables: ['campaign_participants'] },
+      });
+      if (!participant)
+        throw new NotFoundException('Participation link not found');
+      if (
+        participant.completed_at ||
+        participant.status === CampaignParticipantStatus.COMPLETED
+      ) {
+        return {
+          saved: false,
+          completed: true,
+          revision: participant.draft_revision ?? 0,
+          draft: null,
+        };
+      }
+      if (payload.revision !== (participant.draft_revision ?? 0)) {
+        return {
+          saved: false,
+          completed: false,
+          revision: participant.draft_revision ?? 0,
+          draft: participant.draft ?? null,
+        };
+      }
+      const ids = payload.responses.map((item) => item.question_id);
+      if (new Set(ids).size !== ids.length) {
+        throw new BadRequestException(
+          'Each question can only be answered once',
+        );
+      }
+      const questions = ids.length
+        ? await manager.getRepository(Question).find({
+            where: { id: In(ids), campaign: { id: participant.campaign.id } },
+          })
+        : [];
+      if (questions.length !== ids.length) {
+        throw new BadRequestException(
+          'Submitted questions must belong to the participant campaign',
+        );
+      }
+      participant.draft = {
+        responses: payload.responses.map((item) => ({
+          question_id: item.question_id,
+          answer:
+            item.response_state === 'declined' ? null : (item.answer ?? ''),
+          response_state:
+            item.response_state === 'declined' ? 'declined' : 'answered',
+        })),
+        current_section: payload.current_section,
+        started: payload.started,
+      };
+      participant.draft_revision = (participant.draft_revision ?? 0) + 1;
+      participant.status = CampaignParticipantStatus.IN_PROGRESS;
+      await repository.save(participant);
+      return {
+        saved: true,
+        completed: false,
+        revision: participant.draft_revision,
+        draft: participant.draft,
+      };
+    });
+  }
+
   async submitByToken(token: string, payload: SubmitCampaignResponsesDto) {
     const submittedResponses = payload.responses ?? [];
     const normalizedResponses = submittedResponses.map((item) => {
-      const legacyDeclinedAnswer = item.answer?.trim() === 'Je préfère ne pas répondre';
+      const legacyDeclinedAnswer =
+        item.answer?.trim() === 'Je préfère ne pas répondre';
       const responseState =
-        item.response_state === SurveyResponseState.DECLINED || legacyDeclinedAnswer
+        item.response_state === SurveyResponseState.DECLINED ||
+        legacyDeclinedAnswer
           ? SurveyResponseState.DECLINED
           : SurveyResponseState.ANSWERED;
-      const answer = responseState === SurveyResponseState.DECLINED
-        ? null
-        : item.answer?.trim() || null;
+      const answer =
+        responseState === SurveyResponseState.DECLINED
+          ? null
+          : item.answer?.trim() || null;
 
       if (responseState === SurveyResponseState.ANSWERED && !answer) {
         throw new BadRequestException(
@@ -321,6 +417,13 @@ export class CampaignParticipantService {
       const questionRepository = manager.getRepository(Question);
       const responseRepository = manager.getRepository(SurveyResponse);
       const participant = await participantRepository.findOne({
+        select: {
+          id: true,
+          status: true,
+          completed_at: true,
+          draft_revision: true,
+        },
+        lock: { mode: 'pessimistic_write', tables: ['campaign_participants'] },
         where: {
           participation_token: token,
           employee: { deleted_at: IsNull() },
@@ -338,6 +441,15 @@ export class CampaignParticipantService {
       if (participant.completed_at) {
         throw new BadRequestException(
           'This participation link has already been used',
+        );
+      }
+
+      if (
+        payload.draft_revision !== undefined &&
+        payload.draft_revision !== (participant.draft_revision ?? 0)
+      ) {
+        throw new ConflictException(
+          'The questionnaire was modified in another session',
         );
       }
 
@@ -410,6 +522,8 @@ export class CampaignParticipantService {
 
       participant.completed_at = new Date();
       participant.status = CampaignParticipantStatus.COMPLETED;
+      participant.draft = null;
+      participant.draft_revision = (participant.draft_revision ?? 0) + 1;
       participant.employee.status = 'OK';
 
       try {
@@ -467,6 +581,10 @@ export class CampaignParticipantService {
         total_participants: total,
         completed_participants: completed,
         pending_participants: pending,
+        in_progress_participants: participants.filter(
+          (participant) =>
+            participant.status === CampaignParticipantStatus.IN_PROGRESS,
+        ).length,
         reminded_participants: reminded,
         participation_rate:
           total === 0 ? 0 : Number(((completed / total) * 100).toFixed(2)),
@@ -971,7 +1089,10 @@ export class CampaignParticipantService {
     }
 
     try {
-      await this.campaignParticipantRepository.save(sentParticipants);
+      await this.campaignParticipantRepository.update(
+        { id: In(sentParticipants.map((participant) => participant.id)) },
+        { invitation_sent_at: invitationDate },
+      );
     } catch (error) {
       throwPersistenceError(error, {
         defaultMessage: 'Failed to update invitation send timestamps',
@@ -1103,10 +1224,8 @@ export class CampaignParticipantService {
     for (const participant of sentParticipants) {
       participant.reminder_sent_at = reminderDate;
       participant.reminder_count = (participant.reminder_count ?? 0) + 1;
-      participant.status = CampaignParticipantStatus.REMINDED;
+      await this.recordReminder(participant);
     }
-
-    await this.campaignParticipantRepository.save(sentParticipants);
 
     return {
       success: sendGridResult.failed.length === 0,
@@ -1225,9 +1344,8 @@ export class CampaignParticipantService {
       : new Date();
     participant.reminder_count =
       payload.reminder_count ?? (participant.reminder_count ?? 0) + 1;
-    participant.status = CampaignParticipantStatus.REMINDED;
-
-    const saved = await this.campaignParticipantRepository.save(participant);
+    await this.recordReminder(participant);
+    const saved = participant;
 
     return {
       updated: true,
@@ -1236,6 +1354,30 @@ export class CampaignParticipantService {
       reminder_count: saved.reminder_count,
       status: saved.status,
     };
+  }
+
+  private async recordReminder(participant: CampaignParticipant) {
+    // The email may finish sending after a draft save or final submission.
+    // Update only reminder fields and preserve the current database status.
+    const result = await this.campaignParticipantRepository
+      .createQueryBuilder()
+      .update(CampaignParticipant)
+      .set({
+        reminder_sent_at: participant.reminder_sent_at,
+        reminder_count: participant.reminder_count,
+        status: () =>
+          `CASE WHEN "status" = 'in_progress' THEN 'in_progress' ELSE 'reminded' END`,
+      })
+      .where('id = :id', { id: participant.id })
+      .andWhere('completed_at IS NULL')
+      .andWhere('status != :completed', {
+        completed: CampaignParticipantStatus.COMPLETED,
+      })
+      .returning(['status'])
+      .execute();
+    const row = (result.raw as Array<{ status: CampaignParticipantStatus }>)[0];
+    if (row) participant.status = row.status;
+    else participant.status = CampaignParticipantStatus.COMPLETED;
   }
 
   private formatReminderParticipant(
@@ -1420,19 +1562,11 @@ export class CampaignParticipantService {
         rows.push({
           email,
           first_name:
-            (
-              row.first_name ??
-              row.prenom ??
-              derivedFirstName ??
-              ''
-            ).trim() || undefined,
+            (row.first_name ?? row.prenom ?? derivedFirstName ?? '').trim() ||
+            undefined,
           last_name:
-            (
-              row.last_name ??
-              row.nom ??
-              derivedLastName ??
-              ''
-            ).trim() || undefined,
+            (row.last_name ?? row.nom ?? derivedLastName ?? '').trim() ||
+            undefined,
           phone: (row.phone ?? '').trim() || undefined,
           status: (row.status ?? row.statut ?? '').trim() || undefined,
           department:

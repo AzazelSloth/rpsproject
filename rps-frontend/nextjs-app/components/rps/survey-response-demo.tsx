@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { CloudCheck, CloudOff, LoaderCircle, Save } from "lucide-react";
+import { useSurveyDraft } from "@/components/rps/use-survey-draft";
+import type { BackendSurveyDraft } from "@/lib/responses/survey-draft";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import { SurveyPrivacyFooter } from "@/components/rps/survey-privacy-footer";
 import {
@@ -23,6 +26,8 @@ export function SurveyResponseDemo({
   conclusionText,
   status,
   completedAt,
+  initialDraft,
+  draftRevision = 0,
   questions,
 }: {
   participantToken?: string | null;
@@ -35,23 +40,32 @@ export function SurveyResponseDemo({
   conclusionText?: string;
   status?: string;
   completedAt?: string | null;
+  initialDraft?: BackendSurveyDraft | null;
+  draftRevision?: number;
   questions: SurveyQuestion[];
 }) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [hasStarted, setHasStarted] = useState(() => !introductionText?.trim());
   const [submitted, setSubmitted] = useState(false);
-  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const isCompleted = Boolean(completedAt) || submitted;
   const answerableQuestions = useMemo(
     () => questions.filter((question) => question.type !== "section"),
     [questions],
   );
   const surveySections = useMemo(() => buildSurveySections(questions), [questions]);
-  const currentSection = surveySections[currentSectionIndex] ?? surveySections[0];
   const hasConclusionPage = Boolean(conclusionText?.trim());
   const totalSteps = surveySections.length + (hasConclusionPage ? 1 : 0);
+  const sectionQuestionIds = useMemo(() => surveySections.map((section) =>
+    section.items.filter(({ question }) => question.type !== "section").map(({ question }) => question.id),
+  ), [surveySections]);
+  const persistence = useSurveyDraft({
+    token: participantToken, initialDraft, revision: draftRevision,
+    completed: Boolean(completedAt), started: !introductionText?.trim(),
+    sections: sectionQuestionIds, totalSteps,
+  });
+  const { answers, currentSection: currentSectionIndex, started: hasStarted } = persistence.draft;
+  const { setAnswers, setCurrentSectionIndex, setHasStarted } = persistence;
+  const isCompleted = Boolean(completedAt) || submitted || persistence.completed;
+  const currentSection = surveySections[currentSectionIndex] ?? surveySections[0];
   const isConclusionStep = hasConclusionPage && currentSectionIndex === surveySections.length;
   const isFinalStep = currentSectionIndex === totalSteps - 1;
 
@@ -63,19 +77,21 @@ export function SurveyResponseDemo({
     setSubmitError(null);
 
     startTransition(async () => {
-      const payloadAnswers = buildSurveySubmissionAnswers(
-        answerableQuestions.map((question) => question.id),
-        answers,
-      );
-
       try {
+        if (participantToken && !(await persistence.save())) return;
+        const snapshot = persistence.getSnapshot();
+        const payloadAnswers = buildSurveySubmissionAnswers(
+          answerableQuestions.map((question) => question.id), snapshot.draft.answers,
+        );
         await getTrpcClient().surveyResponses.submit.mutate({
             participantToken,
             employeeId,
+            draftRevision: snapshot.revision,
             answers: payloadAnswers,
         });
 
         setSubmitted(true);
+        persistence.finish();
       } catch (error) {
         const message =
           error instanceof Error && error.message
@@ -114,7 +130,7 @@ export function SurveyResponseDemo({
         <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-slate-700">
           {introductionText.trim()}
         </p>
-        <PrimaryButton className="mt-8 sm:w-auto" onClick={() => setHasStarted(true)}>
+        <PrimaryButton className="mt-8 sm:w-auto" disabled={!persistence.ready} onClick={() => setHasStarted(true)}>
           Commencer le sondage
         </PrimaryButton>
         <div className="mt-8">
@@ -126,6 +142,7 @@ export function SurveyResponseDemo({
 
   return (
     <Card className="mx-auto max-w-3xl p-6 sm:p-8">
+      <fieldset disabled={!persistence.ready || isPending} className="contents">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
@@ -270,6 +287,7 @@ export function SurveyResponseDemo({
               </div>
             ) : (
               <textarea
+                maxLength={4000}
                 value={
                   isPreferNotToAnswer(answers[question.id])
                     ? ""
@@ -326,6 +344,20 @@ export function SurveyResponseDemo({
         >
           Précédente
         </SecondaryButton>
+        {participantToken ? (
+          <SecondaryButton
+            className={`sm:w-auto ${persistence.state === "error" ? "!bg-rose-700" : ""}`}
+            aria-label="Enregistrer"
+            title="Enregistrer"
+            aria-busy={persistence.state === "saving"}
+            onClick={() => { void persistence.save(); }}
+          >
+            {persistence.state === "saving" ? <LoaderCircle aria-hidden className="h-5 w-5 animate-spin" />
+              : persistence.state === "saved" ? <CloudCheck aria-hidden className="h-5 w-5" />
+              : persistence.state === "error" ? <CloudOff aria-hidden className="h-5 w-5" />
+              : <Save aria-hidden className="h-5 w-5" />}
+          </SecondaryButton>
+        ) : null}
         {isFinalStep ? <PrimaryButton
           className="sm:w-auto"
           disabled={isPending || !answerableQuestions.length}
@@ -351,6 +383,7 @@ export function SurveyResponseDemo({
           <span className="text-sm font-medium text-rose-700">{submitError}</span>
         ) : null}
       </div>
+      </fieldset>
     </Card>
   );
 }

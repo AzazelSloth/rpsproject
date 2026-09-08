@@ -254,7 +254,8 @@ async function backendFetchWithRetry<T>(
 }
 
 async function backendFetch<T>(path: string, init?: RequestInit) {
-  const requestKey = isReadRequest(init) ? buildReadRequestKey(path, init) : null;
+  const requestKey = isReadRequest(init) && !path.startsWith("/campaign-participants/token/")
+    ? buildReadRequestKey(path, init) : null;
 
   if (requestKey) {
     const cachedValue = getCachedReadValue<T>(requestKey, READ_CACHE_TTL_MS);

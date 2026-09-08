@@ -22,6 +22,7 @@ import {
 	getAllSurveys,
 } from "@/lib/repositories/rps-repository";
 import type { BackendCampaign } from "@/lib/backend/types";
+import type { SaveDraftResult } from "@/lib/responses/survey-draft";
 
 const t = initTRPC.create();
 
@@ -436,11 +437,29 @@ const campaignParticipantsRouter = t.router({
 });
 
 const surveyResponsesRouter = t.router({
+	saveDraft: t.procedure.input(z.object({
+		participantToken: z.string().min(1),
+		revision: z.number().int().min(0),
+		current_section: z.number().int().min(0),
+		started: z.boolean(),
+		responses: z.array(z.object({
+			question_id: z.number().int().positive(),
+			answer: z.string().max(4000).nullable(),
+			response_state: z.enum(["answered", "declined"]),
+		})).max(1000),
+	})).mutation(({ input }) => {
+		ensureBackendConfigured();
+		const { participantToken, ...draft } = input;
+		return postBackend<SaveDraftResult, typeof draft>(
+			`/campaign-participants/token/${encodeURIComponent(participantToken)}/draft`, draft,
+		);
+	}),
 	submit: t.procedure
 		.input(
 			z.object({
 				participantToken: z.string().optional().nullable(),
 				employeeId: z.number().int().positive().optional().nullable(),
+				draftRevision: z.number().int().min(0).optional(),
 				answers: z.array(
 					z.object({
 						questionId: z.number().int().positive(),
@@ -461,6 +480,7 @@ const surveyResponsesRouter = t.router({
 			}
 
 			await postBackend(`/campaign-participants/token/${input.participantToken}/submit`, {
+				draft_revision: input.draftRevision,
 				responses: input.answers.map((answer) => ({
 					question_id: answer.questionId,
 					answer: answer.answer,

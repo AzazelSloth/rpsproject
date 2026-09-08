@@ -89,7 +89,7 @@ export function EmployeesTableDemo({
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>(
     defaultCampaignId ? String(defaultCampaignId) : "",
   );
-  const [filter, setFilter] = useState<"all" | "completed" | "pending" | "reminded">("all");
+  const [filter, setFilter] = useState<"all" | "completed" | "in_progress" | "pending" | "reminded">("all");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -641,7 +641,7 @@ export function EmployeesTableDemo({
             <select
               value={filter}
               onChange={(event) =>
-                setFilter(event.target.value as "all" | "completed" | "pending" | "reminded")
+                setFilter(event.target.value as "all" | "completed" | "in_progress" | "pending" | "reminded")
               }
               className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
             >
@@ -649,6 +649,7 @@ export function EmployeesTableDemo({
               <option value="completed">Complétés</option>
               <option value="pending">En attente</option>
               <option value="reminded">Relancés</option>
+              <option value="in_progress">En cours</option>
             </select>
           </div>
         </div>
@@ -845,7 +846,8 @@ function truncateMessage(value: string, maxLength = 260) {
   return `${value.slice(0, maxLength - 1)}...`;
 }
 
-function formatParticipantStatusLabel(value: "pending" | "reminded" | "completed") {
+function formatParticipantStatusLabel(value: "pending" | "in_progress" | "reminded" | "completed") {
+  if (value === "in_progress") return "En cours";
   if (value === "pending") {
     return "En attente";
   }

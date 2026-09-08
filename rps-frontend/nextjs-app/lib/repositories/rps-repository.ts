@@ -65,6 +65,8 @@ type ResultsData = {
 };
 
 type SurveyResponseData = {
+  draft?: BackendQuestionnaire["draft"];
+  draftRevision?: number;
   participantToken: string | null;
   employeeId: number | null;
   employeeName: string;
@@ -84,7 +86,7 @@ export type CampaignParticipantRecord = {
   name: string;
   email: string;
   department: string;
-  status: "pending" | "reminded" | "completed";
+  status: "pending" | "in_progress" | "reminded" | "completed";
   responseStatus: EmployeeRecord["responseStatus"];
   invitationSentAt: string | null;
   reminderSentAt: string | null;
@@ -595,6 +597,8 @@ function mapCampaignParticipantRecord(
 
 function mapBackendQuestionnaire(entry: BackendQuestionnaire): SurveyResponseData {
   return {
+    draft: entry.draft,
+    draftRevision: entry.draft_revision ?? 0,
     participantToken: entry.token,
     employeeId: entry.employee.id,
     employeeName: `${entry.employee.first_name} ${entry.employee.last_name}`.trim(),

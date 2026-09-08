@@ -15,6 +15,7 @@ import {
   ImportCampaignEmployeesDto,
   SendCampaignInvitationsDto,
   SendCampaignRemindersDto,
+  SaveCampaignDraftDto,
   SubmitCampaignResponsesDto,
   UpdateCampaignParticipantDto,
 } from './dto/campaign-participant.dto';
@@ -49,6 +50,14 @@ export class CampaignParticipantController {
     @Body() payload: SubmitCampaignResponsesDto,
   ) {
     return this.campaignParticipantService.submitByToken(token, payload);
+  }
+
+  @Post('token/:token/draft')
+  saveDraftByToken(
+    @Param('token') token: string,
+    @Body() payload: SaveCampaignDraftDto,
+  ) {
+    return this.campaignParticipantService.saveDraftByToken(token, payload);
   }
 
   // Protected routes (admin only)
