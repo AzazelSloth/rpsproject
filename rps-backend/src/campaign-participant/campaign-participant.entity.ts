@@ -9,6 +9,7 @@ import {
   Unique,
 } from 'typeorm';
 import { randomUUID } from 'crypto';
+import { Exclude } from 'class-transformer';
 import { Campaign } from '../campaign/campaign.entity';
 import { Employee } from '../employee/employee.entity';
 
@@ -68,7 +69,16 @@ export class CampaignParticipant {
   reminder_count!: number;
 
   @Column({ type: 'timestamp', nullable: true })
+  @Exclude()
   completed_at!: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true, select: false })
+  @Exclude()
+  timing_started_at!: Date | null;
+
+  @Column({ type: 'jsonb', default: () => "'[]'::jsonb", select: false })
+  @Exclude()
+  timing_intervals!: Array<{ start: number; end: number }>;
 
   // Draft answers are only selected by the respondent's token routes.
   @Column({ type: 'jsonb', nullable: true, select: false })

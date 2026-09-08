@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  ForbiddenException,
+  Req,
   Param,
   ParseIntPipe,
   Patch,
@@ -16,10 +18,12 @@ import {
   SendCampaignInvitationsDto,
   SendCampaignRemindersDto,
   SaveCampaignDraftDto,
+  SaveSurveyTimingDto,
   SubmitCampaignResponsesDto,
   UpdateCampaignParticipantDto,
 } from './dto/campaign-participant.dto';
-import { AuthGuard } from '../auth/auth.guard';
+import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
+import { isSurveyTimingAllowedEmail } from '../auth/admin-access.config';
 
 @Controller('campaign-participants')
 export class CampaignParticipantController {
@@ -61,6 +65,25 @@ export class CampaignParticipantController {
   }
 
   // Protected routes (admin only)
+  @Post('token/:token/timing')
+  saveTimingByToken(
+    @Param('token') token: string,
+    @Body() payload: SaveSurveyTimingDto,
+  ) {
+    return this.campaignParticipantService.saveTimingByToken(token, payload);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('campaign/:campaignId/timing')
+  getCampaignTiming(
+    @Param('campaignId', ParseIntPipe) campaignId: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    if (!isSurveyTimingAllowedEmail(req.user.email))
+      throw new ForbiddenException();
+    return this.campaignParticipantService.getCampaignTiming(campaignId);
+  }
+
   @UseGuards(AuthGuard)
   @Post()
   @ApiBody({ type: CreateCampaignParticipantDto })

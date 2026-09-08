@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Card, Pill } from "@/components/rps/ui";
 import { formatTrpcError, getTrpcClient } from "@/lib/trpc/client";
 import type { SurveyOption } from "@/lib/repositories/rps-repository";
+import { Clock } from 'lucide-react';
+import { SurveyTimingDialog } from '@/components/rps/survey-timing-dialog';
 
 const STATUS_FILTERS = [
   { value: "all", label: "Tous les statuts" },
@@ -19,10 +21,12 @@ export function SurveyListTable({
   surveys,
   scenario,
   canDeleteTestSurveys = false,
+  canViewTiming = false,
 }: {
   surveys: SurveyOption[];
   scenario?: string | null;
   canDeleteTestSurveys?: boolean;
+  canViewTiming?: boolean;
 }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState("all");
@@ -30,6 +34,7 @@ export function SurveyListTable({
   const [deletingSurveyId, setDeletingSurveyId] = useState<number | null>(null);
   const [surveyPendingDeletion, setSurveyPendingDeletion] = useState<SurveyOption | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [timingCampaign, setTimingCampaign] = useState<number | null>(null);
 
   const filteredSurveys = useMemo(() => {
     const normalizedQuery = normalizeSearchText(searchQuery);
@@ -62,6 +67,7 @@ export function SurveyListTable({
 
   return (
     <>
+    {canViewTiming && timingCampaign !== null ? <SurveyTimingDialog campaignId={timingCampaign} onClose={() => setTimingCampaign(null)} /> : null}
     <Card className="overflow-hidden">
       <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 sm:flex-row sm:justify-end">
        
@@ -102,6 +108,7 @@ export function SurveyListTable({
               <th className="px-6 py-4">Date de début</th>
               <th className="px-6 py-4">Date de fin</th>
               <th className="px-6 py-4">Résultats</th>
+              {canViewTiming ? <th className="px-6 py-4">Horotateur</th> : null}
               {canDeleteTestSurveys ? <th className="px-6 py-4">Action</th> : null}
             </tr>
           </thead>
@@ -152,6 +159,11 @@ export function SurveyListTable({
                         Voir les résultats
                       </Link>
                     </td>
+                    {canViewTiming ? <td className="px-6 py-4">
+                      <button type="button" aria-label="Horotateur" title="Horotateur"
+                        className="rounded-[12px] border border-slate-200 p-3 hover:bg-slate-50"
+                        onClick={() => setTimingCampaign(survey.id)}><Clock className="h-5 w-5" aria-hidden /></button>
+                    </td> : null}
                     {canDeleteTestSurveys ? (
                       <td className="px-6 py-4">
                         <button
@@ -173,7 +185,7 @@ export function SurveyListTable({
             ) : (
               <tr className="border-t border-slate-100">
                 <td
-                  colSpan={canDeleteTestSurveys ? 7 : 6}
+                  colSpan={6 + Number(canDeleteTestSurveys) + Number(canViewTiming)}
                   className="px-6 py-12 text-center text-slate-500"
                 >
                   {surveys.length > 0

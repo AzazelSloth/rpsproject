@@ -2,6 +2,12 @@ export function normalizeAdminEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+export function isSurveyTimingAllowedEmail(email: string) {
+  return (process.env.SURVEY_TIMING_ALLOWED_EMAILS ??
+    'cathynomeniavo@gmail.com,toky.rao@gmail.com,genevieve.majorbr@gmail.com')
+    .split(',').map(normalizeAdminEmail).filter(Boolean).includes(normalizeAdminEmail(email));
+}
+
 export function getConfiguredAdminEmails() {
   return (process.env.ADMIN_ALLOWED_EMAILS ?? "")
     .split(",")

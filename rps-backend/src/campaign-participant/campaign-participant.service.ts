@@ -9,6 +9,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { Campaign } from '../campaign/campaign.entity';
+import { applyParticipationTiming } from './participation-timing';
+import { SaveSurveyTimingDto } from './dto/campaign-participant.dto';
 import { parseCsvDocument } from '../common/csv.util';
 import { throwPersistenceError } from '../common/database-error.util';
 import {
@@ -221,7 +223,7 @@ export class CampaignParticipantService {
     return {
       token: participant.participation_token,
       status: participant.status,
-      completed_at: participant.completed_at,
+      completed_at: null,
       draft: participant.completed_at ? null : (participant.draft ?? null),
       draft_revision: participant.draft_revision ?? 0,
       employee: {
@@ -377,6 +379,66 @@ export class CampaignParticipantService {
     });
   }
 
+  async saveTimingByToken(token: string, payload: SaveSurveyTimingDto) {
+    return this.dataSource.transaction(async (manager) => {
+      const repository = manager.getRepository(CampaignParticipant);
+      const participant = await repository.findOne({
+        select: {
+          id: true,
+          created_at: true,
+          completed_at: true,
+          timing_started_at: true,
+          timing_intervals: true,
+        },
+        where: {
+          participation_token: token,
+          employee: { deleted_at: IsNull() },
+        },
+        lock: { mode: 'pessimistic_write', tables: ['campaign_participants'] },
+      });
+      if (!participant)
+        throw new NotFoundException('Participation link not found');
+      applyParticipationTiming(participant, payload);
+      await repository.save(participant);
+      return { saved: true };
+    });
+  }
+
+  async getCampaignTiming(campaignId: number) {
+    const participants = await this.campaignParticipantRepository.find({
+      select: {
+        id: true,
+        status: true,
+        completed_at: true,
+        timing_started_at: true,
+        timing_intervals: true,
+      },
+      where: {
+        campaign: { id: campaignId },
+        employee: { deleted_at: IsNull() },
+      },
+      relations: { employee: true },
+      order: { id: 'ASC' },
+    });
+    return participants.map((participant) => ({
+      participant_id: participant.id,
+      employee_name:
+        [participant.employee.first_name, participant.employee.last_name]
+          .filter(Boolean)
+          .join(' ') || participant.employee.email,
+      started_at: participant.timing_started_at?.toISOString() ?? null,
+      completed_at: participant.completed_at?.toISOString() ?? null,
+      active_seconds: participant.timing_started_at
+        ? Math.floor(
+            (participant.timing_intervals ?? []).reduce(
+              (total, interval) => total + interval.end - interval.start,
+              0,
+            ) / 1000,
+          )
+        : null,
+    }));
+  }
+
   async submitByToken(token: string, payload: SubmitCampaignResponsesDto) {
     const submittedResponses = payload.responses ?? [];
     const normalizedResponses = submittedResponses.map((item) => {
@@ -419,6 +481,9 @@ export class CampaignParticipantService {
       const participant = await participantRepository.findOne({
         select: {
           id: true,
+          created_at: true,
+          timing_started_at: true,
+          timing_intervals: true,
           status: true,
           completed_at: true,
           draft_revision: true,
@@ -521,6 +586,7 @@ export class CampaignParticipantService {
       }
 
       participant.completed_at = new Date();
+      if (payload.timing) applyParticipationTiming(participant, payload.timing);
       participant.status = CampaignParticipantStatus.COMPLETED;
       participant.draft = null;
       participant.draft_revision = (participant.draft_revision ?? 0) + 1;
@@ -538,7 +604,7 @@ export class CampaignParticipantService {
       return {
         submitted: true,
         participant_id: participant.id,
-        completed_at: participant.completed_at,
+        completed_at: null,
         response_count: responses.length,
         answered_response_count: normalizedResponses.filter(
           (item) => item.response_state === SurveyResponseState.ANSWERED,

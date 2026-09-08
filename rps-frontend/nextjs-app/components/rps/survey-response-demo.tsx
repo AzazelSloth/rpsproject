@@ -59,12 +59,12 @@ export function SurveyResponseDemo({
   ), [surveySections]);
   const persistence = useSurveyDraft({
     token: participantToken, initialDraft, revision: draftRevision,
-    completed: Boolean(completedAt), started: !introductionText?.trim(),
+    completed: Boolean(completedAt) || status === 'completed', started: !introductionText?.trim(),
     sections: sectionQuestionIds, totalSteps,
   });
   const { answers, currentSection: currentSectionIndex, started: hasStarted } = persistence.draft;
   const { setAnswers, setCurrentSectionIndex, setHasStarted } = persistence;
-  const isCompleted = Boolean(completedAt) || submitted || persistence.completed;
+  const isCompleted = Boolean(completedAt) || status === 'completed' || submitted || persistence.completed;
   const currentSection = surveySections[currentSectionIndex] ?? surveySections[0];
   const isConclusionStep = hasConclusionPage && currentSectionIndex === surveySections.length;
   const isFinalStep = currentSectionIndex === totalSteps - 1;
@@ -75,6 +75,7 @@ export function SurveyResponseDemo({
     }
 
     setSubmitError(null);
+    persistence.pauseTiming();
 
     startTransition(async () => {
       try {
@@ -87,6 +88,7 @@ export function SurveyResponseDemo({
             participantToken,
             employeeId,
             draftRevision: snapshot.revision,
+            timing: snapshot.timing,
             answers: payloadAnswers,
         });
 
@@ -98,6 +100,8 @@ export function SurveyResponseDemo({
             ? error.message
             : "La soumission a échoué. Vérifie la configuration du backend.";
         setSubmitError(message);
+      } finally {
+        persistence.resumeTiming();
       }
     });
   }

@@ -5,6 +5,13 @@ function parseEmailList(value?: string | null): string[] {
     .filter(Boolean);
 }
 
+export function isSurveyTimingAllowedEmail(email: string): boolean {
+  return parseEmailList(
+    process.env.SURVEY_TIMING_ALLOWED_EMAILS ??
+      'cathynomeniavo@gmail.com,toky.rao@gmail.com,genevieve.majorbr@gmail.com',
+  ).includes(email.trim().toLowerCase());
+}
+
 function parseDomainList(value?: string | null): string[] {
   return (value ?? '')
     .split(',')

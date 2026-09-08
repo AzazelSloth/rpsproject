@@ -13,6 +13,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  Max,
   Min,
   MinLength,
   ValidateNested,
@@ -90,7 +91,37 @@ export class SubmitCampaignResponseItemDto {
   response_state?: 'answered' | 'declined';
 }
 
+export class TimingIntervalDto {
+  @IsInt()
+  @Min(0)
+  @Max(8640000000000000)
+  start: number;
+
+  @IsInt()
+  @Min(0)
+  @Max(8640000000000000)
+  end: number;
+}
+
+export class SaveSurveyTimingDto {
+  @IsInt()
+  @Min(0)
+  @Max(8640000000000000)
+  started_at: number;
+
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => TimingIntervalDto)
+  intervals: TimingIntervalDto[];
+}
+
 export class SubmitCampaignResponsesDto {
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SaveSurveyTimingDto)
+  timing?: SaveSurveyTimingDto;
+
   @IsOptional()
   @IsInt()
   @Min(0)

@@ -12,6 +12,7 @@ import {
 	postServerBackend as postBackend,
 } from "@/lib/backend/server";
 import { isTestSurveyDeleteAllowedEmail } from "@/lib/backend/auth-config";
+import { isSurveyTimingAllowedEmail } from "@/lib/backend/auth-config";
 import {
 	getDashboardData,
 	getEmployeeManagementData,
@@ -436,7 +437,30 @@ const campaignParticipantsRouter = t.router({
 		}),
 });
 
+const surveyTimingSchema = z.object({
+  started_at: z.number().int().min(0).max(8640000000000000),
+  intervals: z.array(z.object({
+    start: z.number().int().min(0).max(8640000000000000),
+    end: z.number().int().min(0).max(8640000000000000),
+  })).max(500),
+});
+
 const surveyResponsesRouter = t.router({
+  timing: t.procedure.input(z.object({ campaignId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const user = await getServerSessionUser();
+      if (!user || !isSurveyTimingAllowedEmail(user.email)) throw new TRPCError({ code: 'FORBIDDEN' });
+      return getBackendItem<Array<{
+        participant_id: number; employee_name: string | null;
+        started_at: string | null; completed_at: string | null; active_seconds: number | null;
+      }>>(`/campaign-participants/campaign/${input.campaignId}/timing`);
+    }),
+  saveTiming: t.procedure.input(surveyTimingSchema.extend({ participantToken: z.string().min(1) }))
+    .mutation(({ input }) => {
+      ensureBackendConfigured();
+      const { participantToken, ...payload } = input;
+      return postBackend(`/campaign-participants/token/${encodeURIComponent(participantToken)}/timing`, payload);
+    }),
 	saveDraft: t.procedure.input(z.object({
 		participantToken: z.string().min(1),
 		revision: z.number().int().min(0),
@@ -460,6 +484,7 @@ const surveyResponsesRouter = t.router({
 				participantToken: z.string().optional().nullable(),
 				employeeId: z.number().int().positive().optional().nullable(),
 				draftRevision: z.number().int().min(0).optional(),
+				timing: surveyTimingSchema.optional(),
 				answers: z.array(
 					z.object({
 						questionId: z.number().int().positive(),
@@ -481,6 +506,7 @@ const surveyResponsesRouter = t.router({
 
 			await postBackend(`/campaign-participants/token/${input.participantToken}/submit`, {
 				draft_revision: input.draftRevision,
+				timing: input.timing,
 				responses: input.answers.map((answer) => ({
 					question_id: answer.questionId,
 					answer: answer.answer,

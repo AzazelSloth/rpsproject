@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getTrpcClient } from "@/lib/trpc/client";
+import { SurveyTimingTracker } from "@/lib/responses/survey-timing";
 import {
   fromBackendDraft,
   resumeSection,
@@ -28,6 +29,7 @@ export function useSurveyDraft({
   totalSteps: number;
 }) {
   const session = useRef<SurveyDraftSession | null>(null);
+  const timing = useRef<SurveyTimingTracker | null>(null);
   const [view, setView] = useState(() => ({
     draft: fromBackendDraft(initialDraft, started),
     state: "saved" as SurveyDraftSession["state"],
@@ -65,8 +67,15 @@ export function useSurveyDraft({
       },
     );
     session.current = current;
-    if (completed) current.finish();
+    const timer = token ? new SurveyTimingTracker(
+      `rps-survey-timing:${token}`, storage,
+      (payload) => getTrpcClient().surveyResponses.saveTiming.mutate({ participantToken: token, ...payload }),
+      document.visibilityState === 'visible',
+    ) : null;
+    timing.current = timer;
+    if (completed) { current.finish(); timer?.finish(); }
     else {
+      if (Object.values(current.draft.answers).some((answer) => answer.trim())) timer?.start();
       const validIds = new Set(sections.flat());
       const draft = {
         ...current.draft,
@@ -84,6 +93,7 @@ export function useSurveyDraft({
 
     const save = () => {
       if (token && !current.completed) void current.save();
+      if (!current.completed) void timer?.flush();
     };
     const beforeUnload = (event: BeforeUnloadEvent) => {
       current.persist();
@@ -93,12 +103,24 @@ export function useSurveyDraft({
       }
     };
     const pageHide = () => {
+      timer?.setVisible(false);
       current.persist();
       save();
     };
     const visibility = () => {
+      timer?.setVisible(document.visibilityState === 'visible');
       if (document.visibilityState === "hidden") pageHide();
     };
+    const activity = () => { if (!current.completed) timer?.activity(); };
+    const pageShow = () => { timer?.setVisible(document.visibilityState === 'visible'); };
+    document.addEventListener('pointerdown', activity);
+    document.addEventListener('keydown', activity);
+    document.addEventListener('scroll', activity, true);
+    window.addEventListener('pageshow', pageShow);
+    const tick = window.setInterval(() => {
+      if (current.completed) timer?.finish();
+      else timer?.tick();
+    }, 5000);
     window.addEventListener("beforeunload", beforeUnload);
     window.addEventListener("pagehide", pageHide);
     window.addEventListener("online", save);
@@ -107,8 +129,15 @@ export function useSurveyDraft({
     save();
     return () => {
       active = false;
+      timer?.setVisible(false);
+      void timer?.flush();
       current.dispose();
       window.clearInterval(retry);
+      window.clearInterval(tick);
+      document.removeEventListener('pointerdown', activity);
+      document.removeEventListener('keydown', activity);
+      document.removeEventListener('scroll', activity, true);
+      window.removeEventListener('pageshow', pageShow);
       window.removeEventListener("beforeunload", beforeUnload);
       window.removeEventListener("pagehide", pageHide);
       window.removeEventListener("online", save);
@@ -130,11 +159,11 @@ export function useSurveyDraft({
   }, []);
   const setAnswers = useCallback(
     (change: (answers: Record<string, string>) => Record<string, string>) => {
-      update((draft) => ({
-        ...draft,
-        answers: change(draft.answers),
-        started: true,
-      }));
+      update((draft) => {
+        const answers = change(draft.answers);
+        if (Object.values(answers).some((answer) => answer.trim())) timing.current?.start();
+        return { ...draft, answers, started: true };
+      });
     },
     [update],
   );
@@ -160,10 +189,13 @@ export function useSurveyDraft({
     setCurrentSectionIndex,
     setHasStarted,
     save: () => session.current?.save() ?? Promise.resolve(false),
+    pauseTiming: () => timing.current?.setVisible(false),
+    resumeTiming: () => timing.current?.setVisible(document.visibilityState === 'visible'),
     getSnapshot: () => ({
       draft: session.current!.draft,
       revision: session.current!.revision,
+      timing: timing.current?.snapshot(),
     }),
-    finish: () => session.current?.finish(),
+    finish: () => { timing.current?.finish(); session.current?.finish(); },
   };
 }

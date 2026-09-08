@@ -3,6 +3,7 @@ import { SurveyBuilderDemo } from "@/components/rps/survey-builder-demo";
 import { SurveyListTable } from "@/components/rps/survey-list-table";
 import { SectionHeader } from "@/components/rps/ui";
 import { isTestSurveyDeleteAllowedEmail } from "@/lib/backend/auth-config";
+import { isSurveyTimingAllowedEmail } from "@/lib/backend/auth-config";
 import { getServerSessionUser } from "@/lib/backend/server";
 import { getServerTrpcCaller } from "@/lib/trpc/server";
 
@@ -42,6 +43,7 @@ export default async function SurveysPage({
             surveys={surveys}
             scenario={scenario ?? null}
             canDeleteTestSurveys={canDeleteTestSurveys}
+            canViewTiming={Boolean(user && isSurveyTimingAllowedEmail(user.email))}
           />
         </section>
       );
