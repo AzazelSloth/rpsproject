@@ -48,7 +48,7 @@ export function SurveyTimingDialog({ campaignId, onClose }: { campaignId: number
   return <dialog ref={dialog} onCancel={onClose} onClose={onClose} aria-labelledby="survey-timing-title"
     className="m-auto w-[min(95vw,900px)] rounded-xl border border-slate-200 bg-white p-6 backdrop:bg-slate-950/50">
     <div className="mb-5 flex items-center justify-between gap-4">
-      <h2 id="survey-timing-title" className="text-xl font-bold">Horotateur</h2>
+      <h2 id="survey-timing-title" className="text-xl font-bold">Horodateur</h2>
       <button type="button" aria-label="Fermer" onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100"><X aria-hidden className="h-5 w-5" /></button>
     </div>
     {loading ? <LoaderCircle aria-label="Chargement" className="h-5 w-5 animate-spin" /> : null}

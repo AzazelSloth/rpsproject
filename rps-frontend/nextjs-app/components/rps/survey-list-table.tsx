@@ -108,7 +108,7 @@ export function SurveyListTable({
               <th className="px-6 py-4">Date de début</th>
               <th className="px-6 py-4">Date de fin</th>
               <th className="px-6 py-4">Résultats</th>
-              {canViewTiming ? <th className="px-6 py-4">Horotateur</th> : null}
+              {canViewTiming ? <th className="px-6 py-4">Horodateur</th> : null}
               {canDeleteTestSurveys ? <th className="px-6 py-4">Action</th> : null}
             </tr>
           </thead>
@@ -160,7 +160,7 @@ export function SurveyListTable({
                       </Link>
                     </td>
                     {canViewTiming ? <td className="px-6 py-4">
-                      <button type="button" aria-label="Horotateur" title="Horotateur"
+                      <button type="button" aria-label="Horodateur" title="Horodateur"
                         className="rounded-[12px] border border-slate-200 p-3 hover:bg-slate-50"
                         onClick={() => setTimingCampaign(survey.id)}><Clock className="h-5 w-5" aria-hidden /></button>
                     </td> : null}
