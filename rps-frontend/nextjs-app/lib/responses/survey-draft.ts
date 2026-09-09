@@ -262,3 +262,28 @@ export function resumeSection(
   }
   return index;
 }
+
+export function restoreDraftProgress(
+  draft: SurveyDraft,
+  sections: string[][],
+  totalSteps: number,
+): SurveyDraft {
+  const validQuestionIds = new Set(sections.flat());
+  const answers = Object.fromEntries(
+    Object.entries(draft.answers).filter(([id]) => validQuestionIds.has(id)),
+  );
+  const currentSection = resumeSection(
+    { ...draft, answers },
+    sections,
+    totalSteps,
+  );
+
+  return {
+    answers,
+    currentSection,
+    started:
+      draft.started ||
+      currentSection > 0 ||
+      Object.values(answers).some((answer) => Boolean(answer.trim())),
+  };
+}

@@ -5,7 +5,7 @@ import { getTrpcClient } from "@/lib/trpc/client";
 import { SurveyTimingTracker } from "@/lib/responses/survey-timing";
 import {
   fromBackendDraft,
-  resumeSection,
+  restoreDraftProgress,
   SurveyDraftSession,
   type BackendSurveyDraft,
   type SurveyDraft,
@@ -31,7 +31,11 @@ export function useSurveyDraft({
   const session = useRef<SurveyDraftSession | null>(null);
   const timing = useRef<SurveyTimingTracker | null>(null);
   const [view, setView] = useState(() => ({
-    draft: fromBackendDraft(initialDraft, started),
+    draft: restoreDraftProgress(
+      fromBackendDraft(initialDraft, started),
+      sections,
+      totalSteps,
+    ),
     state: "saved" as SurveyDraftSession["state"],
     completed,
     ready: false,
@@ -76,19 +80,7 @@ export function useSurveyDraft({
     if (completed) { current.finish(); timer?.finish(); }
     else {
       if (Object.values(current.draft.answers).some((answer) => answer.trim())) timer?.start();
-      const validIds = new Set(sections.flat());
-      const draft = {
-        ...current.draft,
-        answers: Object.fromEntries(
-          Object.entries(current.draft.answers).filter(([id]) =>
-            validIds.has(id),
-          ),
-        ),
-      };
-      current.update({
-        ...draft,
-        currentSection: resumeSection(draft, sections, totalSteps),
-      });
+      current.update(restoreDraftProgress(current.draft, sections, totalSteps));
     }
 
     const save = () => {

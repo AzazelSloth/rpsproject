@@ -5,6 +5,7 @@ import {
   fromBackendDraft,
   toBackendDraft,
   resumeSection,
+  restoreDraftProgress,
   type SurveyDraft,
   type SaveDraftResult,
 } from "./survey-draft.ts";
@@ -224,6 +225,50 @@ test("resume advances past completed sections and retains a partially answered p
     2,
   );
   assert.equal(resumeSection({ ...draft, currentSection: 50 }, [["1"]], 1), 0);
+});
+
+test("restoring an answered draft skips the introduction and opens the next section", () => {
+  assert.deepEqual(
+    restoreDraftProgress(
+      {
+        answers: { "1": "4", "2": "yes" },
+        currentSection: 0,
+        started: false,
+      },
+      [
+        ["1", "2"],
+        ["3"],
+      ],
+      2,
+    ),
+    {
+      answers: { "1": "4", "2": "yes" },
+      currentSection: 1,
+      started: true,
+    },
+  );
+});
+
+test("restoring a partial page keeps the employee on that page", () => {
+  assert.deepEqual(
+    restoreDraftProgress(
+      {
+        answers: { "1": "4", "999": "obsolete" },
+        currentSection: 0,
+        started: false,
+      },
+      [
+        ["1", "2"],
+        ["3"],
+      ],
+      2,
+    ),
+    {
+      answers: { "1": "4" },
+      currentSection: 0,
+      started: true,
+    },
+  );
 });
 
 test("corrupt or unavailable storage does not prevent server saving", async () => {
