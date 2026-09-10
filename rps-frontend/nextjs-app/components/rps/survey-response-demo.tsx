@@ -147,6 +147,7 @@ export function SurveyResponseDemo({
   return (
     <Card className="mx-auto max-w-3xl p-6 sm:p-8">
       <fieldset disabled={!persistence.ready || isPending} className="contents">
+      {/* En-tête du questionnaire masqué à la demande du client.
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
@@ -159,13 +160,14 @@ export function SurveyResponseDemo({
             <p className="mt-2 text-sm text-slate-500">Attribué à {employeeName}</p>
           ) : null}
         </div>
-      </div>
+      </div> */}
 
+      {/* Statut du lien masqué à la demande du client.
       {status ? (
         <div className="mt-4 text-sm text-slate-500">
           Statut du lien: <span className="font-semibold text-slate-700">{status}</span>
         </div>
-      ) : null}
+      ) : null} */}
 
       <div className="mt-8 space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
