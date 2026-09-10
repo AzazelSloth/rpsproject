@@ -9,6 +9,7 @@ import { PREFER_NOT_TO_ANSWER } from "@/components/rps/survey-response-answer";
 import { SurveyPrivacyFooter } from "@/components/rps/survey-privacy-footer";
 import {
   AGREEMENT_SCALE_OPTIONS,
+  FREQUENCY_SCALE_OPTIONS,
   QUESTION_SUGGESTION_SECTIONS,
   type QuestionSuggestion,
 } from "@/components/rps/question-suggestions";
@@ -1194,7 +1195,7 @@ export function SurveyBuilderDemo({
     });
   }
 
-  function addQuestion(type: SurveyQuestionType) {
+  function addQuestion(type: SurveyQuestionType, scaleOptions?: readonly string[]) {
     if (!canEditQuestions) {
       setError("Impossible d'ajouter des questions quand le sondage est actif.");
       return;
@@ -1206,6 +1207,9 @@ export function SurveyBuilderDemo({
     }
 
     const template = ensureQuestionOptions(templateByType[type]);
+    if (type === "scale" && scaleOptions) {
+      template.options = [...scaleOptions];
+    }
     const temporaryId = `tmp-${Date.now()}`;
 
     if (type === "section") {
@@ -2285,10 +2289,17 @@ export function SurveyBuilderDemo({
           </SecondaryButton>
           <SecondaryButton 
             disabled={isBusy || !campaignId || status === "active"} 
-            onClick={() => addQuestion("scale")} 
+            onClick={() => addQuestion("scale", AGREEMENT_SCALE_OPTIONS)}
             className="sm:w-auto"
           >
-            Ajouter échelle 1-5
+            Ajouter Échelle A
+          </SecondaryButton>
+          <SecondaryButton
+            disabled={isBusy || !campaignId || status === "active"}
+            onClick={() => addQuestion("scale", FREQUENCY_SCALE_OPTIONS)}
+            className="sm:w-auto"
+          >
+            Ajouter Échelle F
           </SecondaryButton>
           <SecondaryButton 
             disabled={isBusy || !campaignId || status === "active"} 
