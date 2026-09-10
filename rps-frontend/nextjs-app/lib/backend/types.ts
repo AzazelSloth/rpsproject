@@ -23,6 +23,7 @@ export type BackendQuestionSection = {
   title: string;
   description?: string | null;
   order_index: number;
+  is_visible?: boolean;
   created_at: string;
 };
 

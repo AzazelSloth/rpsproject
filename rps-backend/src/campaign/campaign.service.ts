@@ -216,6 +216,15 @@ export class CampaignService {
       );
     }
 
+    if (
+      campaign.question_sections?.length &&
+      campaign.question_sections.every((section) => section.is_visible === false)
+    ) {
+      throw new BadRequestException(
+        'Au moins une section visible est nécessaire avant activation',
+      );
+    }
+
     campaign.status = 'active';
     return this.campaignRepository.save(campaign);
   }

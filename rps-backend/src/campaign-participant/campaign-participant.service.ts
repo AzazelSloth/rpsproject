@@ -243,7 +243,7 @@ export class CampaignParticipantService {
         end_date: participant.campaign.end_date,
         company: participant.campaign.company,
       },
-      sections: [...(participant.campaign.question_sections ?? [])].sort(
+      sections: [...(participant.campaign.question_sections ?? [])].filter((section) => section.is_visible !== false).sort(
         (a, b) => {
           if (a.order_index === b.order_index) {
             return a.id - b.id;
@@ -252,7 +252,7 @@ export class CampaignParticipantService {
           return a.order_index - b.order_index;
         },
       ),
-      questions: [...participant.campaign.questions].sort((a, b) => {
+      questions: [...participant.campaign.questions].filter((question) => !question.section || question.section.is_visible !== false).sort((a, b) => {
         if (a.order_index === b.order_index) {
           return a.id - b.id;
         }

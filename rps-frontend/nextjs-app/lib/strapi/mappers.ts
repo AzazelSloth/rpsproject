@@ -29,6 +29,7 @@ export type SurveyQuestion = {
   options?: string[];
   orderIndex: number;
   sectionId?: number | null;
+  isVisible?: boolean;
 };
 
 export function mapStrapiQuestion(question: StrapiQuestion): SurveyQuestion {

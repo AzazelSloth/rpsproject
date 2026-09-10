@@ -290,8 +290,8 @@ const adminSurveysRouter = t.router({
 			z.object({
 				campaignId: z.number().int().positive(),
 				title: z.string().min(1),
-				description: z.string().max(1000).optional(),
-				orderIndex: z.number().int().min(0),
+				 description: z.string().max(1000).optional(),
+				 orderIndex: z.number().int().min(0),
 			}),
 		)
 		.mutation(async ({ input }) => {
@@ -316,6 +316,7 @@ const adminSurveysRouter = t.router({
 				title: z.string().min(1),
 				description: z.string().max(1000).optional(),
 				orderIndex: z.number().int().min(0),
+				isVisible: z.boolean().optional(),
 			}),
 		)
 		.mutation(async ({ input }) => {
@@ -324,6 +325,7 @@ const adminSurveysRouter = t.router({
 				title: input.title,
 				description: input.description || undefined,
 				order_index: input.orderIndex,
+				is_visible: input.isVisible,
 			});
 		}),
 

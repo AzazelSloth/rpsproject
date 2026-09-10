@@ -196,6 +196,10 @@ export class CreateQuestionSectionDto {
 }
 
 export class UpdateQuestionSectionDto {
+  @ApiProperty({ description: 'Section visible pour les répondants', required: false, default: true })
+  @IsOptional()
+  is_visible?: boolean;
+
   @ApiProperty({ description: 'Titre de la section', required: false })
   @IsOptional()
   @IsString()

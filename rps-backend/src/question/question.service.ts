@@ -225,6 +225,9 @@ export class QuestionService {
     if (updateSectionDto.order_index !== undefined) {
       section.order_index = updateSectionDto.order_index;
     }
+    if (updateSectionDto.is_visible !== undefined) {
+      section.is_visible = updateSectionDto.is_visible;
+    }
 
     return this.sectionRepository.save(section);
   }

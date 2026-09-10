@@ -31,6 +31,9 @@ export class QuestionSection {
   @Column({ type: 'int', default: 0 })
   order_index!: number;
 
+  @Column({ type: 'boolean', default: true })
+  is_visible!: boolean;
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at!: Date;
 

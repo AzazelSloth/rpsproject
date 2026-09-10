@@ -1565,6 +1565,25 @@ export function SurveyBuilderDemo({
     );
   }
 
+  function toggleSectionVisibility(section: SurveyQuestion, index: number) {
+    const sectionId = getSectionBackendId(section);
+    if (!sectionId) return;
+
+    runMutation(
+      () => getTrpcClient().adminSurveys.updateSection.mutate({
+        sectionId,
+        title: section.title,
+        description: section.helpText === "Section du questionnaire" ? undefined : section.helpText,
+        orderIndex: index,
+        isVisible: section.isVisible === false,
+      }),
+      section.isVisible === false ? "Section affichée." : "Section masquée.",
+      () => setQuestions((current) => current.map((item) => item.id === section.id ? { ...item, isVisible: section.isVisible === false } : item)),
+      undefined,
+      mode === "edit",
+    );
+  }
+
   function removeQuestion(question: SurveyQuestion) {
     if (question.type !== "section" && !Number.isFinite(Number(question.id))) {
       setQuestions((current) => current.filter((item) => item.id !== question.id));
@@ -2492,6 +2511,11 @@ export function SurveyBuilderDemo({
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
                           Section
                         </p>
+                        {section.question.isVisible === false ? (
+                          <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                            Masquée
+                          </span>
+                        ) : null}
                         <span className="rounded-full border border-amber-200 bg-white px-2 py-1 text-xs font-semibold text-amber-800">
                           {sectionQuestionCount} question{sectionQuestionCount > 1 ? "s" : ""}
                         </span>
@@ -2541,6 +2565,13 @@ export function SurveyBuilderDemo({
                       >
                         Enregistrer
                       </PrimaryButton>
+                      <SecondaryButton
+                        className="flex-1 sm:flex-none px-3 py-2"
+                        disabled={isBusy || !canEditQuestions}
+                        onClick={() => toggleSectionVisibility(section.question, section.index)}
+                      >
+                        {section.question.isVisible === false ? "Afficher la section" : "Masquer la section"}
+                      </SecondaryButton>
                       <SecondaryButton
                         className="flex-1 sm:flex-none px-3 py-2 text-red-600 hover:bg-red-50"
                         disabled={!canEditQuestions}
@@ -3174,6 +3205,7 @@ function mapBackendCampaignQuestions(campaign: BackendCampaign): SurveyQuestion[
     helpText: section.description?.trim() || "",
     orderIndex: section.order_index ?? 0,
     sectionId: section.id,
+    isVisible: section.is_visible !== false,
   }));
 
   const questionItems: SurveyQuestion[] = (campaign.questions ?? []).map((question) => {

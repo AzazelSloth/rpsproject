@@ -680,6 +680,7 @@ function mapBackendSection(entry: BackendQuestionSection): SurveyQuestion {
     helpText: entry.description?.trim() || "Section du questionnaire",
     orderIndex: entry.order_index ?? 0,
     sectionId: entry.id,
+    isVisible: entry.is_visible !== false,
   };
 }
 
