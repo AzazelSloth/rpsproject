@@ -2287,6 +2287,13 @@ export function SurveyBuilderDemo({
           >
             Ajouter section
           </SecondaryButton>
+          <SecondaryButton
+            disabled={isBusy || !campaignId || status === "active"}
+            onClick={() => addQuestion("scale")}
+            className="sm:w-auto"
+          >
+            Ajouter échelle 1-5
+          </SecondaryButton>
           <SecondaryButton 
             disabled={isBusy || !campaignId || status === "active"} 
             onClick={() => addQuestion("scale", AGREEMENT_SCALE_OPTIONS)}
