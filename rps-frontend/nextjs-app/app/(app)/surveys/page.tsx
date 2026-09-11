@@ -40,6 +40,7 @@ export default async function SurveysPage({
           />
 
           <SurveyListTable
+            showResults={false}
             surveys={surveys}
             scenario={scenario ?? null}
             canDeleteTestSurveys={canDeleteTestSurveys}

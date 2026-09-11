@@ -22,11 +22,13 @@ export function SurveyListTable({
   scenario,
   canDeleteTestSurveys = false,
   canViewTiming = false,
+  showResults = true,
 }: {
   surveys: SurveyOption[];
   scenario?: string | null;
   canDeleteTestSurveys?: boolean;
   canViewTiming?: boolean;
+  showResults?: boolean;
 }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState("all");
@@ -107,7 +109,7 @@ export function SurveyListTable({
               <th className="px-6 py-4">Taux de complétion</th>
               <th className="px-6 py-4">Date de début</th>
               <th className="px-6 py-4">Date de fin</th>
-              <th className="px-6 py-4">Résultats</th>
+              {showResults ? <th className="px-6 py-4">Résultats</th> : null}
               {canViewTiming ? <th className="px-6 py-4">Horodateur</th> : null}
               {canDeleteTestSurveys ? <th className="px-6 py-4">Action</th> : null}
             </tr>
@@ -150,7 +152,7 @@ export function SurveyListTable({
                     <td className="px-6 py-4 text-slate-600">
                       {formatShortDate(survey.endDate)}
                     </td>
-                    <td className="px-6 py-4">
+                    {showResults ? <td className="px-6 py-4">
                       <Link
                         href={resultsHref}
                         className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold no-underline shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424]"
@@ -158,7 +160,7 @@ export function SurveyListTable({
                       >
                         Voir les résultats
                       </Link>
-                    </td>
+                    </td> : null}
                     {canViewTiming ? <td className="px-6 py-4">
                       <button type="button" aria-label="Horodateur" title="Horodateur"
                         className="rounded-[12px] border border-slate-200 p-3 hover:bg-slate-50"
@@ -185,7 +187,7 @@ export function SurveyListTable({
             ) : (
               <tr className="border-t border-slate-100">
                 <td
-                  colSpan={6 + Number(canDeleteTestSurveys) + Number(canViewTiming)}
+                  colSpan={5 + Number(showResults) + Number(canDeleteTestSurveys) + Number(canViewTiming)}
                   className="px-6 py-12 text-center text-slate-500"
                 >
                   {surveys.length > 0
