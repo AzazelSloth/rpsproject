@@ -14,6 +14,24 @@ export const FREQUENCY_SCALE_OPTIONS = [
   "Très souvent",
 ] as const;
 
+export function getScaleEditorType(options?: readonly string[]): "scale" | "scale_a" | "scale_f" {
+  const normalize = (label: string) => label.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[’']/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+  const matches = (expected: readonly string[]) => options?.length === expected.length
+    && options.every((label, index) => normalize(label) === normalize(expected[index]));
+  if (matches(AGREEMENT_SCALE_OPTIONS)) return "scale_a";
+  if (matches(FREQUENCY_SCALE_OPTIONS)) return "scale_f";
+  return "scale";
+}
+
+export function getScaleEditorOptions(type: string): string[] | undefined {
+  if (type === "scale_a") return [...AGREEMENT_SCALE_OPTIONS];
+  if (type === "scale_f") return [...FREQUENCY_SCALE_OPTIONS];
+  if (type === "scale") return ["1", "2", "3", "4", "5"];
+  return undefined;
+}
+
 export type QuestionSuggestion = {
   title: string;
   type: "scale" | "choice" | "text";

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getApiUrl } from "@/lib/api";
-import { parseSurveyExportParams } from "@/lib/survey-exports/access";
+import { parseSurveyExportParams, parseSurveyExportFormat, SURVEY_EXPORT_CONTENT_TYPES } from "@/lib/survey-exports/access";
 
 function noStoreHeaders() {
   return {
@@ -20,15 +20,17 @@ function errorResponse(message: string, status: number) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: {
     params: Promise<{ campaignId: string; kind: string }>;
   },
 ) {
   const { campaignId: rawCampaignId, kind: rawKind } = await context.params;
   const exportParams = parseSurveyExportParams(rawCampaignId, rawKind);
+  const formats = new URL(request.url).searchParams.getAll("format");
+  const format = parseSurveyExportFormat(formats[0] ?? null);
 
-  if (!exportParams) {
+  if (!exportParams || !format || formats.length > 1) {
     return errorResponse("Export demandé invalide.", 400);
   }
   const { campaignId, kind } = exportParams;
@@ -41,7 +43,7 @@ export async function GET(
 
   try {
     const backendResponse = await fetch(
-      getApiUrl(`/survey-exports/campaign/${campaignId}/${kind}`),
+      getApiUrl(`/survey-exports/campaign/${campaignId}/${kind}?format=${format}`),
       {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
@@ -50,6 +52,15 @@ export async function GET(
     );
 
     if (!backendResponse.ok) {
+      if (backendResponse.status === 400 && format === "xlsx") {
+        const body = await backendResponse.json().catch(() => null);
+        if (body?.code === "SURVEY_EXCEL_LIMIT_EXCEEDED") {
+          return errorResponse(
+            "Ces réponses dépassent les limites du format Excel. Choisissez CSV pour télécharger leur contenu intégral.",
+            400,
+          );
+        }
+      }
       const message =
         backendResponse.status === 401
           ? "Authentification requise."
@@ -57,12 +68,16 @@ export async function GET(
             ? "Ce compte n'est pas autorisé à exporter les réponses."
             : backendResponse.status === 404
               ? "Ce sondage est introuvable."
-              : "L'export CSV est temporairement indisponible.";
+              : "L'export est temporairement indisponible.";
       return errorResponse(message, backendResponse.status);
     }
 
+    const contentType = backendResponse.headers.get("content-type")?.split(";")[0].trim();
+    if (contentType !== SURVEY_EXPORT_CONTENT_TYPES[format]) {
+      return errorResponse("Le serveur n'a pas retourné le fichier demandé.", 502);
+    }
     const headers = new Headers(noStoreHeaders());
-    headers.set("Content-Type", "text/csv; charset=utf-8");
+    headers.set("Content-Type", format === "csv" ? "text/csv; charset=utf-8" : contentType);
 
     const contentDisposition = backendResponse.headers.get("content-disposition");
     if (contentDisposition?.startsWith("attachment;")) {
@@ -70,7 +85,7 @@ export async function GET(
     } else {
       headers.set(
         "Content-Disposition",
-        `attachment; filename="survey-${campaignId}-${kind}.csv"`,
+        `attachment; filename="survey-${campaignId}-${kind}.${format}"`,
       );
     }
 
@@ -84,6 +99,6 @@ export async function GET(
       headers,
     });
   } catch {
-    return errorResponse("L'export CSV est temporairement indisponible.", 503);
+    return errorResponse("L'export est temporairement indisponible.", 503);
   }
 }

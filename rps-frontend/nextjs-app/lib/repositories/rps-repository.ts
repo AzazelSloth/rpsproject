@@ -111,7 +111,7 @@ export type EmployeeManagementData = {
 export type SurveyBuilderData = {
   campaignId: number | null;
   companyId: number | null;
-  companies: { id: number; name: string; context: string }[];
+  companies: { id: number; name: string; context: string; champion_name?: string | null; champion_email?: string | null }[];
   campaigns: {
     id: number;
     name: string;
@@ -294,6 +294,8 @@ export async function getSurveyBuilderData(
       id: company.id,
       name: company.name,
       context: company.context ?? "",
+      champion_name: company.champion_name ?? null,
+      champion_email: company.champion_email ?? null,
     }));
 
     const campaignOptions = campaigns.map((campaign) => {

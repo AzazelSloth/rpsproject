@@ -28,6 +28,8 @@ export type SurveyInvitationEmailRecipient = {
   survey_url: string;
   campaign_name: string;
   company_name: string;
+  champion_name?: string | null;
+  champion_email?: string | null;
   start_date?: Date | string | null;
   end_date?: Date | string | null;
 };
@@ -572,6 +574,7 @@ const SURVEY_INVITATION_HTML_TEMPLATE = `<!DOCTYPE html>
                     </div>
 
                     <!-- Closing -->
+                    <!-- champion-contact -->
                     <div class="body-text mt-20">
                         <p>
                             Merci de votre précieuse collaboration. Votre voix est entendue et valorisée.
@@ -950,6 +953,13 @@ export class SendGridMailService {
       campaign_name: recipient.campaign_name,
       companyName: recipient.company_name,
       company_name: recipient.company_name,
+      championName: recipient.champion_name?.trim() ?? '',
+      champion_name: recipient.champion_name?.trim() ?? '',
+      nomChampion: recipient.champion_name?.trim() ?? '',
+      championEmail: recipient.champion_email?.trim() ?? '',
+      champion_email: recipient.champion_email?.trim() ?? '',
+      emailChampion: recipient.champion_email?.trim() ?? '',
+      hasChampion: Boolean(recipient.champion_name?.trim() || recipient.champion_email?.trim()),
       startDate,
       start_date: startDate,
       endDate,
@@ -985,6 +995,7 @@ export class SendGridMailService {
       `Lien personnalise : ${recipient.survey_url}`,
       '',
       'Merci de votre precieuse collaboration. Votre voix est entendue et valorisee.',
+      ...[this.buildChampionContactText(recipient)].filter(Boolean),
       `Contact : ${contactEmail}`,
       '',
       fromName,
@@ -1001,7 +1012,7 @@ export class SendGridMailService {
       endDate: this.formatEmailDate(recipient.end_date),
       surveyLink: recipient.survey_url,
       contactEmail,
-    });
+    }).replace('<!-- champion-contact -->', () => this.buildChampionContactHtml(recipient));
   }
 
   private buildReminderText(
@@ -1020,6 +1031,7 @@ export class SendGridMailService {
       `Lien personnalise : ${recipient.survey_url}`,
       '',
       'Merci de prendre quelques minutes pour le completer.',
+      this.buildChampionContactText(recipient),
       `Contact : ${contactEmail}`,
       '',
       fromName,
@@ -1072,6 +1084,7 @@ export class SendGridMailService {
       `<p><a href="${surveyUrl}" style="display:inline-block;background:#E50914;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:24px;font-weight:700;">Completer le sondage</a></p>`,
       `<p>Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>${surveyUrl}</p>`,
       `<p>Contact : <a href="mailto:${escapedContactEmail}">${escapedContactEmail}</a></p>`,
+      this.buildChampionContactHtml(recipient),
       '</body>',
       '</html>',
     ].join('');
@@ -1081,6 +1094,17 @@ export class SendGridMailService {
     return Object.entries(values).reduce((html, [key, value]) => {
       return html.replaceAll(`{{${key}}}`, this.escapeHtml(value));
     }, template);
+  }
+
+  private buildChampionContactText(recipient: SurveyInvitationEmailRecipient) {
+    const contact = [recipient.champion_name?.trim(), recipient.champion_email?.trim()]
+      .filter(Boolean).join(', ');
+    return contact ? `Des questions sur la démarche ? Contact : ${contact}` : '';
+  }
+
+  private buildChampionContactHtml(recipient: SurveyInvitationEmailRecipient) {
+    const contact = this.buildChampionContactText(recipient);
+    return contact ? `<p>${this.escapeHtml(contact)}</p>` : '';
   }
 
   private getFirstName(recipient: SurveyInvitationEmailRecipient) {

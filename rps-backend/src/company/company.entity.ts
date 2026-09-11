@@ -19,6 +19,12 @@ export class Company {
   @Column({ type: 'text', nullable: true })
   context!: string | null;
 
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  champion_name!: string | null;
+
+  @Column({ type: 'varchar', length: 254, nullable: true })
+  champion_email!: string | null;
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at!: Date;
 

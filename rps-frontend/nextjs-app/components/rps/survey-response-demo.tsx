@@ -6,6 +6,7 @@ import { useSurveyDraft } from "@/components/rps/use-survey-draft";
 import type { BackendSurveyDraft } from "@/lib/responses/survey-draft";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import { SurveyPrivacyFooter } from "@/components/rps/survey-privacy-footer";
+import { LinkedSurveyText } from "@/components/rps/linked-survey-text";
 import {
   buildSurveySubmissionAnswers,
   isPreferNotToAnswer,
@@ -132,7 +133,7 @@ export function SurveyResponseDemo({
           <p className="mt-2 text-sm font-semibold text-slate-500">{companyName}</p>
         ) : null}
         <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-          {introductionText.trim()}
+          <LinkedSurveyText text={introductionText.trim()} />
         </p>
         <PrimaryButton className="mt-8 sm:w-auto" disabled={!persistence.ready} onClick={() => setHasStarted(true)}>
           Commencer le sondage
@@ -334,7 +335,7 @@ export function SurveyResponseDemo({
               Conclusion
             </p>
             <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-              {conclusionText.trim()}
+              <LinkedSurveyText text={conclusionText.trim()} />
             </p>
           </div>
         ) : null}

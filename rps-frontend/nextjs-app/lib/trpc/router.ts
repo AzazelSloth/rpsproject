@@ -58,16 +58,22 @@ const adminSurveysRouter = t.router({
 			z.object({
 				companyId: z.number().int().positive(),
 				context: z.string(),
+				champion_name: z.string().trim().max(150).nullable().optional(),
+				champion_email: z.union([z.string().trim().email().max(254), z.literal("")]).nullable().optional(),
 			}),
 		)
 		.mutation(async ({ input }) => {
 			ensureBackendConfigured();
 			return patchBackend<
-				{ id: number; name: string; context: string | null },
-				{ context: string }
+				{ id: number; name: string; context: string | null; champion_name?: string | null; champion_email?: string | null },
+				{ context: string; champion_name?: string | null; champion_email?: string | null }
 			>(
 				`/companies/${input.companyId}`,
-				{ context: input.context },
+				{
+					context: input.context,
+					champion_name: input.champion_name,
+					champion_email: input.champion_email,
+				},
 			);
 		}),
 

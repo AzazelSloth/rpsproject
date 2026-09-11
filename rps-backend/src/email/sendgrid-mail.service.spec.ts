@@ -30,6 +30,53 @@ describe('SendGridMailService', () => {
     process.env = originalEnv;
   });
 
+  it('passes saved champion data to both dynamic templates without changing recipients or reply-to', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(new Response(null, { status: 202 }));
+    const contact = { ...recipient, champion_name: 'Contact réel', champion_email: 'champion@example.com' };
+    const service = new SendGridMailService();
+    await service.sendSurveyInvitations([contact]);
+    await service.sendSurveyReminders([contact]);
+    for (const index of [0, 1]) {
+      const body = getFetchBody(fetchMock, index);
+      expect(body.personalizations[0].dynamic_template_data).toMatchObject({
+        championName: 'Contact réel', champion_name: 'Contact réel', nomChampion: 'Contact réel',
+        championEmail: 'champion@example.com', champion_email: 'champion@example.com', emailChampion: 'champion@example.com',
+        hasChampion: true, companyName: recipient.company_name, surveyLink: recipient.survey_url,
+      });
+      expect(body.personalizations[0].to).toEqual([{ email: recipient.email, name: recipient.name }]);
+      expect(body.reply_to.email).toBe('reply@example.com');
+    }
+  });
+
+  it.each([
+    { champion_name: null, champion_email: null, hasChampion: false },
+    { champion_name: 'Contact seul', champion_email: null, hasChampion: true },
+    { champion_name: null, champion_email: 'champion@example.com', hasChampion: true },
+  ])('does not invent missing champion fields: %j', async (contact) => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(new Response(null, { status: 202 }));
+    await new SendGridMailService().sendSurveyInvitations([{ ...recipient, ...contact }]);
+    expect(getFetchBody(fetchMock, 0).personalizations[0].dynamic_template_data).toMatchObject({
+      championName: contact.champion_name ?? '', championEmail: contact.champion_email ?? '', hasChampion: contact.hasChampion,
+    });
+  });
+
+  it.each(['invitation', 'reminder'])('includes an escaped champion in %s fallback without sending extra mail', async (kind) => {
+    const fetchMock = jest.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ errors: [{ message: 'template not found' }] }), { status: 400 }))
+      .mockResolvedValueOnce(new Response(null, { status: 202 }));
+    const service = new SendGridMailService();
+    const contact = { ...recipient, champion_name: '<b>Contact</b>', champion_email: 'champion@example.com' };
+    if (kind === 'invitation') await service.sendSurveyInvitations([contact]);
+    else await service.sendSurveyReminders([contact]);
+    const content = getFetchBody(fetchMock, 1).content as Array<{ type: string; value: string }>;
+    const html = content.find((part) => part.type === 'text/html')!.value;
+    expect(html).toContain('&lt;b&gt;Contact&lt;/b&gt;');
+    expect(html).not.toContain('<b>Contact</b>');
+    expect(html).toContain('champion@example.com');
+    expect(content.find((part) => part.type === 'text/plain')!.value).toContain('<b>Contact</b>, champion@example.com');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('classifies SendGrid 429 responses as rate limited failures', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue(
       new Response(
@@ -190,5 +237,14 @@ function getFetchBody(
 ) {
   const init = fetchMock.mock.calls[callIndex][1] as RequestInit;
 
-  return JSON.parse(String(init.body)) as Record<string, any>;
+  if (typeof init.body !== 'string') throw new Error('Expected a JSON request body');
+  return JSON.parse(init.body) as {
+    template_id?: string;
+    personalizations: Array<{
+      to: Array<{ email: string; name: string }>;
+      dynamic_template_data: Record<string, unknown>;
+    }>;
+    reply_to: { email: string };
+    content: Array<{ type: string; value: string }>;
+  };
 }
