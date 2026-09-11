@@ -15,6 +15,10 @@ import {
   CampaignParticipantStatus,
 } from './campaign-participant.entity';
 import { CampaignParticipantService } from './campaign-participant.service';
+import {
+  SurveySubmissionItem,
+  SurveySubmissionItemState,
+} from './survey-submission-item.entity';
 
 describe('CampaignParticipantService survey submission', () => {
   let service: CampaignParticipantService;
@@ -29,19 +33,97 @@ describe('CampaignParticipantService survey submission', () => {
     create: jest.Mock;
     save: jest.Mock;
   };
+  let submissionItemRepository: {
+    create: jest.Mock;
+    save: jest.Mock;
+  };
   let employeeRepository: { save: jest.Mock };
   let campaignRepository: { findOne: jest.Mock };
+  let participant: CampaignParticipant;
 
   beforeEach(async () => {
-    const participant = {
+    const visibleSection = {
+      id: 41,
+      title: 'Section visible',
+      description: 'Description visible',
+      order_index: 1,
+      is_visible: true,
+      created_at: new Date('2025-01-01T00:00:00.000Z'),
+    };
+    const question = {
+      id: 31,
+      question_text: 'Question originale',
+      question_type: 'scale',
+      rps_dimension: 'Charge',
+      order_index: 2,
+      choice_options: ['1', '2', '3', '4', '5'],
+      created_at: new Date('2025-01-02T00:00:00.000Z'),
+      section: visibleSection,
+      campaign: { id: 12 },
+    } as Question;
+    participant = {
       id: 7,
       participation_token: 'participant-token',
       completed_at: null,
       status: CampaignParticipantStatus.PENDING,
-      campaign: { id: 12 },
-      employee: { id: 21, status: 'PENDING', deleted_at: null },
+      draft: null,
+      draft_revision: 0,
+      questionnaire_snapshot: null,
+      campaign: {
+        id: 12,
+        name: 'Survey',
+        introduction_text: null,
+        conclusion_text: null,
+        status: 'active',
+        start_date: null,
+        end_date: null,
+        company: { id: 5, name: 'Company' },
+        questions: [question],
+        question_sections: [visibleSection],
+      },
+      employee: {
+        id: 21,
+        first_name: 'Test',
+        last_name: 'Employee',
+        email: 'test@example.com',
+        department: null,
+        status: 'PENDING',
+        deleted_at: null,
+      },
+    } as CampaignParticipant;
+    participant.questionnaire_snapshot = {
+      version: 1,
+      captured_at: '2025-01-04T00:00:00.000Z',
+      sections: [
+        {
+          id: visibleSection.id,
+          title: visibleSection.title,
+          description: visibleSection.description,
+          order_index: visibleSection.order_index,
+          is_visible: true,
+          created_at: visibleSection.created_at.toISOString(),
+        },
+      ],
+      questions: [
+        {
+          id: question.id,
+          question_text: question.question_text,
+          question_type: question.question_type,
+          rps_dimension: question.rps_dimension,
+          order_index: question.order_index,
+          choice_options: [...(question.choice_options ?? [])],
+          created_at: question.created_at.toISOString(),
+          section: {
+            id: visibleSection.id,
+            title: visibleSection.title,
+            description: visibleSection.description,
+            order_index: visibleSection.order_index,
+            is_visible: true,
+            created_at: visibleSection.created_at.toISOString(),
+          },
+        },
+      ],
     };
-    const question = { id: 31, campaign: { id: 12 } };
 
     participantRepository = {
       findOne: jest.fn().mockResolvedValue(participant),
@@ -56,6 +138,10 @@ describe('CampaignParticipantService survey submission', () => {
       create: jest.fn().mockImplementation((value: unknown) => value),
       save: jest.fn().mockImplementation((value) => Promise.resolve(value)),
     };
+    submissionItemRepository = {
+      create: jest.fn().mockImplementation((value: unknown) => value),
+      save: jest.fn().mockImplementation((value) => Promise.resolve(value)),
+    };
     employeeRepository = {
       save: jest.fn().mockImplementation((value) => Promise.resolve(value)),
     };
@@ -66,6 +152,7 @@ describe('CampaignParticipantService survey submission', () => {
         if (entity === CampaignParticipant) return participantRepository;
         if (entity === Question) return questionRepository;
         if (entity === SurveyResponse) return responseRepository;
+        if (entity === SurveySubmissionItem) return submissionItemRepository;
         if (entity === Employee) return employeeRepository;
         throw new Error('Unexpected repository');
       }),
@@ -136,8 +223,16 @@ describe('CampaignParticipantService survey submission', () => {
         response_count: 1,
         answered_response_count: 0,
         declined_response_count: 1,
+        skipped_response_count: 0,
       }),
     );
+    expect(submissionItemRepository.save).toHaveBeenCalledWith([
+      expect.objectContaining({
+        original_question_id: 31,
+        answer: null,
+        response_state: SurveySubmissionItemState.DECLINED,
+      }),
+    ]);
     expect(participantRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         status: CampaignParticipantStatus.COMPLETED,
@@ -147,6 +242,33 @@ describe('CampaignParticipantService survey submission', () => {
   });
 
   it('distingue une réponse, un refus et une question vide', async () => {
+    participant.campaign.questions = [
+      participant.campaign.questions[0],
+      {
+        ...participant.campaign.questions[0],
+        id: 32,
+        question_text: 'Question refusée',
+        order_index: 3,
+      },
+      {
+        ...participant.campaign.questions[0],
+        id: 33,
+        question_text: 'Question sautée',
+        order_index: 4,
+      },
+    ];
+    participant.questionnaire_snapshot!.questions =
+      participant.campaign.questions.map((question) => ({
+        id: question.id,
+        question_text: question.question_text,
+        question_type: question.question_type,
+        rps_dimension: question.rps_dimension,
+        order_index: question.order_index,
+        choice_options: question.choice_options
+          ? [...question.choice_options]
+          : null,
+        section: participant.questionnaire_snapshot!.sections[0],
+      }));
     questionRepository.find.mockResolvedValueOnce([
       { id: 31, campaign: { id: 12 } },
       { id: 32, campaign: { id: 12 } },
@@ -174,11 +296,29 @@ describe('CampaignParticipantService survey submission', () => {
         response_count: 2,
         answered_response_count: 1,
         declined_response_count: 1,
+        skipped_response_count: 1,
       }),
     );
+    expect(submissionItemRepository.save).toHaveBeenCalledWith([
+      expect.objectContaining({
+        original_question_id: 31,
+        answer: '4',
+        response_state: SurveySubmissionItemState.ANSWERED,
+      }),
+      expect.objectContaining({
+        original_question_id: 32,
+        answer: null,
+        response_state: SurveySubmissionItemState.DECLINED,
+      }),
+      expect.objectContaining({
+        original_question_id: 33,
+        answer: null,
+        response_state: SurveySubmissionItemState.SKIPPED,
+      }),
+    ]);
   });
 
-  it('finalise une soumission entièrement vide sans créer de réponse', async () => {
+  it('finalise une soumission entièrement vide sans créer de réponse historique', async () => {
     const result = await service.submitByToken('participant-token', {
       responses: [],
     });
@@ -192,8 +332,131 @@ describe('CampaignParticipantService survey submission', () => {
         response_count: 0,
         answered_response_count: 0,
         declined_response_count: 0,
+        skipped_response_count: 1,
       }),
     );
+    expect(submissionItemRepository.save).toHaveBeenCalledWith([
+      expect.objectContaining({
+        original_question_id: 31,
+        answer: null,
+        response_state: SurveySubmissionItemState.SKIPPED,
+      }),
+    ]);
+  });
+
+  it('fige le questionnaire au premier affichage et le réutilise à la reprise', async () => {
+    participant.questionnaire_snapshot = null;
+    const hiddenSection = {
+      id: 42,
+      title: 'Section masquée',
+      description: null,
+      order_index: 5,
+      is_visible: false,
+      created_at: new Date('2025-01-03T00:00:00.000Z'),
+    };
+    participant.campaign.question_sections.push(hiddenSection);
+    participant.campaign.questions.push({
+      ...participant.campaign.questions[0],
+      id: 32,
+      question_text: 'Question masquée',
+      section: hiddenSection,
+    });
+
+    const firstView = await service.getQuestionnaireByToken(
+      'participant-token',
+    );
+
+    expect(firstView.sections.map((section) => section.id)).toEqual([41]);
+    expect(firstView.questions.map((question) => question.id)).toEqual([31]);
+    expect(participant.questionnaire_snapshot).toEqual(
+      expect.objectContaining({
+        version: 1,
+        sections: [expect.objectContaining({ title: 'Section visible' })],
+        questions: [
+          expect.objectContaining({ question_text: 'Question originale' }),
+        ],
+      }),
+    );
+
+    participant.campaign.question_sections[0].title = 'Section modifiée';
+    participant.campaign.questions[0].question_text = 'Question modifiée';
+    participant.campaign.questions[0].choice_options = ['Nouvelle option'];
+
+    const resumedView = await service.getQuestionnaireByToken(
+      'participant-token',
+    );
+
+    expect(resumedView.sections[0].title).toBe('Section visible');
+    expect(resumedView.questions[0]).toEqual(
+      expect.objectContaining({
+        question_text: 'Question originale',
+        choice_options: ['1', '2', '3', '4', '5'],
+      }),
+    );
+    expect(participantRepository.save).toHaveBeenCalledTimes(1);
+
+    await service.submitByToken('participant-token', {
+      responses: [{ question_id: 31, answer: '4' }],
+    });
+
+    expect(submissionItemRepository.save).toHaveBeenCalledWith([
+      expect.objectContaining({
+        original_question_id: 31,
+        question_text: 'Question originale',
+        section_title: 'Section visible',
+        choice_options: ['1', '2', '3', '4', '5'],
+        answer: '4',
+        response_state: SurveySubmissionItemState.ANSWERED,
+      }),
+    ]);
+  });
+
+  it('ne fabrique pas de snapshot pour une participation historique terminée', async () => {
+    participant.questionnaire_snapshot = null;
+    participant.completed_at = new Date('2024-01-01T00:00:00.000Z');
+    participant.status = CampaignParticipantStatus.COMPLETED;
+
+    await service.getQuestionnaireByToken('participant-token');
+
+    expect(participant.questionnaire_snapshot).toBeNull();
+    expect(participantRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('préserve la soumission legacy sans inventer de lignes fiables', async () => {
+    participant.questionnaire_snapshot = null;
+
+    const result = await service.submitByToken('participant-token', {
+      responses: [{ question_id: 31, answer: 'réponse legacy' }],
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        submitted: true,
+        response_count: 1,
+        skipped_response_count: 0,
+      }),
+    );
+    expect(responseRepository.save).toHaveBeenCalledTimes(1);
+    expect(submissionItemRepository.create).not.toHaveBeenCalled();
+    expect(submissionItemRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejette une réponse answered vide avant toute écriture', async () => {
+    await expect(
+      service.submitByToken('participant-token', {
+        responses: [
+          {
+            question_id: 31,
+            answer: '   ',
+            response_state: 'answered',
+          },
+        ],
+      }),
+    ).rejects.toThrow('must contain a value');
+
+    expect(responseRepository.save).not.toHaveBeenCalled();
+    expect(submissionItemRepository.save).not.toHaveBeenCalled();
+    expect(participantRepository.save).not.toHaveBeenCalled();
   });
 
   const draftPayload = () => ({
@@ -273,10 +536,12 @@ describe('CampaignParticipantService survey submission', () => {
         responses: [...payload.responses, ...payload.responses],
       }),
     ).rejects.toThrow('Each question can only be answered once');
-    questionRepository.find.mockResolvedValueOnce([]);
     await expect(
-      service.saveDraftByToken('participant-token', payload),
-    ).rejects.toThrow('must belong');
+      service.saveDraftByToken('participant-token', {
+        ...payload,
+        responses: [{ ...payload.responses[0], question_id: 999 }],
+      }),
+    ).rejects.toThrow('must have been presented');
     expect(participantRepository.save).not.toHaveBeenCalled();
   });
 

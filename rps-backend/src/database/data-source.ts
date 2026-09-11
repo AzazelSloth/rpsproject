@@ -10,6 +10,7 @@ import { QuestionSection } from '../question/question-section.entity';
 import { Question } from '../question/question.entity';
 import { Report } from '../report/report.entity';
 import { SurveyResponse } from '../response/response.entity';
+import { SurveySubmissionItem } from '../campaign-participant/survey-submission-item.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -30,6 +31,7 @@ export const AppDataSource = new DataSource({
     Report,
     SurveyResponse,
     CampaignParticipant,
+    SurveySubmissionItem,
   ],
   // Use runtime-relative path so TypeORM loads migrations once (src in ts-node, dist in node).
   migrations: [join(__dirname, 'migrations/*{.ts,.js}')],

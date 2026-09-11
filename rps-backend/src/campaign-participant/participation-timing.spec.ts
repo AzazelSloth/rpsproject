@@ -117,12 +117,19 @@ describe('Participation timing', () => {
 
 describe('Timing access', () => {
   const previous = process.env.SURVEY_TIMING_ALLOWED_EMAILS;
+  const previousTestSurveyEmails =
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
   beforeEach(() => {
     delete process.env.SURVEY_TIMING_ALLOWED_EMAILS;
+    delete process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
   });
   afterEach(() => {
     if (previous === undefined) delete process.env.SURVEY_TIMING_ALLOWED_EMAILS;
     else process.env.SURVEY_TIMING_ALLOWED_EMAILS = previous;
+    if (previousTestSurveyEmails === undefined)
+      delete process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
+    else
+      process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS = previousTestSurveyEmails;
   });
 
   it.each([
@@ -156,6 +163,16 @@ describe('Timing access', () => {
     expect(isSurveyTimingAllowedEmail('toky.rao@gmail.com')).toBe(true);
     expect(isSurveyTimingAllowedEmail('cathynomeniavo@gmail.com')).toBe(false);
     process.env.SURVEY_TIMING_ALLOWED_EMAILS = '';
-    expect(isSurveyTimingAllowedEmail('toky.rao@gmail.com')).toBe(false);
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS =
+      'toky.rao@gmail.com,genevieve.majorbr@gmail.com,cathynomeniavo@gmail.com';
+    expect(isSurveyTimingAllowedEmail('toky.rao@gmail.com')).toBe(true);
+  });
+
+  it('uses the existing server-side account list when timing configuration is absent', () => {
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS =
+      'toky.rao@gmail.com,genevieve.majorbr@gmail.com,cathynomeniavo@gmail.com';
+
+    expect(isSurveyTimingAllowedEmail('genevieve.majorbr@gmail.com')).toBe(true);
+    expect(isSurveyTimingAllowedEmail('other@gmail.com')).toBe(false);
   });
 });

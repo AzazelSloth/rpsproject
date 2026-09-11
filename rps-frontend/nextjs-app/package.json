@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "eslint",
+    "test:survey-export": "node --experimental-strip-types --test lib/survey-exports/access.test.ts lib/backend/auth-config.test.ts",
     "test:survey-response": "node --experimental-strip-types --test components/rps/survey-response-answer.test.ts components/rps/question-suggestions.test.ts lib/responses/response-state.test.ts lib/responses/survey-draft.test.ts"
   },
   "dependencies": {

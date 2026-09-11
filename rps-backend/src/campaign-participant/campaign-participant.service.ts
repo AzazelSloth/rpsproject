@@ -27,7 +27,14 @@ import {
 import {
   CampaignParticipant,
   CampaignParticipantStatus,
+  QuestionnaireSnapshot,
+  QuestionnaireSnapshotQuestion,
+  QuestionnaireSnapshotSection,
 } from './campaign-participant.entity';
+import {
+  SurveySubmissionItem,
+  SurveySubmissionItemState,
+} from './survey-submission-item.entity';
 import {
   CreateCampaignParticipantDto,
   ImportCampaignEmployeeRowDto,
@@ -193,73 +200,93 @@ export class CampaignParticipantService {
   }
 
   async getQuestionnaireByToken(token: string) {
-    const participant = await this.campaignParticipantRepository.findOne({
-      select: {
-        id: true,
-        participation_token: true,
-        status: true,
-        completed_at: true,
-        draft: true,
-        draft_revision: true,
-      },
-      where: {
-        participation_token: token,
-        employee: { deleted_at: IsNull() },
-      },
-      relations: {
+    return this.dataSource.transaction(async (manager) => {
+      const repository = manager.getRepository(CampaignParticipant);
+      const lockedParticipant = await repository.findOne({
+        select: { id: true },
+        where: {
+          participation_token: token,
+          employee: { deleted_at: IsNull() },
+        },
+        lock: { mode: 'pessimistic_write', tables: ['campaign_participants'] },
+      });
+
+      if (!lockedParticipant) {
+        throw new NotFoundException('Participation link not found');
+      }
+
+      // Load one-to-many questionnaire relations only after locking the single
+      // participant row. PostgreSQL cannot safely lock a DISTINCT join query.
+      const participant = await repository.findOne({
+        select: {
+          id: true,
+          participation_token: true,
+          status: true,
+          completed_at: true,
+          draft: true,
+          draft_revision: true,
+          questionnaire_snapshot: true,
+        },
+        where: {
+          id: lockedParticipant.id,
+          employee: { deleted_at: IsNull() },
+        },
+        relations: {
+          campaign: {
+            company: true,
+            questions: { section: true },
+            question_sections: true,
+          },
+          employee: true,
+        },
+      });
+
+      if (!participant) {
+        throw new NotFoundException('Participation link not found');
+      }
+
+      let questionnaire = participant.questionnaire_snapshot;
+      if (
+        !questionnaire &&
+        !participant.completed_at &&
+        participant.status !== CampaignParticipantStatus.COMPLETED
+      ) {
+        questionnaire = this.buildQuestionnaireSnapshot(participant.campaign);
+        participant.questionnaire_snapshot = questionnaire;
+        await repository.save(participant);
+      }
+
+      // Completed historical participations are deliberately not backfilled.
+      const displayedQuestionnaire =
+        questionnaire ?? this.buildQuestionnaireSnapshot(participant.campaign);
+
+      return {
+        token: participant.participation_token,
+        status: participant.status,
+        completed_at: null,
+        draft: participant.completed_at ? null : (participant.draft ?? null),
+        draft_revision: participant.draft_revision ?? 0,
+        employee: {
+          id: participant.employee.id,
+          first_name: participant.employee.first_name,
+          last_name: participant.employee.last_name,
+          email: participant.employee.email,
+          department: participant.employee.department,
+        },
         campaign: {
-          company: true,
-          questions: { section: true },
-          question_sections: true,
+          id: participant.campaign.id,
+          name: participant.campaign.name,
+          introduction_text: participant.campaign.introduction_text,
+          conclusion_text: participant.campaign.conclusion_text,
+          status: participant.campaign.status,
+          start_date: participant.campaign.start_date,
+          end_date: participant.campaign.end_date,
+          company: participant.campaign.company,
         },
-        employee: true,
-      },
+        sections: displayedQuestionnaire.sections,
+        questions: displayedQuestionnaire.questions,
+      };
     });
-
-    if (!participant) {
-      throw new NotFoundException('Participation link not found');
-    }
-
-    return {
-      token: participant.participation_token,
-      status: participant.status,
-      completed_at: null,
-      draft: participant.completed_at ? null : (participant.draft ?? null),
-      draft_revision: participant.draft_revision ?? 0,
-      employee: {
-        id: participant.employee.id,
-        first_name: participant.employee.first_name,
-        last_name: participant.employee.last_name,
-        email: participant.employee.email,
-        department: participant.employee.department,
-      },
-      campaign: {
-        id: participant.campaign.id,
-        name: participant.campaign.name,
-        introduction_text: participant.campaign.introduction_text,
-        conclusion_text: participant.campaign.conclusion_text,
-        status: participant.campaign.status,
-        start_date: participant.campaign.start_date,
-        end_date: participant.campaign.end_date,
-        company: participant.campaign.company,
-      },
-      sections: [...(participant.campaign.question_sections ?? [])].filter((section) => section.is_visible !== false).sort(
-        (a, b) => {
-          if (a.order_index === b.order_index) {
-            return a.id - b.id;
-          }
-
-          return a.order_index - b.order_index;
-        },
-      ),
-      questions: [...participant.campaign.questions].filter((question) => !question.section || question.section.is_visible !== false).sort((a, b) => {
-        if (a.order_index === b.order_index) {
-          return a.id - b.id;
-        }
-
-        return a.order_index - b.order_index;
-      }),
-    };
   }
 
   async update(
@@ -311,6 +338,7 @@ export class CampaignParticipantService {
           completed_at: true,
           draft: true,
           draft_revision: true,
+          questionnaire_snapshot: true,
         },
         where: {
           participation_token: token,
@@ -346,15 +374,30 @@ export class CampaignParticipantService {
           'Each question can only be answered once',
         );
       }
-      const questions = ids.length
-        ? await manager.getRepository(Question).find({
-            where: { id: In(ids), campaign: { id: participant.campaign.id } },
-          })
-        : [];
-      if (questions.length !== ids.length) {
-        throw new BadRequestException(
-          'Submitted questions must belong to the participant campaign',
+      if (participant.questionnaire_snapshot) {
+        const presentedQuestionIds = new Set(
+          participant.questionnaire_snapshot.questions.map(
+            (question) => question.id,
+          ),
         );
+        if (ids.some((id) => !presentedQuestionIds.has(id))) {
+          throw new BadRequestException(
+            'Submitted questions must have been presented to the participant',
+          );
+        }
+      } else {
+        // Compatibility path for a page opened before snapshot deployment.
+        // It validates as before but cannot reliably infer skipped questions.
+        const questions = ids.length
+          ? await manager.getRepository(Question).find({
+              where: { id: In(ids), campaign: { id: participant.campaign.id } },
+            })
+          : [];
+        if (questions.length !== ids.length) {
+          throw new BadRequestException(
+            'Submitted questions must belong to the participant campaign',
+          );
+        }
       }
       participant.draft = {
         responses: payload.responses.map((item) => ({
@@ -478,6 +521,9 @@ export class CampaignParticipantService {
       const participantRepository = manager.getRepository(CampaignParticipant);
       const questionRepository = manager.getRepository(Question);
       const responseRepository = manager.getRepository(SurveyResponse);
+      const submissionItemRepository = manager.getRepository(
+        SurveySubmissionItem,
+      );
       const participant = await participantRepository.findOne({
         select: {
           id: true,
@@ -487,6 +533,7 @@ export class CampaignParticipantService {
           status: true,
           completed_at: true,
           draft_revision: true,
+          questionnaire_snapshot: true,
         },
         lock: { mode: 'pessimistic_write', tables: ['campaign_participants'] },
         where: {
@@ -516,6 +563,18 @@ export class CampaignParticipantService {
         throw new ConflictException(
           'The questionnaire was modified in another session',
         );
+      }
+
+      const questionnaire = participant.questionnaire_snapshot;
+      if (questionnaire) {
+        const presentedQuestionIds = new Set(
+          questionnaire.questions.map((question) => question.id),
+        );
+        if (questionIds.some((id) => !presentedQuestionIds.has(id))) {
+          throw new BadRequestException(
+            'Submitted questions must have been presented to the participant',
+          );
+        }
       }
 
       const questions = questionIds.length
@@ -585,6 +644,54 @@ export class CampaignParticipantService {
         }
       }
 
+      const normalizedResponseByQuestionId = new Map(
+        normalizedResponses.map((response) => [
+          response.question_id,
+          response,
+        ]),
+      );
+      const submissionItems = (questionnaire?.questions ?? []).map((question) => {
+        const response = normalizedResponseByQuestionId.get(question.id);
+        const responseState = response
+          ? response.response_state === SurveyResponseState.DECLINED
+            ? SurveySubmissionItemState.DECLINED
+            : SurveySubmissionItemState.ANSWERED
+          : SurveySubmissionItemState.SKIPPED;
+
+        return submissionItemRepository.create({
+          participation: participant,
+          original_question_id: question.id,
+          question_text: question.question_text,
+          question_type: question.question_type,
+          section_title: question.section?.title ?? null,
+          section_order: question.section?.order_index ?? null,
+          question_order: question.order_index,
+          choice_options: question.choice_options
+            ? [...question.choice_options]
+            : null,
+          answer:
+            responseState === SurveySubmissionItemState.ANSWERED
+              ? (response?.answer ?? null)
+              : null,
+          response_state: responseState,
+        });
+      });
+
+      if (submissionItems.length) {
+        try {
+          await submissionItemRepository.save(submissionItems);
+        } catch (error) {
+          throwPersistenceError(error, {
+            defaultMessage: 'Failed to save survey submission snapshot',
+            duplicateMessage: 'This participation has already been submitted',
+            constraintMessages: {
+              IDX_survey_submission_items_participation_question:
+                'This participation has already been submitted',
+            },
+          });
+        }
+      }
+
       participant.completed_at = new Date();
       if (payload.timing) applyParticipationTiming(participant, payload.timing);
       participant.status = CampaignParticipantStatus.COMPLETED;
@@ -612,8 +719,68 @@ export class CampaignParticipantService {
         declined_response_count: normalizedResponses.filter(
           (item) => item.response_state === SurveyResponseState.DECLINED,
         ).length,
+        skipped_response_count: submissionItems.filter(
+          (item) =>
+            item.response_state === SurveySubmissionItemState.SKIPPED,
+        ).length,
       };
     });
+  }
+
+  private buildQuestionnaireSnapshot(campaign: Campaign): QuestionnaireSnapshot {
+    const sections = [...(campaign.question_sections ?? [])]
+      .filter((section) => section.is_visible !== false)
+      .sort((left, right) => {
+        if (left.order_index === right.order_index) return left.id - right.id;
+        return left.order_index - right.order_index;
+      })
+      .map<QuestionnaireSnapshotSection>((section) => ({
+        id: section.id,
+        title: section.title,
+        description: section.description ?? null,
+        order_index: section.order_index,
+        is_visible: true,
+        ...(section.created_at
+          ? { created_at: this.serializeSnapshotDate(section.created_at) }
+          : {}),
+      }));
+    const sectionById = new Map(sections.map((section) => [section.id, section]));
+    const questions = [...(campaign.questions ?? [])]
+      .filter(
+        (question) =>
+          !question.section || question.section.is_visible !== false,
+      )
+      .sort((left, right) => {
+        if (left.order_index === right.order_index) return left.id - right.id;
+        return left.order_index - right.order_index;
+      })
+      .map<QuestionnaireSnapshotQuestion>((question) => ({
+        id: question.id,
+        question_text: question.question_text ?? null,
+        question_type: question.question_type ?? null,
+        rps_dimension: question.rps_dimension ?? null,
+        order_index: question.order_index,
+        choice_options: question.choice_options
+          ? [...question.choice_options]
+          : null,
+        ...(question.created_at
+          ? { created_at: this.serializeSnapshotDate(question.created_at) }
+          : {}),
+        section: question.section
+          ? (sectionById.get(question.section.id) ?? null)
+          : null,
+      }));
+
+    return {
+      version: 1,
+      captured_at: new Date().toISOString(),
+      sections,
+      questions,
+    };
+  }
+
+  private serializeSnapshotDate(value: Date | string) {
+    return value instanceof Date ? value.toISOString() : value;
   }
 
   async getCampaignProgress(campaignId: number) {
