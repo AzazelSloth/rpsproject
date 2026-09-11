@@ -189,7 +189,7 @@ describe('Survey exports over HTTP (e2e)', () => {
         .expect('Pragma', 'no-cache')
         .expect('X-Content-Type-Options', 'nosniff');
 
-      expect(response.text).toContain('"Répondant";"Section";"Question"');
+      expect(response.text).toMatch(/^\uFEFF?sep=;\r\n"Répondant";"Section";"Question"/);
       expect(response.text).toMatch(/R-[A-F0-9]{16}/);
       expect(response.text).toContain(
         `Campaign 5 ${kind === 'closed' ? 'choice' : 'text'}`,

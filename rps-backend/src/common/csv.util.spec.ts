@@ -4,6 +4,18 @@ import {
 } from './csv.util';
 
 describe('CSV export utilities', () => {
+  it('declares the separator for Excel while preserving accents and quoted cells', () => {
+    const csv = serializeCsvDocument(
+      ['Répondant', 'Réponse'],
+      [['R-123', 'Très bien; "merci"\net vous ?']],
+      { excelSeparatorHint: true },
+    );
+    expect(csv).toBe(
+      '\uFEFFsep=;\r\n"Répondant";"Réponse"\r\n' +
+      '"R-123";"Très bien; ""merci""\net vous ?"\r\n',
+    );
+  });
+
   it('produces an Excel-compatible UTF-8 semicolon document', () => {
     const csv = serializeCsvDocument(
       ['Répondant', 'Question', 'Réponse'],

@@ -15,6 +15,7 @@ export function neutralizeCsvFormula(value: string) {
 export function serializeCsvDocument(
   headers: string[],
   rows: CsvCell[][],
+  options: { excelSeparatorHint?: boolean } = {},
 ): string {
   const serializeRow = (row: CsvCell[]) =>
     row
@@ -26,7 +27,10 @@ export function serializeCsvDocument(
       })
       .join(';');
 
-  return `\uFEFF${[headers, ...rows].map(serializeRow).join('\r\n')}\r\n`;
+  // Excel otherwise uses the regional list separator when opening a CSV.
+  // Opt in because sep= is an Excel directive, not a standard CSV data row.
+  const separatorHint = options.excelSeparatorHint ? 'sep=;\r\n' : '';
+  return `\uFEFF${separatorHint}${[headers, ...rows].map(serializeRow).join('\r\n')}\r\n`;
 }
 
 export function normalizeCsvHeader(header: string) {

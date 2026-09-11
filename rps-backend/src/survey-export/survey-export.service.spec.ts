@@ -224,7 +224,7 @@ describe('SurveyExportService', () => {
     const result = await service.exportClosedQuestions(77);
 
     expect(result.content).toBe(
-      '\uFEFF"Répondant";"Section";"Question";"Type de question";"Réponse";"Statut"\r\n',
+      '\uFEFFsep=;\r\n"Répondant";"Section";"Question";"Type de question";"Réponse";"Statut"\r\n',
     );
     expect(submissionItemRepository.find).not.toHaveBeenCalled();
   });

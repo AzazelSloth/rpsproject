@@ -306,7 +306,7 @@ export class SurveyExportService {
         ]);
 
     return {
-      content: serializeCsvDocument(headers, csvRows),
+      content: serializeCsvDocument(headers, csvRows, { excelSeparatorHint: true }),
       filename: `survey-${campaignId}-${kind}${
         containsIndeterminateHistory ? '-historique-indetermine' : ''
       }-${new Date()
