@@ -4,6 +4,8 @@ export type BackendCompany = {
   id: number;
   name: string;
   context: string | null;
+  champion_name?: string | null;
+  champion_email?: string | null;
   created_at: string;
 };
 

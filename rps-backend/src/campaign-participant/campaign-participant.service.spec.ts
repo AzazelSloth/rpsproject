@@ -23,6 +23,8 @@ import {
 describe('CampaignParticipantService survey submission', () => {
   let service: CampaignParticipantService;
   let participantRepository: {
+    update: jest.Mock;
+    createQueryBuilder: jest.Mock;
     findOne: jest.Mock;
     find: jest.Mock;
     save: jest.Mock;
@@ -40,6 +42,10 @@ describe('CampaignParticipantService survey submission', () => {
   let employeeRepository: { save: jest.Mock };
   let campaignRepository: { findOne: jest.Mock };
   let participant: CampaignParticipant;
+  const mailService = {
+    sendSurveyInvitations: jest.fn(),
+    sendSurveyReminders: jest.fn(),
+  };
 
   beforeEach(async () => {
     const visibleSection = {
@@ -126,6 +132,15 @@ describe('CampaignParticipantService survey submission', () => {
     };
 
     participantRepository = {
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      createQueryBuilder: jest.fn(() => ({
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        returning: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({ raw: [{ status: CampaignParticipantStatus.REMINDED }] }),
+      })),
       findOne: jest.fn().mockResolvedValue(participant),
       find: jest.fn().mockResolvedValue([participant]),
       save: jest.fn().mockImplementation((value) => Promise.resolve(value)),
@@ -188,11 +203,39 @@ describe('CampaignParticipantService survey submission', () => {
           useValue: campaignRepository,
         },
         { provide: DataSource, useValue: dataSource },
-        { provide: SendGridMailService, useValue: {} },
+        { provide: SendGridMailService, useValue: mailService },
       ],
     }).compile();
 
     service = module.get(CampaignParticipantService);
+  });
+
+  it('loads the saved campaign company champion for invitations and reminders', async () => {
+    const originalAppUrl = process.env.APP_URL;
+    process.env.APP_URL = 'https://app.example.com';
+    try {
+      participant.campaign.company.champion_name = 'Saved champion';
+      participant.campaign.company.champion_email = 'saved@example.com';
+      campaignRepository.findOne.mockResolvedValue(participant.campaign);
+      participantRepository.find.mockResolvedValue([participant]);
+      const sent = [{ participant_id: participant.id }];
+      mailService.sendSurveyInvitations.mockResolvedValue({ sent, failed: [] });
+      mailService.sendSurveyReminders.mockResolvedValue({ sent, failed: [] });
+      await service.sendInvitations(12, { app_url: 'https://app.example.com' });
+      expect(mailService.sendSurveyInvitations).toHaveBeenLastCalledWith([
+        expect.objectContaining({ champion_name: 'Saved champion', champion_email: 'saved@example.com', email: 'test@example.com' }),
+      ]);
+      // The next send must use the current persisted values, not cached invitation data.
+      participant.campaign.company.champion_name = 'Updated champion';
+      participant.campaign.company.champion_email = null;
+      await service.sendReminders(12, { force: true });
+      expect(mailService.sendSurveyReminders).toHaveBeenLastCalledWith([
+        expect.objectContaining({ champion_name: 'Updated champion', champion_email: null }),
+      ]);
+    } finally {
+      if (originalAppUrl === undefined) delete process.env.APP_URL;
+      else process.env.APP_URL = originalAppUrl;
+    }
   });
 
   it('enregistre explicitement un refus sans texte de réponse', async () => {

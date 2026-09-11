@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { LoaderCircle, X } from 'lucide-react';
 import { getTrpcClient, formatTrpcError } from '@/lib/trpc/client';
+import { summarizeSurveyTiming } from './survey-timing-summary';
 
 type TimingRow = {
   participant_id: number;
@@ -17,6 +18,7 @@ export function SurveyTimingDialog({ campaignId, onClose }: { campaignId: number
   const [rows, setRows] = useState<TimingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const summary = summarizeSurveyTiming(rows);
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -53,6 +55,16 @@ export function SurveyTimingDialog({ campaignId, onClose }: { campaignId: number
     </div>
     {loading ? <LoaderCircle aria-label="Chargement" className="h-5 w-5 animate-spin" /> : null}
     {error ? <p role="alert" className="text-sm text-rose-700">{error}</p> : null}
+    {!loading && !error ? <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <p className="text-sm font-medium text-slate-700">Temps moyen de remplissage (durée active)</p>
+      <p className="mt-1 text-2xl font-bold tabular-nums">{formatDuration(summary.averageSeconds)}</p>
+      <p className="mt-1 text-sm text-slate-600">
+        {summary.count > 0
+          ? `Calculé sur ${summary.count} questionnaire${summary.count > 1 ? 's' : ''} terminé${summary.count > 1 ? 's' : ''} avec une durée enregistrée. Format : heures:minutes:secondes.`
+          : 'Aucun questionnaire terminé avec une durée enregistrée.'}
+        {' '}Les questionnaires en cours ou sans mesure sont exclus.
+      </p>
+    </div> : null}
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm">
         <thead><tr>{['Employé', 'Début', 'Fin', 'Durée active'].map((label) => <th key={label} className="px-3 py-3">{label}</th>)}</tr></thead>

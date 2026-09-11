@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsNotEmpty,
+  IsEmail,
   IsOptional,
   IsString,
   MaxLength,
@@ -39,4 +41,22 @@ export class UpdateCompanyDto {
   @IsOptional()
   @IsString()
   context?: string | null;
+
+  @ApiProperty({ description: 'Nom du champion', required: false, nullable: true })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() || null : value,
+  )
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  champion_name?: string | null;
+
+  @ApiProperty({ description: 'Courriel du champion', required: false, nullable: true })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() || null : value,
+  )
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(254)
+  champion_email?: string | null;
 }

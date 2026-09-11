@@ -12,6 +12,7 @@ import {
 } from '../campaign-participant/survey-submission-item.entity';
 import { Campaign } from '../campaign/campaign.entity';
 import { serializeCsvDocument } from '../common/csv.util';
+import { serializeSurveyWorkbook } from './survey-export.excel';
 import { SurveyResponse } from '../response/response.entity';
 import {
   ClosedSurveyExportRowDto,
@@ -28,6 +29,13 @@ import {
 } from './survey-export.util';
 
 type ExportKind = 'closed' | 'text';
+
+type SurveyExportTable = {
+  headers: string[];
+  rows: string[][];
+  filename: string;
+  containsIndeterminateHistory: boolean;
+};
 
 type InternalExportRow = {
   participationId: number;
@@ -55,18 +63,26 @@ export class SurveyExportService {
     private readonly responseRepository: Repository<SurveyResponse>,
   ) {}
 
-  exportClosedQuestions(campaignId: number) {
-    return this.buildExport(campaignId, 'closed');
+  async exportClosedQuestions(campaignId: number) {
+    return this.createCsvFile(await this.buildExport(campaignId, 'closed'));
   }
 
-  exportTextQuestions(campaignId: number) {
-    return this.buildExport(campaignId, 'text');
+  async exportTextQuestions(campaignId: number) {
+    return this.createCsvFile(await this.buildExport(campaignId, 'text'));
+  }
+
+  async exportClosedQuestionsExcel(campaignId: number) {
+    return this.createExcelFile(await this.buildExport(campaignId, 'closed'), 'closed');
+  }
+
+  async exportTextQuestionsExcel(campaignId: number) {
+    return this.createExcelFile(await this.buildExport(campaignId, 'text'), 'text');
   }
 
   private async buildExport(
     campaignId: number,
     kind: ExportKind,
-  ): Promise<SurveyExportFile> {
+  ): Promise<SurveyExportTable> {
     await this.ensureCampaignExists(campaignId);
     const secret = this.getPseudonymSecret();
     const participants = await this.findCompletedParticipants(campaignId);
@@ -270,7 +286,7 @@ export class SurveyExportService {
     kind: ExportKind,
     rows: ClosedSurveyExportRowDto[] | TextSurveyExportRowDto[],
     containsIndeterminateHistory: boolean,
-  ): SurveyExportFile {
+  ): SurveyExportTable {
     const isClosed = kind === 'closed';
     const headers = isClosed
       ? [
@@ -306,13 +322,33 @@ export class SurveyExportService {
         ]);
 
     return {
-      content: serializeCsvDocument(headers, csvRows, { excelSeparatorHint: true }),
+      headers,
+      rows: csvRows,
       filename: `survey-${campaignId}-${kind}${
         containsIndeterminateHistory ? '-historique-indetermine' : ''
       }-${new Date()
         .toISOString()
         .slice(0, 10)}.csv`,
       containsIndeterminateHistory,
+    };
+  }
+
+  private createCsvFile(table: SurveyExportTable): SurveyExportFile {
+    return {
+      content: serializeCsvDocument(table.headers, table.rows, { excelSeparatorHint: true }),
+      filename: table.filename,
+      containsIndeterminateHistory: table.containsIndeterminateHistory,
+    };
+  }
+
+  private async createExcelFile(
+    table: SurveyExportTable,
+    kind: ExportKind,
+  ): Promise<SurveyExportFile<Buffer>> {
+    return {
+      content: await serializeSurveyWorkbook(kind, table.headers, table.rows),
+      filename: table.filename.replace(/\.csv$/, '.xlsx'),
+      containsIndeterminateHistory: table.containsIndeterminateHistory,
     };
   }
 

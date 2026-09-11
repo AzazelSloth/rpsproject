@@ -22,8 +22,11 @@ export class TextSurveyExportRowDto {
   status!: string;
 }
 
-export type SurveyExportFile = {
-  content: string;
+export type SurveyExportFile<TContent = string> = {
+  content: TContent;
   filename: string;
   containsIndeterminateHistory: boolean;
 };
+
+export const SURVEY_EXCEL_CONTENT_TYPE =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';

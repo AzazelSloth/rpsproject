@@ -1,4 +1,7 @@
-import { INestApplication } from '@nestjs/common';
+import { ClassSerializerInterceptor, INestApplication } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { Workbook } from 'exceljs';
+import type { IncomingMessage } from 'http';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -136,6 +139,7 @@ describe('Survey exports over HTTP (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');
+    app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
     await app.init();
     jwt = moduleFixture.get(JwtService);
   });
@@ -206,24 +210,67 @@ describe('Survey exports over HTTP (e2e)', () => {
     },
   );
 
-  it('rejects unauthenticated requests before reading responses', async () => {
+  it.each(['closed', 'text'] as const)(
+    'downloads %s Excel through the same guards and preserves its data', async (kind) => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/survey-exports/campaign/5/${kind}?format=xlsx`)
+        .set('Authorization', `Bearer ${tokenFor(EXPORT_ADMIN)}`)
+        .buffer(true)
+        .parse((response: IncomingMessage, done: (error: Error | null, body?: Buffer) => void) => {
+          const chunks: Buffer[] = [];
+          response.on('data', (chunk: Buffer) => chunks.push(chunk));
+          response.on('end', () => done(null, Buffer.concat(chunks)));
+          response.on('error', done);
+        })
+        .expect(200)
+        .expect('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .expect('Content-Disposition', new RegExp(`attachment; filename="survey-5-${kind}-.*\\.xlsx"`))
+        .expect('Cache-Control', 'private, no-store, max-age=0');
+      expect(Buffer.isBuffer(response.body)).toBe(true);
+      const workbook = new Workbook();
+      await workbook.xlsx.load(Uint8Array.from(response.body as Buffer).buffer);
+      expect(workbook.worksheets).toHaveLength(1);
+      const sheet = workbook.worksheets[0];
+      expect(sheet.getCell('C2').value).toBe(`Campaign 5 ${kind === 'closed' ? 'choice' : 'text'}`);
+      expect(sheet.rowCount).toBe(2);
+      const values = JSON.stringify(sheet.getSheetValues());
+      expect(values).not.toContain('Campaign 6');
+      expect(values).not.toContain('private@example.test');
+      expect(values).not.toContain(TEST_PSEUDONYM_SECRET);
+      expect(sheet.getCell('A2').value).toMatch(/^R-[A-F0-9]{16}$/);
+      if (kind === 'text') {
+        expect(sheet.getCell('D2').value).toBe('=1+1; commentaire privé');
+        expect(sheet.getCell('D2').formula).toBeUndefined();
+      }
+    },
+  );
+
+  it('rejects an unsupported format', async () => {
     await request(app.getHttpServer())
-      .get('/api/survey-exports/campaign/5/closed')
+      .get('/api/survey-exports/campaign/5/closed?format=html')
+      .set('Authorization', `Bearer ${tokenFor(EXPORT_ADMIN)}`)
+      .expect(400);
+    expect(participantRepository.find).not.toHaveBeenCalled();
+  });
+
+  it.each(['', '?format=xlsx'])('rejects unauthenticated requests before reading responses (%s)', async (format) => {
+    await request(app.getHttpServer())
+      .get(`/api/survey-exports/campaign/5/closed${format}`)
       .expect(401);
     expect(participantRepository.find).not.toHaveBeenCalled();
   });
 
-  it('rejects an unlisted administrator despite a claimed export permission', async () => {
+  it.each(['', '?format=xlsx'])('rejects an unlisted administrator despite a claimed export permission (%s)', async (format) => {
     await request(app.getHttpServer())
-      .get('/api/survey-exports/campaign/5/text')
+      .get(`/api/survey-exports/campaign/5/text${format}`)
       .set('Authorization', `Bearer ${tokenFor(OTHER_ADMIN)}`)
       .expect(403);
     expect(participantRepository.find).not.toHaveBeenCalled();
   });
 
-  it('rejects the existing n8n API key before reading responses', async () => {
+  it.each(['', '?format=xlsx'])('rejects the existing n8n API key before reading responses (%s)', async (format) => {
     await request(app.getHttpServer())
-      .get('/api/survey-exports/campaign/5/closed')
+      .get(`/api/survey-exports/campaign/5/closed${format}`)
       .set('x-api-key', TEST_API_KEY)
       .expect(403);
     expect(participantRepository.find).not.toHaveBeenCalled();

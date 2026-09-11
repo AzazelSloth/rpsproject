@@ -3,7 +3,17 @@ import test from "node:test";
 import {
   hasSurveyExportPermission,
   parseSurveyExportParams,
+  parseSurveyExportFormat,
 } from "./access.ts";
+
+test("conserve CSV par défaut et n’accepte que les deux formats prévus", () => {
+  assert.equal(parseSurveyExportFormat(null), "csv");
+  assert.equal(parseSurveyExportFormat("csv"), "csv");
+  assert.equal(parseSurveyExportFormat("xlsx"), "xlsx");
+  for (const invalid of ["", "pdf", "html", "XLSX", "xlsx,csv", "../xlsx"]) {
+    assert.equal(parseSurveyExportFormat(invalid), null);
+  }
+});
 
 test("affiche les exports uniquement avec la permission explicite du serveur", () => {
   assert.equal(hasSurveyExportPermission(["EXPORT_SURVEY_RESPONSES"]), true);

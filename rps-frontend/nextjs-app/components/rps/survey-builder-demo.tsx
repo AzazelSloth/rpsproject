@@ -7,9 +7,12 @@ import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import { ConfirmationModal } from "@/components/rps/confirmation-modal";
 import { PREFER_NOT_TO_ANSWER } from "@/components/rps/survey-response-answer";
 import { SurveyPrivacyFooter } from "@/components/rps/survey-privacy-footer";
+import { LinkedSurveyText } from "@/components/rps/linked-survey-text";
 import {
   AGREEMENT_SCALE_OPTIONS,
   FREQUENCY_SCALE_OPTIONS,
+  getScaleEditorType,
+  getScaleEditorOptions,
   QUESTION_SUGGESTION_SECTIONS,
   type QuestionSuggestion,
 } from "@/components/rps/question-suggestions";
@@ -184,6 +187,12 @@ export function SurveyBuilderDemo({
   const [sourceCompanyId, setSourceCompanyId] = useState<number | null>(null);
   const [sourceCampaignId, setSourceCampaignId] = useState<number | null>(null);
   const [newCompanyName, setNewCompanyName] = useState("");
+  const [championName, setChampionName] = useState(() =>
+    initialData.companies.find((company) => company.id === initialCompanyId)?.champion_name ?? "",
+  );
+  const [championEmail, setChampionEmail] = useState(() =>
+    initialData.companies.find((company) => company.id === initialCompanyId)?.champion_email ?? "",
+  );
   const [companyContext, setCompanyContext] = useState(() =>
     mode === "create"
       ? ""
@@ -314,6 +323,11 @@ export function SurveyBuilderDemo({
     setSourceCompanyId(null);
     setSourceCampaignId(null);
     setNewCompanyName("");
+    const selectedCompany = initialData.companies.find(
+      (company) => company.id === getInitialCompanyId(initialData, mode),
+    );
+    setChampionName(selectedCompany?.champion_name ?? "");
+    setChampionEmail(selectedCompany?.champion_email ?? "");
     setCompanyContext(
       mode === "create"
         ? ""
@@ -428,6 +442,8 @@ export function SurveyBuilderDemo({
           { ...result, context: result.context ?? "" },
         ]);
         setCompanyId(result.id);
+        setChampionName("");
+        setChampionEmail("");
         setCompanyContext(result.context ?? "");
         setCampaignId(null);
         setStatus("draft");
@@ -449,23 +465,27 @@ export function SurveyBuilderDemo({
       return;
     }
 
-    runMutation<{ id: number; name: string; context: string | null }>(
+    runMutation<{ id: number; name: string; context: string | null; champion_name?: string | null; champion_email?: string | null }>(
       () =>
         getTrpcClient().adminSurveys.updateCompanyContext.mutate({
           companyId,
           context: companyContext,
+          champion_name: championName.trim() || null,
+          champion_email: championEmail.trim() || null,
         }),
-      "Contexte de l'entreprise enregistre.",
+      "Contexte de l'entreprise et coordonnées du champion enregistrés.",
       undefined,
       (result) => {
         setCompanies((current) =>
           current.map((company) =>
             company.id === result.id
-              ? { ...company, context: result.context ?? "" }
+              ? { ...company, context: result.context ?? "", champion_name: result.champion_name ?? null, champion_email: result.champion_email ?? null }
               : company,
           ),
         );
         setCompanyContext(result.context ?? "");
+        setChampionName(result.champion_name ?? "");
+        setChampionEmail(result.champion_email ?? "");
       },
       false,
     );
@@ -502,6 +522,9 @@ export function SurveyBuilderDemo({
 
   function handleCompanySelection(nextCompanyId: number) {
     setCompanyId(nextCompanyId);
+    const selectedCompany = companies.find((company) => company.id === nextCompanyId);
+    setChampionName(selectedCompany?.champion_name ?? "");
+    setChampionEmail(selectedCompany?.champion_email ?? "");
     setCompanyContext(
       mode === "create"
         ? ""
@@ -555,6 +578,9 @@ export function SurveyBuilderDemo({
 
     setCampaignId(nextCampaign.id);
     setCompanyId(nextCampaign.companyId);
+    const selectedCompany = companies.find((company) => company.id === nextCampaign.companyId);
+    setChampionName(selectedCompany?.champion_name ?? "");
+    setChampionEmail(selectedCompany?.champion_email ?? "");
     setCompanyContext(
       companies.find((company) => company.id === nextCampaign.companyId)?.context ?? "",
     );
@@ -1411,7 +1437,9 @@ export function SurveyBuilderDemo({
         }
 
         if (updates.type === "scale") {
-          nextQuestion.options = question.type === "scale" && question.options?.length === 5
+          nextQuestion.options = updates.options?.length === 5
+            ? [...updates.options]
+            : question.type === "scale" && question.options?.length === 5
             ? question.options
             : [...AGREEMENT_SCALE_OPTIONS];
         }
@@ -2288,6 +2316,26 @@ export function SurveyBuilderDemo({
           placeholder="Saisir le contexte de l'entreprise..."
           className="mt-4 min-h-48 w-full resize-y rounded-[8px] border border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:bg-slate-100"
         />
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label htmlFor="champion-name" className="text-sm font-medium text-slate-700">
+            Nom du champion (facultatif)
+            <input id="champion-name" type="text" value={championName}
+              onChange={(event) => setChampionName(event.target.value)}
+              maxLength={150} disabled={!companyId || isBusy}
+              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 disabled:bg-slate-100" />
+          </label>
+          <label htmlFor="champion-email" className="text-sm font-medium text-slate-700">
+            Adresse courriel du champion (facultatif)
+            <input id="champion-email" type="email" value={championEmail}
+              onChange={(event) => setChampionEmail(event.target.value)}
+              maxLength={254} disabled={!companyId || isBusy}
+              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 disabled:bg-slate-100" />
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          Ces coordonnées seront utilisées dans les prochains courriels de sondage de cette entreprise.
+          Cliquez sur « Enregistrer le contexte » pour les sauvegarder.
+        </p>
       </section>
 
       {/* Gestion des questions */}
@@ -2606,7 +2654,9 @@ export function SurveyBuilderDemo({
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
                           Question {getQuestionNumber(questions, index)}
                         </p>
-                        <p className="mt-2 text-sm font-semibold">{question.type}</p>
+                        <p className="mt-2 text-sm font-semibold">{question.type === "scale"
+                          ? { scale: "Échelle 1 à 5", scale_a: "Échelle A", scale_f: "Échelle F" }[getScaleEditorType(question.options)]
+                          : question.type}</p>
                         {section ? (
                           <p className="mt-1 text-xs font-medium text-slate-500">
                             Section: {section.question.title}
@@ -2637,14 +2687,19 @@ export function SurveyBuilderDemo({
                       className="mt-3 sm:mt-4 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                     />
                     <select
-                      value={question.type}
-                      onChange={(event) =>
-                        updateQuestion(index, { type: event.target.value as SurveyQuestion["type"] })
-                      }
+                      value={question.type === "scale" ? getScaleEditorType(question.options) : question.type}
+                      onChange={(event) => {
+                        const options = getScaleEditorOptions(event.target.value);
+                        updateQuestion(index, options
+                          ? { type: "scale", options }
+                          : { type: event.target.value as SurveyQuestion["type"] });
+                      }}
                       disabled={!canEditQuestions}
                       className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                     >
-                      <option value="scale">Echelle 1 a 5</option>
+                      <option value="scale">Échelle 1 à 5</option>
+                      <option value="scale_a">Échelle A</option>
+                      <option value="scale_f">Échelle F</option>
                       <option value="choice">QCM</option>
                       <option value="text">Texte libre</option>
                     </select>
@@ -2655,7 +2710,11 @@ export function SurveyBuilderDemo({
                           Lecture de l&apos;echelle
                         </p>
                         <p className="mt-2 text-sm text-slate-600">
-                          Le répondant choisit une note de 1 à 5 pour indiquer son niveau d&apos;accord.
+                          {getScaleEditorType(question.options) === "scale_f"
+                            ? "Le répondant choisit une note de 1 à 5 pour indiquer la fréquence."
+                            : getScaleEditorType(question.options) === "scale_a"
+                              ? "Le répondant choisit une note de 1 à 5 pour indiquer son niveau d’accord."
+                              : "Le répondant choisit une note de 1 à 5 selon les libellés ci-dessous."}
                         </p>
                         <div className="mt-3 grid gap-2 grid-cols-2 sm:grid-cols-5">
                           {(question.options?.length === 5
@@ -2768,7 +2827,7 @@ export function SurveyBuilderDemo({
             </div>
             {introductionText.trim() ? (
               <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-                {introductionText.trim()}
+                <LinkedSurveyText text={introductionText.trim()} />
               </p>
             ) : (
               <p className="mt-4 text-sm italic text-slate-500">
@@ -2934,7 +2993,7 @@ export function SurveyBuilderDemo({
             </p>
             {conclusionText.trim() ? (
               <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-                {conclusionText.trim()}
+                <LinkedSurveyText text={conclusionText.trim()} />
               </p>
             ) : (
               <p className="mt-3 text-sm italic text-slate-500">

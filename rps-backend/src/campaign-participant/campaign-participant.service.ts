@@ -1692,6 +1692,8 @@ export class CampaignParticipantService {
         survey_url: `${appUrl}/survey-response/${participant.participation_token}`,
         campaign_name: campaignName,
         company_name: companyName,
+        champion_name: campaign.company.champion_name ?? null,
+        champion_email: campaign.company.champion_email ?? null,
         start_date: campaign.start_date,
         end_date: campaign.end_date,
       };

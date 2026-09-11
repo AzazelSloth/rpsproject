@@ -2,6 +2,7 @@ import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { SurveySubmissionItemState } from '../campaign-participant/survey-submission-item.entity';
 import { SurveyResponseState } from '../response/response.entity';
 import { SurveyExportService } from './survey-export.service';
+import { Workbook } from 'exceljs';
 
 describe('SurveyExportService', () => {
   const originalSecret = process.env.SURVEY_EXPORT_PSEUDONYM_SECRET;
@@ -216,6 +217,51 @@ describe('SurveyExportService', () => {
     expect(participantRepository.save).not.toHaveBeenCalled();
     expect(submissionItemRepository.save).not.toHaveBeenCalled();
     expect(responseRepository.save).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['choice', 'exportClosedQuestionsExcel', 'Choix simple'],
+    ['scale', 'exportClosedQuestionsExcel', 'Échelle 1 à 5'],
+    ['text', 'exportTextQuestionsExcel', null],
+  ] as const)('exports the same allowed %s data to Excel without reading or writing other data', async (type, method, label) => {
+    submissionItemRepository.find.mockResolvedValue([
+      submissionItem({ question_type: type, answer: 'Réponse exacte', response_state: SurveySubmissionItemState.ANSWERED }),
+      submissionItem({ original_question_id: 2, question_order: 1, question_type: type, response_state: SurveySubmissionItemState.DECLINED }),
+      submissionItem({ original_question_id: 3, question_order: 2, question_type: type, response_state: SurveySubmissionItemState.SKIPPED }),
+    ]);
+    const file = await service[method](77);
+    const workbook = new Workbook();
+    await workbook.xlsx.load(Uint8Array.from(file.content).buffer);
+    const sheet = workbook.worksheets[0];
+    const lastColumn = type === 'text' ? 5 : 6;
+    expect(sheet.rowCount).toBe(4);
+    expect(sheet.getRow(2).getCell(lastColumn - 1).value).toBe('Réponse exacte');
+    expect(sheet.getRow(2).getCell(lastColumn).value).toBe('Répondu');
+    expect(sheet.getRow(3).getCell(lastColumn).value).toBe('Je préfère ne pas répondre');
+    expect(sheet.getRow(4).getCell(lastColumn).value).toBe('Sauté');
+    if (label) expect(sheet.getCell('D2').value).toBe(label);
+    expect(file.filename).toMatch(/\.xlsx$/);
+    expect(file.containsIndeterminateHistory).toBe(false);
+    const values = JSON.stringify(sheet.getSheetValues());
+    expect(values).not.toContain('Private');
+    expect(values).not.toContain('private@example.com');
+    expect(campaignRepository.save).not.toHaveBeenCalled();
+    expect(participantRepository.save).not.toHaveBeenCalled();
+    expect(submissionItemRepository.save).not.toHaveBeenCalled();
+    expect(responseRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('keeps the historical warning in Excel filenames and statuses', async () => {
+    responseRepository.find.mockResolvedValue([{
+      id: 90, answer: 'Ancienne réponse', employee: { id: 501 },
+      question: { id: 30, question_text: 'Question historique', question_type: 'text', order_index: 0 },
+    }]);
+    const file = await service.exportTextQuestionsExcel(77);
+    const workbook = new Workbook();
+    await workbook.xlsx.load(Uint8Array.from(file.content).buffer);
+    expect(file.containsIndeterminateHistory).toBe(true);
+    expect(file.filename).toContain('historique-indetermine');
+    expect(workbook.worksheets[0].getCell('E2').value).toBe('Indéterminé');
   });
 
   it('returns headers only when the campaign has no completed submission', async () => {
