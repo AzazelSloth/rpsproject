@@ -1,4 +1,5 @@
 import AppDataSource from './data-source';
+import { verifySurveyExportSchema } from './verify-survey-export-schema';
 
 const INITIAL_MIGRATION_NAME = 'InitialSchema1710000000000';
 const INITIAL_MIGRATION_TIMESTAMP = 1710000000000;
@@ -81,6 +82,7 @@ async function runMigrations() {
   try {
     await ensureMigrationBaselineForLegacySchema();
     const executed = await AppDataSource.runMigrations({ transaction: 'all' });
+    await verifySurveyExportSchema(AppDataSource);
 
     if (executed.length === 0) {
       console.log('[db] No pending migration.');

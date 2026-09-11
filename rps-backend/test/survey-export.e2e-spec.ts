@@ -21,7 +21,7 @@ const TEST_PSEUDONYM_SECRET = 'http-export-test-only-pseudonym-secret';
 const TEST_API_KEY = 'http-export-test-only-api-key';
 const ENVIRONMENT_KEYS = [
   'ADMIN_ALLOWED_EMAILS',
-  'SURVEY_EXPORT_ALLOWED_EMAILS',
+  'TEST_SURVEY_DELETE_ALLOWED_EMAILS',
   'SURVEY_EXPORT_PSEUDONYM_SECRET',
   'API_KEY',
 ] as const;
@@ -146,7 +146,7 @@ describe('Survey exports over HTTP (e2e)', () => {
       EXPORT_ADMIN.email,
       OTHER_ADMIN.email,
     ].join(',');
-    process.env.SURVEY_EXPORT_ALLOWED_EMAILS = EXPORT_ADMIN.email;
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS = EXPORT_ADMIN.email;
     process.env.SURVEY_EXPORT_PSEUDONYM_SECRET = TEST_PSEUDONYM_SECRET;
     process.env.API_KEY = TEST_API_KEY;
   });

@@ -5,7 +5,7 @@ import { AUTH_PERMISSIONS } from './auth.permissions';
 import { User } from './user.entity';
 
 describe('AuthController profile permissions', () => {
-  const originalValue = process.env.SURVEY_EXPORT_ALLOWED_EMAILS;
+  const originalValue = process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
   let validateUser: jest.MockedFunction<AuthService['validateUser']>;
   let controller: AuthController;
 
@@ -17,11 +17,11 @@ describe('AuthController profile permissions', () => {
   });
 
   afterEach(() => {
-    restoreEnvValue('SURVEY_EXPORT_ALLOWED_EMAILS', originalValue);
+    restoreEnvValue('TEST_SURVEY_DELETE_ALLOWED_EMAILS', originalValue);
   });
 
   it('adds the explicit export permission without removing profile fields', async () => {
-    process.env.SURVEY_EXPORT_ALLOWED_EMAILS = 'cathy@example.com';
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS = 'cathy@example.com';
     const user = buildUser('cathy@example.com');
     validateUser.mockResolvedValue(user);
 
@@ -36,7 +36,7 @@ describe('AuthController profile permissions', () => {
   });
 
   it('returns an empty permission list for another authenticated admin', async () => {
-    process.env.SURVEY_EXPORT_ALLOWED_EMAILS = 'cathy@example.com';
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS = 'cathy@example.com';
     const user = buildUser('other-admin@example.com');
     validateUser.mockResolvedValue(user);
 

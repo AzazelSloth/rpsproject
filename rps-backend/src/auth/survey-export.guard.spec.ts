@@ -14,26 +14,20 @@ describe('SurveyExportGuard', () => {
     'genevieve.majorbr@gmail.com',
     'toky.rao@gmail.com',
   ];
-  const originalValue = process.env.SURVEY_EXPORT_ALLOWED_EMAILS;
-  const originalTestSurveyValue =
-    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
+  const originalValue = process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
 
   let validateUser: jest.MockedFunction<AuthService['validateUser']>;
   let guard: SurveyExportGuard;
 
   beforeEach(() => {
     delete process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
-    process.env.SURVEY_EXPORT_ALLOWED_EMAILS = configuredAccounts.join(',');
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS = configuredAccounts.join(',');
     validateUser = jest.fn();
     guard = new SurveyExportGuard({ validateUser } as unknown as AuthService);
   });
 
   afterEach(() => {
-    restoreEnvValue('SURVEY_EXPORT_ALLOWED_EMAILS', originalValue);
-    restoreEnvValue(
-      'TEST_SURVEY_DELETE_ALLOWED_EMAILS',
-      originalTestSurveyValue,
-    );
+    restoreEnvValue('TEST_SURVEY_DELETE_ALLOWED_EMAILS', originalValue);
   });
 
   it.each(configuredAccounts)(
@@ -81,7 +75,7 @@ describe('SurveyExportGuard', () => {
   );
 
   it('refuses access when export configuration is absent', async () => {
-    delete process.env.SURVEY_EXPORT_ALLOWED_EMAILS;
+    delete process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
     const user = buildUser(configuredAccounts[0]);
     validateUser.mockResolvedValue(user);
 
@@ -94,7 +88,7 @@ describe('SurveyExportGuard', () => {
   });
 
   it('fails closed when any configured entry is a wildcard', async () => {
-    process.env.SURVEY_EXPORT_ALLOWED_EMAILS =
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS =
       'cathy@example.com,*@example.com';
     const user = buildUser('cathy@example.com');
     validateUser.mockResolvedValue(user);

@@ -28,14 +28,7 @@ function parseExactEmailList(value?: string | null): string[] {
 }
 
 export function isSurveyTimingAllowedEmail(email: string): boolean {
-  const configuredEmails = process.env.SURVEY_TIMING_ALLOWED_EMAILS?.trim()
-    ? process.env.SURVEY_TIMING_ALLOWED_EMAILS
-    : process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
-
-  return parseEmailList(
-    configuredEmails ??
-      'cathynomeniavo@gmail.com,toky.rao@gmail.com,genevieve.majorbr@gmail.com',
-  ).includes(email.trim().toLowerCase());
+  return isTestSurveyDeleteAllowedEmail(email);
 }
 
 function parseDomainList(value?: string | null): string[] {
@@ -62,12 +55,7 @@ export function isAdminEmailAllowed(email: string): boolean {
 }
 
 export function getSurveyExportAllowedEmails(): string[] {
-  const dedicatedConfiguration = process.env.SURVEY_EXPORT_ALLOWED_EMAILS;
-  const configuredEmails = dedicatedConfiguration?.trim()
-    ? dedicatedConfiguration
-    : process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
-
-  return parseExactEmailList(configuredEmails);
+  return parseExactEmailList(process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS);
 }
 
 export function isSurveyExportAllowedEmail(

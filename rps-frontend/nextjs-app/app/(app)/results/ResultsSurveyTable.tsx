@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SurveyExportButton } from "@/components/rps/survey-export-button";
 import { useMemo, useState } from "react";
 import { Card, Pill } from "@/components/rps/ui";
 import { hasCampaignEnded } from "@/lib/campaigns/dates";
@@ -133,20 +134,12 @@ export function ResultsSurveyTable({
                         </Link>
                         {canExportSurveyResponses ? (
                           <>
-                            <a
-                              href={`/admin/campaigns/${survey.id}/exports/closed`}
-                              download
-                              className="inline-flex items-center justify-center rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-[0_12px_24px_rgba(24,24,24,0.06)] transition hover:-translate-y-0.5 hover:bg-slate-50"
-                            >
+                            <SurveyExportButton campaignId={survey.id} kind="closed">
                               Exporter les réponses aux questions fermées
-                            </a>
-                            <a
-                              href={`/admin/campaigns/${survey.id}/exports/text`}
-                              download
-                              className="inline-flex items-center justify-center rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-[0_12px_24px_rgba(24,24,24,0.06)] transition hover:-translate-y-0.5 hover:bg-slate-50"
-                            >
+                            </SurveyExportButton>
+                            <SurveyExportButton campaignId={survey.id} kind="text">
                               Exporter les réponses aux questions texte
-                            </a>
+                            </SurveyExportButton>
                           </>
                         ) : null}
                       </div>

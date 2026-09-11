@@ -1,23 +1,28 @@
 import {
   getSurveyExportAllowedEmails,
   isSurveyExportAllowedEmail,
+  isSurveyTimingAllowedEmail,
 } from './admin-access.config';
 
 describe('survey export access configuration', () => {
-  const originalValue = process.env.SURVEY_EXPORT_ALLOWED_EMAILS;
-  const originalTestSurveyValue =
-    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
+  const originalValue = process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
 
   afterEach(() => {
-    restoreEnvValue('SURVEY_EXPORT_ALLOWED_EMAILS', originalValue);
-    restoreEnvValue(
-      'TEST_SURVEY_DELETE_ALLOWED_EMAILS',
-      originalTestSurveyValue,
-    );
+    restoreEnvValue('TEST_SURVEY_DELETE_ALLOWED_EMAILS', originalValue);
+  });
+
+  it('uses only the shared list for timing access, without default accounts', () => {
+    for (const value of [undefined, '', '   ']) {
+      restoreEnvValue('TEST_SURVEY_DELETE_ALLOWED_EMAILS', value);
+      expect(isSurveyTimingAllowedEmail('cathynomeniavo@gmail.com')).toBe(false);
+    }
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS = ' Cathy@Example.com ';
+    expect(isSurveyTimingAllowedEmail(' CATHY@example.com ')).toBe(true);
+    expect(isSurveyTimingAllowedEmail('other@example.com')).toBe(false);
   });
 
   it('normalizes and deduplicates exact configured email addresses', () => {
-    process.env.SURVEY_EXPORT_ALLOWED_EMAILS =
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS =
       ' Cathy@Example.com, genevieve@example.com, CATHY@example.com ';
 
     expect(getSurveyExportAllowedEmails()).toEqual([
@@ -31,7 +36,7 @@ describe('survey export access configuration', () => {
     'fails closed when the configuration is absent or empty (%p)',
     (value) => {
       delete process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
-      restoreEnvValue('SURVEY_EXPORT_ALLOWED_EMAILS', value);
+      restoreEnvValue('TEST_SURVEY_DELETE_ALLOWED_EMAILS', value);
 
       expect(getSurveyExportAllowedEmails()).toEqual([]);
       expect(isSurveyExportAllowedEmail('cathy@example.com')).toBe(false);
@@ -44,14 +49,14 @@ describe('survey export access configuration', () => {
     'cathy@example.com,',
     'cathy@example',
   ])('fails closed for the entire invalid configuration %p', (value) => {
-    process.env.SURVEY_EXPORT_ALLOWED_EMAILS = value;
+    process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS = value;
 
     expect(getSurveyExportAllowedEmails()).toEqual([]);
     expect(isSurveyExportAllowedEmail('cathy@example.com')).toBe(false);
   });
 
-  it('uses the existing exact server-side account list when the dedicated list is absent', () => {
-    delete process.env.SURVEY_EXPORT_ALLOWED_EMAILS;
+  it('uses the shared server-side account list', () => {
+    delete process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
     process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS =
       'toky.rao@gmail.com,genevieve.majorbr@gmail.com,cathynomeniavo@gmail.com';
 
