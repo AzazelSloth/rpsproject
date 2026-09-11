@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { User } from './user.entity';
 import { AuthGuard } from './auth.guard';
 import { SendGridMailService } from '../email/sendgrid-mail.service';
+import { SurveyExportGuard } from './survey-export.guard';
 
 @Module({
   imports: [
@@ -15,8 +16,8 @@ import { SendGridMailService } from '../email/sendgrid-mail.service';
       signOptions: { expiresIn: '7d' },
     }),
   ],
-  providers: [AuthService, AuthGuard, SendGridMailService],
+  providers: [AuthService, AuthGuard, SurveyExportGuard, SendGridMailService],
   controllers: [AuthController],
-  exports: [AuthService, AuthGuard, JwtModule],
+  exports: [AuthService, AuthGuard, SurveyExportGuard, JwtModule],
 })
 export class AuthModule {}

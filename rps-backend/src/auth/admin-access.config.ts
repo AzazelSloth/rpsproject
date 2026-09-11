@@ -5,9 +5,35 @@ function parseEmailList(value?: string | null): string[] {
     .filter(Boolean);
 }
 
+const EXACT_EMAIL_PATTERN =
+  /^[a-z0-9.!#$%&'+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i;
+
+function parseExactEmailList(value?: string | null): string[] {
+  if (!value?.trim()) {
+    return [];
+  }
+
+  const emails = value.split(',').map((item) => item.trim().toLowerCase());
+
+  if (
+    emails.some(
+      (email) =>
+        !email || email.includes('*') || !EXACT_EMAIL_PATTERN.test(email),
+    )
+  ) {
+    return [];
+  }
+
+  return [...new Set(emails)];
+}
+
 export function isSurveyTimingAllowedEmail(email: string): boolean {
+  const configuredEmails = process.env.SURVEY_TIMING_ALLOWED_EMAILS?.trim()
+    ? process.env.SURVEY_TIMING_ALLOWED_EMAILS
+    : process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
+
   return parseEmailList(
-    process.env.SURVEY_TIMING_ALLOWED_EMAILS ??
+    configuredEmails ??
       'cathynomeniavo@gmail.com,toky.rao@gmail.com,genevieve.majorbr@gmail.com',
   ).includes(email.trim().toLowerCase());
 }
@@ -33,6 +59,25 @@ export function isAdminEmailAllowed(email: string): boolean {
 
     return allowedEmail === normalizedEmail;
   });
+}
+
+export function getSurveyExportAllowedEmails(): string[] {
+  const dedicatedConfiguration = process.env.SURVEY_EXPORT_ALLOWED_EMAILS;
+  const configuredEmails = dedicatedConfiguration?.trim()
+    ? dedicatedConfiguration
+    : process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
+
+  return parseExactEmailList(configuredEmails);
+}
+
+export function isSurveyExportAllowedEmail(
+  email: string | null | undefined,
+): boolean {
+  if (!email) {
+    return false;
+  }
+
+  return getSurveyExportAllowedEmails().includes(email.trim().toLowerCase());
 }
 
 export function getTestSurveyDeleteAllowedEmails() {

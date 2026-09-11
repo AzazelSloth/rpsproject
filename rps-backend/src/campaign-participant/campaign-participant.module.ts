@@ -11,6 +11,7 @@ import { ParticipantAutomationController } from './participant-automation.contro
 import { AuthModule } from '../auth/auth.module';
 import { CampaignModule } from '../campaign/campaign.module';
 import { SendGridMailService } from '../email/sendgrid-mail.service';
+import { SurveySubmissionItem } from './survey-submission-item.entity';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { SendGridMailService } from '../email/sendgrid-mail.service';
       Question,
       Employee,
       Campaign,
+      SurveySubmissionItem,
     ]),
     AuthModule,
     CampaignModule,

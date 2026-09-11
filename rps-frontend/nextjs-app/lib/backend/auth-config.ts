@@ -3,7 +3,11 @@ export function normalizeAdminEmail(email: string) {
 }
 
 export function isSurveyTimingAllowedEmail(email: string) {
-  return (process.env.SURVEY_TIMING_ALLOWED_EMAILS ??
+  const configuredEmails = process.env.SURVEY_TIMING_ALLOWED_EMAILS?.trim()
+    ? process.env.SURVEY_TIMING_ALLOWED_EMAILS
+    : process.env.TEST_SURVEY_DELETE_ALLOWED_EMAILS;
+
+  return (configuredEmails ??
     'cathynomeniavo@gmail.com,toky.rao@gmail.com,genevieve.majorbr@gmail.com')
     .split(',').map(normalizeAdminEmail).filter(Boolean).includes(normalizeAdminEmail(email));
 }

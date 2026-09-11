@@ -16,6 +16,7 @@ import {
 } from './dto/auth.dto';
 import { AuthGuard } from './auth.guard';
 import type { AuthenticatedRequest } from './auth.guard';
+import { getAuthPermissions } from './auth.permissions';
 
 @Controller('auth')
 export class AuthController {
@@ -63,8 +64,16 @@ export class AuthController {
   @UseGuards(AuthGuard)
   @ApiResponse({ status: 200, description: 'Profil utilisateur' })
   @ApiResponse({ status: 401, description: 'Non autorisé' })
-  getProfile(@Request() req: AuthenticatedRequest) {
-    return this.authService.validateUser(req.user.sub, req.user.email);
+  async getProfile(@Request() req: AuthenticatedRequest) {
+    const user = await this.authService.validateUser(
+      req.user.sub,
+      req.user.email,
+    );
+
+    return {
+      ...user,
+      permissions: getAuthPermissions(user.email),
+    };
   }
 
   @Post('logout')

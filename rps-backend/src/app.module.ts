@@ -11,6 +11,7 @@ import { QuestionModule } from './question/question.module';
 import { ReportModule } from './report/report.module';
 import { ResponseModule } from './response/response.module';
 import { HealthModule } from './health/health.module';
+import { SurveyExportModule } from './survey-export/survey-export.module';
 
 const shouldEnableDatabase =
   process.env.NODE_ENV !== 'test' || process.env.ENABLE_DATABASE === 'true';
@@ -36,6 +37,7 @@ const persistenceImports = shouldEnableDatabase
       EmployeeModule,
       ResponseModule,
       ReportModule,
+      SurveyExportModule,
     ]
   : [];
 

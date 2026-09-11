@@ -4,6 +4,31 @@ export type ParsedCsvDocument = {
   dataLineCount: number;
 };
 
+export type CsvCell = string | number | null | undefined;
+
+const CSV_FORMULA_PREFIX = /^\s*[=+\-@]/u;
+
+export function neutralizeCsvFormula(value: string) {
+  return CSV_FORMULA_PREFIX.test(value) ? `'${value}` : value;
+}
+
+export function serializeCsvDocument(
+  headers: string[],
+  rows: CsvCell[][],
+): string {
+  const serializeRow = (row: CsvCell[]) =>
+    row
+      .map((cell) => {
+        const value = neutralizeCsvFormula(
+          cell === null || cell === undefined ? '' : String(cell),
+        );
+        return `"${value.replace(/"/g, '""')}"`;
+      })
+      .join(';');
+
+  return `\uFEFF${[headers, ...rows].map(serializeRow).join('\r\n')}\r\n`;
+}
+
 export function normalizeCsvHeader(header: string) {
   return header
     .replace(/^\uFEFF/, '')
