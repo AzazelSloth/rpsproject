@@ -434,6 +434,7 @@ const campaignParticipantsRouter = t.router({
 				campaignId: z.number().int().positive(),
 				minimumDaysSinceInvitation: z.number().int().min(0).optional(),
 				force: z.boolean().optional(),
+				emailType: z.enum(["email2", "email3"]).optional(),
 			}),
 		)
 		.mutation(async ({ input }) => {
@@ -441,6 +442,7 @@ const campaignParticipantsRouter = t.router({
 			return postBackend(`/campaign-participants/campaign/${input.campaignId}/remind`, {
 				minimum_days_since_invitation: input.minimumDaysSinceInvitation,
 				force: input.force,
+				email_type: input.emailType,
 			});
 		}),
 });

@@ -241,6 +241,16 @@ export class ImportCampaignEmployeesDto {
 
 export class SendCampaignRemindersDto {
   @ApiProperty({
+    description: 'Courriel de relance a envoyer',
+    enum: ['email2', 'email3'],
+    required: false,
+    default: 'email2',
+  })
+  @IsOptional()
+  @IsIn(['email2', 'email3'])
+  email_type?: 'email2' | 'email3';
+
+  @ApiProperty({
     description: "Nombre minimum de jours depuis l'invitation",
     example: 0,
     required: false,

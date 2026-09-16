@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { Campaign } from '../campaign/campaign.entity';
 import { applyParticipationTiming } from './participation-timing';
@@ -247,13 +248,44 @@ export class CampaignParticipantService {
 
       let questionnaire = participant.questionnaire_snapshot;
       if (
-        !questionnaire &&
         !participant.completed_at &&
         participant.status !== CampaignParticipantStatus.COMPLETED
       ) {
-        questionnaire = this.buildQuestionnaireSnapshot(participant.campaign);
-        participant.questionnaire_snapshot = questionnaire;
-        await repository.save(participant);
+        const currentQuestionnaire = this.buildQuestionnaireSnapshot(
+          participant.campaign,
+        );
+        // Ignore captured_at: an unchanged questionnaire must not invalidate drafts.
+        const changed = questionnaire && (
+          !isDeepStrictEqual(
+            questionnaire.sections,
+            currentQuestionnaire.sections,
+          ) ||
+          !isDeepStrictEqual(
+            questionnaire.questions,
+            currentQuestionnaire.questions,
+          )
+        );
+        if (!questionnaire || changed) {
+          if (changed) {
+            const currentIds = new Set(
+              currentQuestionnaire.questions.map((question) => question.id),
+            );
+            if (participant.draft) {
+              participant.draft = {
+                ...participant.draft,
+                responses: participant.draft.responses.filter((response) =>
+                  currentIds.has(response.question_id),
+                ),
+                // Re-evaluate progress from the first section so added questions aren't skipped.
+                current_section: 0,
+              };
+            }
+            participant.draft_revision = (participant.draft_revision ?? 0) + 1;
+          }
+          questionnaire = currentQuestionnaire;
+          participant.questionnaire_snapshot = questionnaire;
+          await repository.save(participant);
+        }
       }
 
       // Completed historical participations are deliberately not backfilled.
@@ -1416,7 +1448,9 @@ export class CampaignParticipantService {
       companyName,
     );
     const sendGridResult =
-      await this.sendGridMailService.sendSurveyReminders(recipients);
+      options.email_type === 'email3'
+        ? await this.sendGridMailService.sendSurveyFinalReminders(recipients)
+        : await this.sendGridMailService.sendSurveyReminders(recipients);
     const failedReminders = sendGridResult.failed.map((item) => ({
       participant_id: item.recipient.participant_id,
       email: item.recipient.email,

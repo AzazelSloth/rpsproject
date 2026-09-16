@@ -19,10 +19,11 @@ import { getTrpcClient } from "@/lib/trpc/client";
 export function SurveyResponseDemo({
   participantToken,
   employeeId,
-  employeeName,
-  employeeTitle,
-  companyName,
-  campaignName,
+  // Informations masquées dans le parcours employé.
+  // employeeName,
+  // employeeTitle,
+  // companyName,
+  // campaignName,
   introductionText,
   conclusionText,
   status,
@@ -126,16 +127,22 @@ export function SurveyResponseDemo({
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
           Introduction
         </p>
+        {/* Titre et entreprise masqués à la demande du client.
         <h1 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold text-slate-950">
           {campaignName || "Sondage"}
         </h1>
         {companyName ? (
           <p className="mt-2 text-sm font-semibold text-slate-500">{companyName}</p>
         ) : null}
-        <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+        */}
+        <div className="mt-6 whitespace-pre-wrap text-sm leading-7 text-slate-700">
           <LinkedSurveyText text={introductionText.trim()} />
-        </p>
-        <PrimaryButton className="mt-8 sm:w-auto" disabled={!persistence.ready} onClick={() => setHasStarted(true)}>
+        </div>
+        <PrimaryButton
+          className="mt-8 sm:w-auto"
+          disabled={!persistence.ready}
+          onClick={() => setHasStarted(true)}
+        >
           Commencer le sondage
         </PrimaryButton>
         <div className="mt-8">
@@ -171,6 +178,7 @@ export function SurveyResponseDemo({
       ) : null} */}
 
       <div className="mt-8 space-y-6">
+        {/* Informations d'identification masquées dans toutes les étapes.
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-[12px] border border-slate-200 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
@@ -203,6 +211,8 @@ export function SurveyResponseDemo({
             />
           </div>
         </div>
+
+        */}
 
         {totalSteps > 1 ? (
           <nav aria-label="Sections du sondage" className="rounded-[12px] bg-slate-50 p-4">

@@ -45,6 +45,7 @@ describe('CampaignParticipantService survey submission', () => {
   const mailService = {
     sendSurveyInvitations: jest.fn(),
     sendSurveyReminders: jest.fn(),
+    sendSurveyFinalReminders: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -221,6 +222,7 @@ describe('CampaignParticipantService survey submission', () => {
       const sent = [{ participant_id: participant.id }];
       mailService.sendSurveyInvitations.mockResolvedValue({ sent, failed: [] });
       mailService.sendSurveyReminders.mockResolvedValue({ sent, failed: [] });
+      mailService.sendSurveyFinalReminders.mockResolvedValue({ sent, failed: [] });
       await service.sendInvitations(12, { app_url: 'https://app.example.com' });
       expect(mailService.sendSurveyInvitations).toHaveBeenLastCalledWith([
         expect.objectContaining({ champion_name: 'Saved champion', champion_email: 'saved@example.com', email: 'test@example.com' }),
@@ -230,6 +232,10 @@ describe('CampaignParticipantService survey submission', () => {
       participant.campaign.company.champion_email = null;
       await service.sendReminders(12, { force: true });
       expect(mailService.sendSurveyReminders).toHaveBeenLastCalledWith([
+        expect.objectContaining({ champion_name: 'Updated champion', champion_email: null }),
+      ]);
+      await service.sendReminders(12, { force: true, email_type: 'email3' });
+      expect(mailService.sendSurveyFinalReminders).toHaveBeenLastCalledWith([
         expect.objectContaining({ champion_name: 'Updated champion', champion_email: null }),
       ]);
     } finally {
@@ -387,7 +393,7 @@ describe('CampaignParticipantService survey submission', () => {
     ]);
   });
 
-  it('fige le questionnaire au premier affichage et le réutilise à la reprise', async () => {
+  it('actualise le questionnaire non termine a la reouverture', async () => {
     participant.questionnaire_snapshot = null;
     const hiddenSection = {
       id: 42,
@@ -429,14 +435,14 @@ describe('CampaignParticipantService survey submission', () => {
       'participant-token',
     );
 
-    expect(resumedView.sections[0].title).toBe('Section visible');
+    expect(resumedView.sections[0].title).toBe('Section modifiée');
     expect(resumedView.questions[0]).toEqual(
       expect.objectContaining({
-        question_text: 'Question originale',
-        choice_options: ['1', '2', '3', '4', '5'],
+        question_text: 'Question modifiée',
+        choice_options: ['Nouvelle option'],
       }),
     );
-    expect(participantRepository.save).toHaveBeenCalledTimes(1);
+    expect(participantRepository.save).toHaveBeenCalledTimes(2);
 
     await service.submitByToken('participant-token', {
       responses: [{ question_id: 31, answer: '4' }],
@@ -445,13 +451,129 @@ describe('CampaignParticipantService survey submission', () => {
     expect(submissionItemRepository.save).toHaveBeenCalledWith([
       expect.objectContaining({
         original_question_id: 31,
-        question_text: 'Question originale',
-        section_title: 'Section visible',
-        choice_options: ['1', '2', '3', '4', '5'],
+        question_text: 'Question modifiée',
+        section_title: 'Section modifiée',
+        choice_options: ['Nouvelle option'],
         answer: '4',
         response_state: SurveySubmissionItemState.ANSWERED,
       }),
     ]);
+  });
+
+  it.each(['invitation', 'email2', 'email3'] as const)(
+    'shows new questions on the same link after sending %s and preserves saved answers',
+    async (emailType) => {
+      participant.status = CampaignParticipantStatus.IN_PROGRESS;
+      participant.draft = {
+        responses: [{ question_id: 31, answer: '4', response_state: 'answered' }],
+        current_section: 1,
+        started: true,
+      };
+      participant.draft_revision = 3;
+      participant.campaign.questions.push({
+        ...participant.campaign.questions[0], id: 32, question_text: 'Nouvelle question', order_index: 3,
+      });
+      campaignRepository.findOne.mockResolvedValue(participant.campaign);
+      const sent = [{ participant_id: participant.id }];
+      mailService.sendSurveyInvitations.mockResolvedValue({ sent, failed: [] });
+      mailService.sendSurveyReminders.mockResolvedValue({ sent, failed: [] });
+      mailService.sendSurveyFinalReminders.mockResolvedValue({ sent, failed: [] });
+
+      if (emailType === 'invitation') await service.sendInvitations(12, { force: true });
+      else await service.sendReminders(12, { force: true, email_type: emailType });
+
+      const view = await service.getQuestionnaireByToken('participant-token');
+      expect(view.token).toBe('participant-token');
+      expect(view.questions.map((question) => question.id)).toEqual([31, 32]);
+      expect(view.draft).toEqual({
+        responses: [{ question_id: 31, answer: '4', response_state: 'answered' }],
+        current_section: 0, started: true,
+      });
+      expect(view.draft_revision).toBe(4);
+      const saved = await service.saveDraftByToken('participant-token', {
+        revision: 4, current_section: 0, started: true,
+        responses: [
+          { question_id: 31, answer: '4', response_state: 'answered' },
+          { question_id: 32, answer: '5', response_state: 'answered' },
+        ],
+      });
+      expect(saved.saved).toBe(true);
+      questionRepository.find.mockResolvedValue(participant.campaign.questions);
+      await service.submitByToken('participant-token', {
+        draft_revision: saved.revision,
+        responses: [{ question_id: 31, answer: '4' }, { question_id: 32, answer: '5' }],
+      });
+      expect(submissionItemRepository.save).toHaveBeenCalledWith([
+        expect.objectContaining({ original_question_id: 31, answer: '4' }),
+        expect.objectContaining({ original_question_id: 32, answer: '5' }),
+      ]);
+    },
+  );
+
+  it('does not rewrite an unchanged snapshot or increase its revision', async () => {
+    // JSONB can return object keys in a different order.
+    participant.questionnaire_snapshot!.sections[0] = Object.fromEntries(
+      Object.entries(participant.questionnaire_snapshot!.sections[0]).reverse(),
+    ) as typeof participant.questionnaire_snapshot.sections[number];
+    const snapshot = participant.questionnaire_snapshot;
+    await service.getQuestionnaireByToken('participant-token');
+    await service.getQuestionnaireByToken('participant-token');
+    expect(participant.questionnaire_snapshot).toBe(snapshot);
+    expect(participant.draft_revision).toBe(0);
+    expect(participantRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('removes deleted and hidden answers while preserving answers and refusals still presented', async () => {
+    participant.draft = {
+      responses: [
+        { question_id: 31, answer: '4', response_state: 'answered' },
+        { question_id: 32, answer: null, response_state: 'declined' },
+        { question_id: 33, answer: 'deleted', response_state: 'answered' },
+        { question_id: 34, answer: 'hidden', response_state: 'answered' },
+      ],
+      current_section: 4, started: true,
+    };
+    const original = participant.campaign.questions[0];
+    const hiddenSection = { ...original.section!, id: 42, is_visible: false };
+    participant.campaign.question_sections.push(hiddenSection);
+    participant.campaign.questions.push(
+      { ...original, id: 32, order_index: 3 },
+      { ...original, id: 34, section: hiddenSection },
+    );
+    const view = await service.getQuestionnaireByToken('participant-token');
+    expect(view.questions.map((question) => question.id)).toEqual([31, 32]);
+    expect(view.draft!.responses).toEqual([
+      { question_id: 31, answer: '4', response_state: 'answered' },
+      { question_id: 32, answer: null, response_state: 'declined' },
+    ]);
+    expect(view.draft!.current_section).toBe(0);
+  });
+
+  it('rejects stale saves and submissions after refreshing the questions', async () => {
+    participant.campaign.questions[0].question_text = 'Question actualisee';
+    await service.getQuestionnaireByToken('participant-token');
+    participantRepository.save.mockClear();
+    const stale = await service.saveDraftByToken('participant-token', {
+      revision: 0, current_section: 0, started: true, responses: [],
+    });
+    expect(stale).toMatchObject({ saved: false, revision: 1 });
+    await expect(service.submitByToken('participant-token', {
+      draft_revision: 0, responses: [{ question_id: 31, answer: '4' }],
+    })).rejects.toThrow('The questionnaire was modified in another session');
+    expect(participantRepository.save).not.toHaveBeenCalled();
+    expect(responseRepository.save).not.toHaveBeenCalled();
+  });
+
+  it.each(['status', 'timestamp'])('keeps completed history frozen when marked by %s', async (marker) => {
+    if (marker === 'status') participant.status = CampaignParticipantStatus.COMPLETED;
+    else participant.completed_at = new Date();
+    const snapshot = participant.questionnaire_snapshot;
+    participant.campaign.questions[0].question_text = 'New text after completion';
+    participant.campaign.questions.push({ ...participant.campaign.questions[0], id: 32 });
+    const view = await service.getQuestionnaireByToken('participant-token');
+    expect(view.questions).toEqual(snapshot!.questions);
+    expect(participant.questionnaire_snapshot).toBe(snapshot);
+    expect(participantRepository.save).not.toHaveBeenCalled();
   });
 
   it('ne fabrique pas de snapshot pour une participation historique terminée', async () => {

@@ -60,11 +60,12 @@ type SendGridConfig = {
   replyTo: string;
 };
 
-type SendGridTemplateKind = 'invitation' | 'reminder';
+type SendGridTemplateKind = 'invitation' | 'reminder' | 'final_reminder';
 
 const DEFAULT_SENDGRID_TEMPLATE_IDS: Record<SendGridTemplateKind, string> = {
   invitation: 'd-29ae7d6438ff4c24b8b179a840fd15a4',
   reminder: 'd-83afb17df29c43c89489a20ee92d500b',
+  final_reminder: 'd-039191451ef9494097dcee955088d1ac',
 };
 
 class SendGridDeliveryError extends Error {
@@ -621,6 +622,12 @@ export class SendGridMailService {
     return this.sendSurveyEmails(recipients, 'reminder');
   }
 
+  async sendSurveyFinalReminders(
+    recipients: SurveyInvitationEmailRecipient[],
+  ): Promise<SendGridBatchResult> {
+    return this.sendSurveyEmails(recipients, 'final_reminder');
+  }
+
   async sendPasswordResetEmail(
     recipient: PasswordResetEmailRecipient,
   ): Promise<void> {
@@ -678,9 +685,9 @@ export class SendGridMailService {
   }) {
     const { apiKey, fromEmail, fromName, replyTo, kind, recipient } = params;
     const subject =
-      kind === 'reminder'
-        ? `Relance - Sondage RPS - ${recipient.campaign_name}`
-        : `Sondage RPS - ${recipient.campaign_name}`;
+      kind === 'invitation'
+        ? `Sondage RPS - ${recipient.campaign_name}`
+        : `Relance - Sondage RPS - ${recipient.campaign_name}`;
     const templateId = this.resolveTemplateId(kind);
 
     if (templateId) {
@@ -764,10 +771,12 @@ export class SendGridMailService {
   }
 
   private resolveTemplateId(kind: SendGridTemplateKind) {
-    const configuredTemplateId =
-      kind === 'reminder'
-        ? this.getOptionalEnv('SENDGRID_REMINDER_TEMPLATE_ID')
-        : this.getOptionalEnv('SENDGRID_INVITATION_TEMPLATE_ID');
+    const envNameByKind: Record<SendGridTemplateKind, string> = {
+      invitation: 'SENDGRID_INVITATION_TEMPLATE_ID',
+      reminder: 'SENDGRID_REMINDER_TEMPLATE_ID',
+      final_reminder: 'SENDGRID_FINAL_REMINDER_TEMPLATE_ID',
+    };
+    const configuredTemplateId = this.getOptionalEnv(envNameByKind[kind]);
 
     return this.normalizeTemplateId(
       configuredTemplateId ?? DEFAULT_SENDGRID_TEMPLATE_IDS[kind],
@@ -839,11 +848,11 @@ export class SendGridMailService {
   }) {
     const { fromEmail, fromName, replyTo, recipient, kind, subject } = params;
     const text =
-      kind === 'reminder'
+      kind !== 'invitation'
         ? this.buildReminderText(recipient, replyTo, fromName)
         : this.buildInvitationText(recipient, replyTo, fromName);
     const html =
-      kind === 'reminder'
+      kind !== 'invitation'
         ? this.buildReminderHtml(recipient, replyTo)
         : this.buildInvitationHtml(recipient, replyTo);
 
@@ -934,6 +943,15 @@ export class SendGridMailService {
     subject: string,
   ) {
     const firstName = this.getFirstName(recipient);
+
+    if (kind === 'final_reminder') {
+      return {
+        firstname: firstName,
+        champion: recipient.champion_name?.trim() ?? '',
+        emailchampion: recipient.champion_email?.trim() ?? '',
+      };
+    }
+
     const startDate = this.formatEmailDate(recipient.start_date);
     const endDate = this.formatEmailDate(recipient.end_date);
 

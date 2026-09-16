@@ -271,6 +271,42 @@ test("restoring a partial page keeps the employee on that page", () => {
   );
 });
 
+test("reopening the updated questionnaire returns from conclusion to newly added questions", () => {
+  const cache = storage();
+  const oldDraft = {
+    answers: { "1": "4", "2": "yes" },
+    currentSection: 2,
+    started: true,
+  };
+  const old = new SurveyDraftSession("token", oldDraft, 5, cache, accept, noop);
+  old.persist();
+  // The backend refreshed the questionnaire and reset the saved position.
+  const reopened = new SurveyDraftSession(
+    "token", { ...oldDraft, currentSection: 0 }, 6, cache, accept, noop,
+  );
+  const restored = restoreDraftProgress(reopened.draft, [["1"], ["2", "3"]], 3);
+  assert.equal(restored.currentSection, 1);
+  assert.deepEqual(restored.answers, oldDraft.answers);
+  assert.equal(restored.started, true);
+});
+
+test("updated questions retain offline answers still present and remove obsolete cached answers", async () => {
+  const cache = storage();
+  const oldDraft = {
+    answers: { "1": "saved", "9": "deleted question" },
+    currentSection: 1, started: true,
+  };
+  const old = new SurveyDraftSession("token", oldDraft, 5, cache, accept, noop);
+  old.update({ ...oldDraft, answers: { "1": "offline edit", "9": "offline obsolete" } });
+  const reopened = new SurveyDraftSession(
+    "token", { answers: { "1": "saved" }, currentSection: 0, started: true }, 6, cache, accept, noop,
+  );
+  reopened.update(restoreDraftProgress(reopened.draft, [["1", "2"]], 2));
+  assert.deepEqual(reopened.draft.answers, { "1": "offline edit" });
+  assert.equal(reopened.draft.currentSection, 0);
+  assert.equal(await reopened.save(), true);
+});
+
 test("corrupt or unavailable storage does not prevent server saving", async () => {
   const cache = {
     getItem: () => "{bad",

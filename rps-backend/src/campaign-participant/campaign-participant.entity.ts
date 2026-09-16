@@ -116,7 +116,7 @@ export class CampaignParticipant {
   @Column({ type: 'int', default: 0, select: false })
   draft_revision!: number;
 
-  // Captured once for unfinished participations and never rewritten afterwards.
+  // Refreshed on opening unfinished participations; retained after completion.
   @Column({ type: 'jsonb', nullable: true, select: false })
   @Exclude()
   questionnaire_snapshot!: QuestionnaireSnapshot | null;

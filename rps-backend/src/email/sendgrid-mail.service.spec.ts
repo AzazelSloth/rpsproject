@@ -24,6 +24,7 @@ describe('SendGridMailService', () => {
     };
     delete process.env.SENDGRID_INVITATION_TEMPLATE_ID;
     delete process.env.SENDGRID_REMINDER_TEMPLATE_ID;
+    delete process.env.SENDGRID_FINAL_REMINDER_TEMPLATE_ID;
   });
 
   afterAll(() => {
@@ -156,6 +157,28 @@ describe('SendGridMailService', () => {
     expect(reminderBody.template_id).toBe(
       'd-83afb17df29c43c89489a20ee92d500b',
     );
+  });
+
+  it('uses Email 3 with exactly the client-provided dynamic variables', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 202 }));
+
+    await new SendGridMailService().sendSurveyFinalReminders([
+      {
+        ...recipient,
+        champion_name: 'Marie Champion',
+        champion_email: 'marie@example.com',
+      },
+    ]);
+
+    const body = getFetchBody(fetchMock, 0);
+    expect(body.template_id).toBe('d-039191451ef9494097dcee955088d1ac');
+    expect(body.personalizations[0].dynamic_template_data).toEqual({
+      firstname: 'Employee',
+      champion: 'Marie Champion',
+      emailchampion: 'marie@example.com',
+    });
   });
 
   it('formats survey dates in full French words', async () => {

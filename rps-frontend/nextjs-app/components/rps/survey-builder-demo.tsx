@@ -81,6 +81,7 @@ type ImportEmployeesResponse = {
 
 type SendInvitationsResponse = {
   sent_count?: number;
+  reminded_count?: number;
   failed_count?: number;
   skipped_count?: number;
   message?: string;
@@ -245,6 +246,8 @@ export function SurveyBuilderDemo({
   const [hasSentInvitations, setHasSentInvitations] = useState(false);
   const [isSendingInvitations, setIsSendingInvitations] = useState(false);
   const [isInvitationConfirmationOpen, setIsInvitationConfirmationOpen] = useState(false);
+  const [reminderEmailType, setReminderEmailType] = useState<"email2" | "email3" | null>(null);
+  const [sendingReminderEmailType, setSendingReminderEmailType] = useState<"email2" | "email3" | null>(null);
   const [isPreparingImport, setIsPreparingImport] = useState(false);
   const [participantCount, setParticipantCount] = useState(
     mode === "create" ? 0 : initialData.participantCount,
@@ -365,6 +368,8 @@ export function SurveyBuilderDemo({
     setSelectedFileName(null);
     setIsPreparingImport(false);
     setIsSendingInvitations(false);
+    setReminderEmailType(null);
+    setSendingReminderEmailType(null);
     setIsMutating(false);
     mutationInFlightRef.current = false;
     setParticipantCount(mode === "create" ? 0 : initialData.participantCount);
@@ -1859,8 +1864,94 @@ export function SurveyBuilderDemo({
     });
   }
 
+  function handleReminderEmailStep(emailType: "email2" | "email3") {
+    if (!campaignId) {
+      setError("Enregistrez d'abord le sondage avant l'envoi.");
+      return;
+    }
+
+    setReminderEmailType(emailType);
+  }
+
+  async function sendReminderEmailConfirmed() {
+    if (!campaignId || !reminderEmailType) {
+      setReminderEmailType(null);
+      return;
+    }
+
+    const emailType = reminderEmailType;
+    const emailLabel = emailType === "email2" ? "Email 2" : "Email 3";
+    setReminderEmailType(null);
+    setSendingReminderEmailType(emailType);
+    setIsSendingInvitations(true);
+    setFeedback(null);
+    setError(null);
+
+    try {
+      const rawResult = await getTrpcClient().campaignParticipants.remind.mutate({
+        campaignId,
+        minimumDaysSinceInvitation: 0,
+        force: true,
+        emailType,
+      });
+      const result = rawResult as SendInvitationsResponse;
+      const sentCount = result.reminded_count ?? 0;
+      const failedCount = result.failed_count ?? 0;
+      const failureMessage = formatInvitationFailureMessage(result);
+
+      if (failedCount > 0 && sentCount === 0) {
+        setError(failureMessage);
+        return;
+      }
+
+      setFeedback(
+        failedCount > 0
+          ? `${emailLabel} envoye a ${sentCount} employe(s), ${failedCount} echec(s).`
+          : sentCount > 0
+            ? `${emailLabel} envoye a ${sentCount} employe(s).`
+            : result.message ?? `Aucun ${emailLabel} a envoyer.`,
+      );
+      if (failedCount > 0) {
+        setError(`Certains envois ont echoue. ${failureMessage}`);
+      }
+      router.refresh();
+    } catch (caughtError) {
+      const errorInfo = parseApiError(caughtError);
+      setError(
+        `${errorInfo.userMessage}${errorInfo.suggestedAction ? ` ${errorInfo.suggestedAction}` : ""}`,
+      );
+    } finally {
+      setIsSendingInvitations(false);
+      setSendingReminderEmailType(null);
+    }
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
+      <ConfirmationModal
+        open={reminderEmailType !== null}
+        eyebrow="Envoi d'un courriel de relance"
+        title={`Envoyer ${reminderEmailType === "email3" ? "Email 3" : "Email 2"} ?`}
+        confirmLabel={`Envoyer ${reminderEmailType === "email3" ? "Email 3" : "Email 2"}`}
+        pendingLabel="Envoi..."
+        pending={isSendingInvitations}
+        onCancel={() => setReminderEmailType(null)}
+        onConfirm={() => void sendReminderEmailConfirmed()}
+      >
+        <p>
+          Le courriel sera envoye aux employes qui n'ont pas encore termine le sondage.
+        </p>
+        <div className="mt-4 rounded-[14px] border border-slate-200 bg-white px-5 py-4">
+          <p className="font-bold text-slate-950">{effectiveCampaignTitle || "Sondage"}</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Entreprise : <strong className="text-slate-950">{selectedCompanyName || "Entreprise"}</strong>
+          </p>
+          <p className="mt-1 text-sm text-slate-600">
+            Participants : <strong className="text-slate-950">{participantCount}</strong>
+          </p>
+        </div>
+      </ConfirmationModal>
+
       <ConfirmationModal
         open={isInvitationConfirmationOpen}
         eyebrow={mode === "edit" ? "Renvoi des courriels" : "Envoi des courriels"}
@@ -1903,14 +1994,36 @@ export function SurveyBuilderDemo({
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <button
-              type="button"
-              onClick={handleDeploymentStep}
-              disabled={isBusy || isSendingInvitations || !isAllStepsComplete}
-              className="inline-flex items-center justify-center rounded-[10px] bg-[#111827] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60 whitespace-nowrap"
-            >
-              {isSendingInvitations ? "Envoi..." : invitationActionLabel}
-            </button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {mode === "edit" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleReminderEmailStep("email3")}
+                    disabled={isBusy || isSendingInvitations || !isAllStepsComplete}
+                    className="inline-flex items-center justify-center rounded-[10px] bg-[#111827] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60 whitespace-nowrap"
+                  >
+                    {sendingReminderEmailType === "email3" ? "Envoi..." : "Email 3"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReminderEmailStep("email2")}
+                    disabled={isBusy || isSendingInvitations || !isAllStepsComplete}
+                    className="inline-flex items-center justify-center rounded-[10px] bg-[#111827] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60 whitespace-nowrap"
+                  >
+                    {sendingReminderEmailType === "email2" ? "Envoi..." : "Email 2"}
+                  </button>
+                </>
+              ) : null}
+              <button
+                type="button"
+                onClick={handleDeploymentStep}
+                disabled={isBusy || isSendingInvitations || !isAllStepsComplete}
+                className="inline-flex items-center justify-center rounded-[10px] bg-[#111827] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60 whitespace-nowrap"
+              >
+                {isSendingInvitations && !sendingReminderEmailType ? "Envoi..." : invitationActionLabel}
+              </button>
+            </div>
             {displayedImportedParticipants.length > 0 ? (
               <button
                 type="button"
@@ -2803,6 +2916,7 @@ export function SurveyBuilderDemo({
           </h3>
         </div>
         <div className="space-y-3 sm:space-y-4 p-3 sm:p-6">
+          {/* En-tête masqué pour aligner l'aperçu sur le parcours employé.
           <div className="rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-slate-50 p-3 sm:p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
               Sondage
@@ -2815,6 +2929,7 @@ export function SurveyBuilderDemo({
             </p>
             <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
           </div>
+          */}
 
           <div className="rounded-[12px] sm:rounded-[16px] border border-amber-200 bg-amber-50/60 p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
