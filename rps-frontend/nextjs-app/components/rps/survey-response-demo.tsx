@@ -124,10 +124,7 @@ export function SurveyResponseDemo({
   if (!hasStarted && introductionText?.trim()) {
     return (
       <Card className="mx-auto max-w-3xl p-6 sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
-          Introduction
-        </p>
-        <p className="mt-3 text-lg font-bold text-slate-950">
+        <p className="text-lg font-bold text-slate-950">
           Un portrait de votre milieu de travail.
         </p>
         {/* Titre et entreprise masqués à la demande du client.
@@ -345,10 +342,7 @@ export function SurveyResponseDemo({
 
         {isConclusionStep && conclusionText?.trim() ? (
           <div className="rounded-[12px] border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
-              Conclusion
-            </p>
-            <p className="mt-3 text-lg font-bold text-slate-950">
+            <p className="text-lg font-bold text-slate-950">
               Merci. Votre voix compte dans le portrait.
             </p>
             <RichSurveyText

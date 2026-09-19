@@ -2930,10 +2930,7 @@ export function SurveyBuilderDemo({
           */}
 
           <div className="rounded-[12px] sm:rounded-[16px] border border-amber-200 bg-amber-50/60 p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-                Introduction
-              </p>
+            <div className="flex items-center justify-end gap-3">
               <span className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-semibold text-amber-700">
                 Avant les questions
               </span>
@@ -3097,10 +3094,7 @@ export function SurveyBuilderDemo({
           )}
 
           <div className="rounded-[12px] sm:rounded-[16px] border border-emerald-200 bg-emerald-50/70 p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                Conclusion
-              </p>
+            <div className="flex items-center justify-end gap-3">
               <span className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700">
                 Avant l&apos;envoi · page finale
               </span>
