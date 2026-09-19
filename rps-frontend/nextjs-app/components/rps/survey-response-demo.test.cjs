@@ -34,6 +34,7 @@ function fixture({ started = false, section = 0, ready = true, completed = false
           SurveyPrivacyFooter: () => React.createElement('footer', null, 'Confidentialité'),
         };
         if (name === '@/components/rps/linked-survey-text') return { LinkedSurveyText: ({ text }) => text };
+        if (name === '@/components/rps/rich-survey-text') return { RichSurveyText: ({ text }) => text };
         if (name === '@/components/rps/survey-response-answer') return compile('survey-response-answer.ts');
         if (name === '@/lib/trpc/client') return {
           getTrpcClient: () => { throw new Error('Unexpected network request'); },

@@ -6,7 +6,7 @@ import { useSurveyDraft } from "@/components/rps/use-survey-draft";
 import type { BackendSurveyDraft } from "@/lib/responses/survey-draft";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import { SurveyPrivacyFooter } from "@/components/rps/survey-privacy-footer";
-import { LinkedSurveyText } from "@/components/rps/linked-survey-text";
+import { RichSurveyText } from "@/components/rps/rich-survey-text";
 import {
   buildSurveySubmissionAnswers,
   isPreferNotToAnswer,
@@ -125,7 +125,7 @@ export function SurveyResponseDemo({
     return (
       <Card className="mx-auto max-w-3xl p-6 sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
-          Introduction
+          Un portrait de votre milieu de travail.
         </p>
         {/* Titre et entreprise masqués à la demande du client.
         <h1 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold text-slate-950">
@@ -135,9 +135,10 @@ export function SurveyResponseDemo({
           <p className="mt-2 text-sm font-semibold text-slate-500">{companyName}</p>
         ) : null}
         */}
-        <div className="mt-6 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-          <LinkedSurveyText text={introductionText.trim()} />
-        </div>
+        <RichSurveyText
+          text={introductionText.trim()}
+          className="mt-6 text-sm leading-7 text-slate-700"
+        />
         <PrimaryButton
           className="mt-8 sm:w-auto"
           disabled={!persistence.ready}
@@ -342,11 +343,12 @@ export function SurveyResponseDemo({
         {isConclusionStep && conclusionText?.trim() ? (
           <div className="rounded-[12px] border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
-              Conclusion
+              Merci. Votre voix compte dans le portrait.
             </p>
-            <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-              <LinkedSurveyText text={conclusionText.trim()} />
-            </p>
+            <RichSurveyText
+              text={conclusionText.trim()}
+              className="mt-4 text-sm leading-7 text-slate-700"
+            />
           </div>
         ) : null}
 

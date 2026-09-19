@@ -7,7 +7,11 @@ import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
 import { ConfirmationModal } from "@/components/rps/confirmation-modal";
 import { PREFER_NOT_TO_ANSWER } from "@/components/rps/survey-response-answer";
 import { SurveyPrivacyFooter } from "@/components/rps/survey-privacy-footer";
-import { LinkedSurveyText } from "@/components/rps/linked-survey-text";
+import {
+  getSurveyTextLength,
+  RichSurveyText,
+  SurveyRichTextEditor,
+} from "@/components/rps/rich-survey-text";
 import {
   AGREEMENT_SCALE_OPTIONS,
   FREQUENCY_SCALE_OPTIONS,
@@ -2366,34 +2370,28 @@ export function SurveyBuilderDemo({
             <label htmlFor="survey-introduction" className="text-sm font-semibold text-slate-800">
               Texte d&apos;introduction
             </label>
-            <textarea
+            <SurveyRichTextEditor
               id="survey-introduction"
               value={introductionText}
-              onChange={(event) => setIntroductionText(event.target.value)}
+              onChange={setIntroductionText}
               maxLength={10000}
-              rows={8}
-              placeholder="Saisir le texte présenté avant le questionnaire..."
-              className="mt-2 min-h-48 w-full resize-y rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
             />
             <p className="mt-1 text-right text-xs text-slate-400">
-              {introductionText.length}/10 000
+              {getSurveyTextLength(introductionText)}/10 000
             </p>
           </div>
           <div>
             <label htmlFor="survey-conclusion" className="text-sm font-semibold text-slate-800">
               Texte de conclusion
             </label>
-            <textarea
+            <SurveyRichTextEditor
               id="survey-conclusion"
               value={conclusionText}
-              onChange={(event) => setConclusionText(event.target.value)}
+              onChange={setConclusionText}
               maxLength={10000}
-              rows={8}
-              placeholder="Saisir le texte présenté après la dernière section, avant l’envoi des réponses..."
-              className="mt-2 min-h-48 w-full resize-y rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
             />
             <p className="mt-1 text-right text-xs text-slate-400">
-              {conclusionText.length}/10 000
+              {getSurveyTextLength(conclusionText)}/10 000
             </p>
           </div>
         </div>
@@ -2941,9 +2939,10 @@ export function SurveyBuilderDemo({
               </span>
             </div>
             {introductionText.trim() ? (
-              <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-                <LinkedSurveyText text={introductionText.trim()} />
-              </p>
+              <RichSurveyText
+                text={introductionText.trim()}
+                className="mt-4 text-sm leading-7 text-slate-700"
+              />
             ) : (
               <p className="mt-4 text-sm italic text-slate-500">
                 Aucun texte d&apos;introduction renseigné.
@@ -3107,9 +3106,10 @@ export function SurveyBuilderDemo({
               Merci pour votre participation
             </p>
             {conclusionText.trim() ? (
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-                <LinkedSurveyText text={conclusionText.trim()} />
-              </p>
+              <RichSurveyText
+                text={conclusionText.trim()}
+                className="mt-3 text-sm leading-7 text-slate-700"
+              />
             ) : (
               <p className="mt-3 text-sm italic text-slate-500">
                 Aucun texte de conclusion renseigné.
