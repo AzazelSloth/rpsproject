@@ -219,7 +219,7 @@ export function SurveyResponseDemo({
           <nav aria-label="Sections du sondage" className="rounded-[12px] bg-slate-50 p-4">
             <div className="flex items-center justify-between gap-4 text-sm font-semibold text-slate-700">
               <span>Étape {currentSectionIndex + 1} sur {totalSteps}</span>
-              <span>{isConclusionStep ? "Conclusion" : currentSection?.title}</span>
+              {!isConclusionStep ? <span>{currentSection?.title}</span> : null}
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
               <div
