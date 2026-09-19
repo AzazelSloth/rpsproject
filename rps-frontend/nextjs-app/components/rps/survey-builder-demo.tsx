@@ -2938,6 +2938,9 @@ export function SurveyBuilderDemo({
                 Avant les questions
               </span>
             </div>
+            <p className="mt-3 text-lg font-bold text-slate-950">
+              Un portrait de votre milieu de travail.
+            </p>
             {introductionText.trim() ? (
               <RichSurveyText
                 text={introductionText.trim()}
@@ -3103,7 +3106,7 @@ export function SurveyBuilderDemo({
               </span>
             </div>
             <p className="mt-3 text-lg font-bold text-slate-950">
-              Merci pour votre participation
+              Merci. Votre voix compte dans le portrait.
             </p>
             {conclusionText.trim() ? (
               <RichSurveyText
