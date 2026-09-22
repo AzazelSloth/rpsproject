@@ -164,6 +164,12 @@ export function SurveyRichTextEditor({
     onChange(serialized);
   }
 
+  function runCommand(command: "bold" | "insertUnorderedList") {
+    editorRef.current?.focus();
+    document.execCommand(command);
+    publishEditorValue();
+  }
+
   function openLinkDialog() {
     const editor = editorRef.current;
     if (!editor) {
@@ -264,6 +270,30 @@ export function SurveyRichTextEditor({
             className={toolbarButtonClass}
             onMouseDown={(event) => {
               event.preventDefault();
+              runCommand("bold");
+            }}
+            aria-label="Mettre en gras"
+            title="Gras"
+          >
+            B
+          </button>
+          <button
+            type="button"
+            className={toolbarButtonClass}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              runCommand("insertUnorderedList");
+            }}
+            aria-label="Créer une liste à puces"
+            title="Liste à puces"
+          >
+            • Liste
+          </button>
+          <button
+            type="button"
+            className={toolbarButtonClass}
+            onMouseDown={(event) => {
+              event.preventDefault();
               openLinkDialog();
             }}
             aria-label="Ajouter un lien"
@@ -285,7 +315,7 @@ export function SurveyRichTextEditor({
             event.preventDefault();
             insertPlainText(event.dataTransfer.getData("text/plain"));
           }}
-          className="min-h-48 px-4 py-3 text-left text-sm leading-6 text-slate-800 outline-none [&_a]:text-sky-700 [&_a]:underline [&_a]:underline-offset-2"
+          className="min-h-48 px-4 py-3 text-left text-sm leading-6 text-slate-800 outline-none [&_a]:text-sky-700 [&_a]:underline [&_a]:underline-offset-2 [&_ul]:list-disc [&_ul]:pl-6"
         />
       </div>
 
