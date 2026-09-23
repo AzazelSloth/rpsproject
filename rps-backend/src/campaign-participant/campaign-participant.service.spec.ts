@@ -244,6 +244,68 @@ describe('CampaignParticipantService survey submission', () => {
     }
   });
 
+  it.each([
+    { champion_name: '  Marie Champion  ', champion_email: '  marie@example.com  ' },
+    { champion_name: null, champion_email: null },
+  ])('transmits saved Email 3 variables through the real mail service: %j', async (contact) => {
+    const originalEnv = process.env;
+    process.env = {
+      ...originalEnv,
+      APP_URL: 'https://app.example.com',
+      SENDGRID_API_KEY: 'SG.test',
+      SENDGRID_FROM_EMAIL: 'sender@example.com',
+      SENDGRID_FROM_NAME: 'RPS',
+      SENDGRID_REPLY_TO: 'reply@example.com',
+    };
+    delete process.env.SENDGRID_FINAL_REMINDER_TEMPLATE_ID;
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(null, { status: 202 }),
+    );
+    try {
+      Object.assign(participant.campaign.company, contact);
+      participant.campaign.end_date = new Date('2026-09-30T12:00:00.000Z');
+      campaignRepository.findOne.mockResolvedValue(participant.campaign);
+      // Only the HTTP transport is intercepted; use the production mail service.
+      mailService.sendSurveyFinalReminders.mockImplementationOnce((recipients) =>
+        new SendGridMailService().sendSurveyFinalReminders(recipients),
+      );
+
+      const result = await service.sendReminders(12, { force: true, email_type: 'email3' });
+
+      expect(result.reminded_count).toBe(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe('https://api.sendgrid.com/v3/mail/send');
+      expect(init?.method).toBe('POST');
+      if (typeof init?.body !== 'string') throw new Error('Expected JSON mail payload');
+      const body = JSON.parse(init.body) as {
+        template_id: string;
+        personalizations: Array<{
+          to: Array<{ email: string; name: string }>;
+          dynamic_template_data: Record<string, unknown>;
+        }>;
+      };
+      expect(body.template_id).toBe('d-039191451ef9494097dcee955088d1ac');
+      expect(body.personalizations[0].to).toEqual([
+        { email: 'test@example.com', name: 'Test Employee' },
+      ]);
+      expect(body.personalizations[0].dynamic_template_data).toMatchObject({
+        firstName: 'Test',
+        endDate: '30 septembre 2026',
+        surveyLink: 'https://app.example.com/survey-response/participant-token',
+        championName: contact.champion_name?.trim() ?? '',
+        championEmail: contact.champion_email?.trim() ?? '',
+        companyName: 'Company',
+      });
+      expect(campaignRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 12 }, relations: { company: true },
+      });
+    } finally {
+      process.env = originalEnv;
+      fetchMock.mockRestore();
+    }
+  });
+
   it('enregistre explicitement un refus sans texte de réponse', async () => {
     const result = await service.submitByToken('participant-token', {
       responses: [

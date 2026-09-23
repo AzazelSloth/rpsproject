@@ -159,7 +159,7 @@ describe('SendGridMailService', () => {
     );
   });
 
-  it('uses Email 3 with exactly the client-provided dynamic variables', async () => {
+  it('supplies the active Email 3 template variables and preserves legacy aliases', async () => {
     const fetchMock = jest
       .spyOn(global, 'fetch')
       .mockResolvedValue(new Response(null, { status: 202 }));
@@ -169,12 +169,21 @@ describe('SendGridMailService', () => {
         ...recipient,
         champion_name: 'Marie Champion',
         champion_email: 'marie@example.com',
+        end_date: '2026-09-30',
       },
     ]);
 
     const body = getFetchBody(fetchMock, 0);
     expect(body.template_id).toBe('d-039191451ef9494097dcee955088d1ac');
-    expect(body.personalizations[0].dynamic_template_data).toEqual({
+    expect(body.personalizations[0].dynamic_template_data).toMatchObject({
+      firstName: 'Employee',
+      endDate: '30 septembre 2026',
+      surveyLink: recipient.survey_url,
+      championName: 'Marie Champion',
+      championEmail: 'marie@example.com',
+      companyName: recipient.company_name,
+      emailType: 'final_reminder',
+      isReminder: true,
       firstname: 'Employee',
       champion: 'Marie Champion',
       emailchampion: 'marie@example.com',

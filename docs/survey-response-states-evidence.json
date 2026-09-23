@@ -1,0 +1,360 @@
+{
+  "executed_at": "2026-09-23T06:23:58.908Z",
+  "scope": "Local PostgreSQL, temporary schema, synthetic data; not the deployed test survey.",
+  "path": "getQuestionnaireByToken -> saveDraftByToken -> submitByToken -> SQL -> exportClosedQuestionsExcel",
+  "queries": [
+    {
+      "label": "Raw stored states, before any export",
+      "sql": "SELECT participation_id, original_question_id, question_type, answer, response_state\n      FROM survey_submission_items\n      WHERE original_question_id IN ($1, $2)\n      ORDER BY original_question_id, participation_id",
+      "parameters": [
+        1,
+        2
+      ],
+      "rows": [
+        {
+          "participation_id": 1,
+          "original_question_id": 1,
+          "question_type": "choice",
+          "answer": "Oui",
+          "response_state": "answered"
+        },
+        {
+          "participation_id": 2,
+          "original_question_id": 1,
+          "question_type": "choice",
+          "answer": null,
+          "response_state": "skipped"
+        },
+        {
+          "participation_id": 3,
+          "original_question_id": 1,
+          "question_type": "choice",
+          "answer": null,
+          "response_state": "declined"
+        },
+        {
+          "participation_id": 1,
+          "original_question_id": 2,
+          "question_type": "scale",
+          "answer": "4",
+          "response_state": "answered"
+        },
+        {
+          "participation_id": 2,
+          "original_question_id": 2,
+          "question_type": "scale",
+          "answer": null,
+          "response_state": "skipped"
+        },
+        {
+          "participation_id": 3,
+          "original_question_id": 2,
+          "question_type": "scale",
+          "answer": null,
+          "response_state": "declined"
+        }
+      ]
+    },
+    {
+      "label": "Three stored values for each closed question",
+      "sql": "SELECT original_question_id, COUNT(DISTINCT participation_id)::int AS respondents,\n             COUNT(DISTINCT response_state)::int AS distinct_states,\n             ARRAY_AGG(DISTINCT response_state ORDER BY response_state) AS stored_states\n      FROM survey_submission_items\n      WHERE original_question_id IN ($1, $2)\n      GROUP BY original_question_id ORDER BY original_question_id",
+      "parameters": [
+        1,
+        2
+      ],
+      "rows": [
+        {
+          "original_question_id": 1,
+          "respondents": 3,
+          "distinct_states": 3,
+          "stored_states": [
+            "answered",
+            "declined",
+            "skipped"
+          ]
+        },
+        {
+          "original_question_id": 2,
+          "respondents": 3,
+          "distinct_states": 3,
+          "stored_states": [
+            "answered",
+            "declined",
+            "skipped"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Database constraints",
+      "sql": "SELECT conname, pg_get_constraintdef(oid) AS definition FROM pg_constraint\n      WHERE conrelid = 'survey_submission_items'::regclass AND contype = 'c'\n      ORDER BY conname",
+      "parameters": [],
+      "rows": [
+        {
+          "conname": "CHK_survey_submission_items_answer_consistency",
+          "definition": "CHECK (((((response_state)::text = 'answered'::text) AND (answer IS NOT NULL) AND (btrim(answer) <> ''::text)) OR (((response_state)::text = ANY ((ARRAY['declined'::character varying, 'skipped'::character varying])::text[])) AND (answer IS NULL))))"
+        },
+        {
+          "conname": "CHK_survey_submission_items_response_state",
+          "definition": "CHECK (((response_state)::text = ANY ((ARRAY['answered'::character varying, 'declined'::character varying, 'skipped'::character varying])::text[])))"
+        }
+      ]
+    },
+    {
+      "label": "Stored group and timing in the same SQL output",
+      "sql": "SELECT i.participation_id, i.original_question_id, i.response_state, i.answer,\n             g.answer AS survey_group, e.department AS employee_department,\n             p.timing_started_at, p.timing_intervals,\n             CASE WHEN p.timing_started_at IS NULL THEN NULL ELSE\n               (SELECT COALESCE(SUM((t->>'end')::bigint - (t->>'start')::bigint), 0) / 1000\n                FROM jsonb_array_elements(p.timing_intervals) AS t)\n             END AS active_seconds_from_stored_intervals\n      FROM survey_submission_items i\n      JOIN campaign_participants p ON p.id = i.participation_id\n      JOIN employees e ON e.id = p.employee_id\n      LEFT JOIN survey_submission_items g ON g.participation_id = p.id AND g.original_question_id = $3\n      WHERE i.original_question_id IN ($1, $2)\n      ORDER BY i.original_question_id, i.participation_id",
+      "parameters": [
+        1,
+        2,
+        3
+      ],
+      "rows": [
+        {
+          "participation_id": 1,
+          "original_question_id": 1,
+          "response_state": "answered",
+          "answer": "Oui",
+          "survey_group": "Groupe A",
+          "employee_department": "Groupe A",
+          "timing_started_at": "2026-09-23T06:21:29.216Z",
+          "timing_intervals": [
+            {
+              "end": 1790144609216,
+              "start": 1790144489216
+            }
+          ],
+          "active_seconds_from_stored_intervals": "120.0000000000000000"
+        },
+        {
+          "participation_id": 2,
+          "original_question_id": 1,
+          "response_state": "skipped",
+          "answer": null,
+          "survey_group": "Groupe B",
+          "employee_department": "Groupe B",
+          "timing_started_at": "2026-09-23T06:20:29.253Z",
+          "timing_intervals": [
+            {
+              "end": 1790144609253,
+              "start": 1790144429253
+            }
+          ],
+          "active_seconds_from_stored_intervals": "180.0000000000000000"
+        },
+        {
+          "participation_id": 3,
+          "original_question_id": 1,
+          "response_state": "declined",
+          "answer": null,
+          "survey_group": "Groupe A",
+          "employee_department": "Groupe A",
+          "timing_started_at": "2026-09-23T06:19:29.283Z",
+          "timing_intervals": [
+            {
+              "end": 1790144609283,
+              "start": 1790144369283
+            }
+          ],
+          "active_seconds_from_stored_intervals": "240.0000000000000000"
+        },
+        {
+          "participation_id": 1,
+          "original_question_id": 2,
+          "response_state": "answered",
+          "answer": "4",
+          "survey_group": "Groupe A",
+          "employee_department": "Groupe A",
+          "timing_started_at": "2026-09-23T06:21:29.216Z",
+          "timing_intervals": [
+            {
+              "end": 1790144609216,
+              "start": 1790144489216
+            }
+          ],
+          "active_seconds_from_stored_intervals": "120.0000000000000000"
+        },
+        {
+          "participation_id": 2,
+          "original_question_id": 2,
+          "response_state": "skipped",
+          "answer": null,
+          "survey_group": "Groupe B",
+          "employee_department": "Groupe B",
+          "timing_started_at": "2026-09-23T06:20:29.253Z",
+          "timing_intervals": [
+            {
+              "end": 1790144609253,
+              "start": 1790144429253
+            }
+          ],
+          "active_seconds_from_stored_intervals": "180.0000000000000000"
+        },
+        {
+          "participation_id": 3,
+          "original_question_id": 2,
+          "response_state": "declined",
+          "answer": null,
+          "survey_group": "Groupe A",
+          "employee_department": "Groupe A",
+          "timing_started_at": "2026-09-23T06:19:29.283Z",
+          "timing_intervals": [
+            {
+              "end": 1790144609283,
+              "start": 1790144369283
+            }
+          ],
+          "active_seconds_from_stored_intervals": "240.0000000000000000"
+        }
+      ]
+    },
+    {
+      "label": "Historical responses table does not store skipped rows",
+      "sql": "SELECT question_id, response_state, answer FROM responses\n      WHERE question_id IN ($1, $2) ORDER BY question_id, employee_id",
+      "parameters": [
+        1,
+        2
+      ],
+      "rows": [
+        {
+          "question_id": 1,
+          "response_state": "answered",
+          "answer": "Oui"
+        },
+        {
+          "question_id": 1,
+          "response_state": "declined",
+          "answer": null
+        },
+        {
+          "question_id": 2,
+          "response_state": "answered",
+          "answer": "4"
+        },
+        {
+          "question_id": 2,
+          "response_state": "declined",
+          "answer": null
+        }
+      ]
+    }
+  ],
+  "migrations": [
+    "InitialSchema1710000000000",
+    "AddCampaignDescription1710000000001",
+    "AddCompanyNameToEmployee1710000000002",
+    "AddMissingConstraints1710000000003",
+    "RemoveRedundantEmployeeCompanyName1710000000004",
+    "RestoreEmployeeCompanyName1710000000005",
+    "AddEmployeeStatus1710000000006",
+    "AddReminderCount1710000000007",
+    "AddPasswordResetToUsers1710000000008",
+    "AddQuestionSections1710000000009",
+    "AddCompanyContext1710000000010",
+    "AddResponseState1710000000011",
+    "AddCampaignIntroductionConclusion1710000000012",
+    "AddParticipationDraft1710000000013",
+    "AddParticipationTiming1710000000014",
+    "AddQuestionSectionVisibility1710000000015",
+    "CaptureSurveySubmissions1710000000016",
+    "AddCompanyChampion1710000000017"
+  ],
+  "constraint_checks": {
+    "unknown_state_rejected": true,
+    "text_on_declined_rejected": true
+  },
+  "application_output": {
+    "format": "xlsx (read in memory; no workbook saved)",
+    "headers": [
+      "Répondant",
+      "Section",
+      "Question",
+      "Type de question",
+      "Réponse",
+      "Statut"
+    ],
+    "rows": [
+      [
+        "R-154EB54866CE6235",
+        "Questions générales",
+        "Question fermee de test",
+        "Choix simple",
+        "Oui",
+        "Répondu"
+      ],
+      [
+        "R-154EB54866CE6235",
+        "Questions générales",
+        "Echelle de test",
+        "Échelle 1 à 5",
+        "4",
+        "Répondu"
+      ],
+      [
+        "R-154EB54866CE6235",
+        "Questions générales",
+        "Departement de test",
+        "Choix simple",
+        "Groupe A",
+        "Répondu"
+      ],
+      [
+        "R-46A56780122A296E",
+        "Questions générales",
+        "Question fermee de test",
+        "Choix simple",
+        "",
+        "Sauté"
+      ],
+      [
+        "R-46A56780122A296E",
+        "Questions générales",
+        "Echelle de test",
+        "Échelle 1 à 5",
+        "",
+        "Sauté"
+      ],
+      [
+        "R-46A56780122A296E",
+        "Questions générales",
+        "Departement de test",
+        "Choix simple",
+        "Groupe B",
+        "Répondu"
+      ],
+      [
+        "R-C98CF935B6AF800C",
+        "Questions générales",
+        "Question fermee de test",
+        "Choix simple",
+        "",
+        "Je préfère ne pas répondre"
+      ],
+      [
+        "R-C98CF935B6AF800C",
+        "Questions générales",
+        "Echelle de test",
+        "Échelle 1 à 5",
+        "",
+        "Je préfère ne pas répondre"
+      ],
+      [
+        "R-C98CF935B6AF800C",
+        "Questions générales",
+        "Departement de test",
+        "Choix simple",
+        "Groupe A",
+        "Répondu"
+      ]
+    ],
+    "contains_indeterminate_history": false
+  },
+  "limitations": [
+    "No canonical question number field or mapping is supplied; internal IDs are not canonical numbers.",
+    "The current application export has no canonical number, group column or duration column.",
+    "The synthetic department question appears as a response row; it is not propagated to other question rows.",
+    "Timing was injected as synthetic input; this is not a browser stopwatch accuracy test.",
+    "The six client CSV datasets were not available or imported; the witness report was not generated.",
+    "This exercises application services and real repositories, not HTTP routes or the deployed environment."
+  ],
+  "temporary_schema_removed": true
+}

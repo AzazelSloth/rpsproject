@@ -944,21 +944,13 @@ export class SendGridMailService {
   ) {
     const firstName = this.getFirstName(recipient);
 
-    if (kind === 'final_reminder') {
-      return {
-        firstname: firstName,
-        champion: recipient.champion_name?.trim() ?? '',
-        emailchampion: recipient.champion_email?.trim() ?? '',
-      };
-    }
-
     const startDate = this.formatEmailDate(recipient.start_date);
     const endDate = this.formatEmailDate(recipient.end_date);
 
     return {
       subject,
       emailType: kind,
-      isReminder: kind === 'reminder',
+      isReminder: kind !== 'invitation',
       participantId: recipient.participant_id,
       participant_id: recipient.participant_id,
       employeeId: recipient.employee_id,
@@ -991,6 +983,15 @@ export class SendGridMailService {
       contact_email: contactEmail,
       fromName,
       from_name: fromName,
+      // Email 3's active template uses the shared camelCase fields above.
+      // Keep its original aliases for compatibility with older template versions.
+      ...(kind === 'final_reminder'
+        ? {
+            firstname: firstName,
+            champion: recipient.champion_name?.trim() ?? '',
+            emailchampion: recipient.champion_email?.trim() ?? '',
+          }
+        : {}),
     };
   }
 
