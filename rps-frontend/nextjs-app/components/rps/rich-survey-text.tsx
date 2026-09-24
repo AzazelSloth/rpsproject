@@ -6,8 +6,14 @@ import { LinkedSurveyText } from "@/components/rps/linked-survey-text";
 
 const RICH_TEXT_MARKER = "<!--rps-rich-text-->";
 
+// Use the same typography in the editor, preview and participant questionnaire.
+// Empty blocks are intentional blank lines; don't add spacing between blocks.
+const SURVEY_TEXT_CLASS_NAME =
+  "whitespace-pre-wrap break-words [&_p]:m-0 [&_p]:min-h-[1lh] [&_div]:m-0 [&_div]:min-h-[1lh] [&_a]:text-sky-700 [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-sky-900 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6";
+
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
-  allowedTags: ["p", "br", "ul", "ol", "li", "strong", "em", "a"],
+  // Browsers insert divs as well as paragraphs when pressing Enter.
+  allowedTags: ["p", "div", "br", "ul", "ol", "li", "strong", "em", "u", "a"],
   allowedAttributes: {
     a: ["href", "target", "rel", "referrerpolicy"],
   },
@@ -40,7 +46,7 @@ function escapeHtml(value: string) {
 }
 
 function plainTextToHtml(value: string) {
-  return escapeHtml(value).replaceAll("\n", "<br>");
+  return escapeHtml(value).replace(/\r\n?/g, "\n").replaceAll("\n", "<br>");
 }
 
 function sanitizeSurveyHtml(value: string) {
@@ -90,7 +96,7 @@ export function RichSurveyText({
 }) {
   if (!isRichText(text)) {
     return (
-      <div className={`whitespace-pre-wrap ${className}`}>
+      <div className={`${SURVEY_TEXT_CLASS_NAME} ${className}`}>
         <LinkedSurveyText text={text} />
       </div>
     );
@@ -98,7 +104,7 @@ export function RichSurveyText({
 
   return (
     <div
-      className={`space-y-3 break-words [&_a]:text-sky-700 [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-sky-900 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-6 ${className}`}
+      className={`${SURVEY_TEXT_CLASS_NAME} ${className}`}
       dangerouslySetInnerHTML={{ __html: getStoredHtml(text) }}
     />
   );
@@ -253,8 +259,15 @@ export function SurveyRichTextEditor({
     publishEditorValue();
     closeLinkDialog();
   }
-  function insertPlainText(value: string) {
-    document.execCommand("insertText", false, value);
+  function insertClipboardContent(data: DataTransfer) {
+    const html = data.getData("text/html");
+    if (html) {
+      // Preserve supported formatting while removing scripts, styles and handlers
+      // before the clipboard HTML ever reaches the editable DOM.
+      document.execCommand("insertHTML", false, sanitizeSurveyHtml(html));
+    } else {
+      document.execCommand("insertText", false, data.getData("text/plain"));
+    }
     publishEditorValue();
   }
 
@@ -309,13 +322,13 @@ export function SurveyRichTextEditor({
           onInput={publishEditorValue}
           onPaste={(event) => {
             event.preventDefault();
-            insertPlainText(event.clipboardData.getData("text/plain"));
+            insertClipboardContent(event.clipboardData);
           }}
           onDrop={(event) => {
             event.preventDefault();
-            insertPlainText(event.dataTransfer.getData("text/plain"));
+            insertClipboardContent(event.dataTransfer);
           }}
-          className="min-h-48 px-4 py-3 text-left text-sm leading-6 text-slate-800 outline-none [&_a]:text-sky-700 [&_a]:underline [&_a]:underline-offset-2 [&_ul]:list-disc [&_ul]:pl-6"
+          className={`${SURVEY_TEXT_CLASS_NAME} min-h-48 px-4 py-3 text-left text-sm leading-7 text-slate-800 outline-none`}
         />
       </div>
 
