@@ -64,10 +64,10 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-screen text-slate-900">
-      <aside className="fixed inset-x-0 top-0 z-30 h-16 border-b border-[rgba(64,54,42,0.08)] bg-[rgba(247,243,235,0.95)] backdrop-blur-xl lg:inset-y-0 lg:left-0 lg:right-auto lg:h-full lg:w-72 lg:border-b-0 lg:border-r">
+    <div className="min-h-screen text-graphite">
+      <aside className="fixed inset-x-0 top-0 z-30 h-16 border-b border-line bg-page backdrop-blur-xl lg:inset-y-0 lg:left-0 lg:right-auto lg:h-full lg:w-72 lg:border-b-0 lg:border-r">
         <div className="flex h-full flex-col">
-          <div className="hidden border-b border-[rgba(64,54,42,0.08)] px-6 py-6 lg:block">
+          <div className="hidden border-b border-line px-6 py-6 lg:block">
             <div className="space-y-3">
               <BrandLogo compact />
             </div>
@@ -78,15 +78,15 @@ export function AppShell({
               href="/dashboard"
               className={`flex items-center justify-between rounded-[12px] px-4 py-3 text-sm font-semibold no-underline transition visited:no-underline ${
                 pathname === "/dashboard"
-                  ? "bg-slate-900 text-white visited:text-white shadow-lg shadow-slate-300/60 ring-1 ring-slate-800"
-                  : "text-slate-600 visited:text-slate-600 hover:bg-[#f2e7d4] hover:text-slate-900"
+                  ? "bg-graphite text-white visited:text-white shadow-lg ring-1 ring-graphite"
+                  : "text-muted visited:text-muted hover:bg-accent-soft hover:text-graphite"
               }`}
             >
               <span className={pathname === "/dashboard" ? "text-white" : "text-inherit"}>
                 Tableau de bord
               </span>
               {pathname === "/dashboard" ? (
-                <span className="h-2.5 w-2.5 rounded-full bg-[#f0c36d]" />
+                <span className="h-2.5 w-2.5 rounded-full bg-accent-bright" />
               ) : null}
             </Link>
 
@@ -95,8 +95,8 @@ export function AppShell({
               onClick={() => setSurveysOpen((value) => !value)}
               className={`flex items-center justify-between rounded-[12px] px-4 py-3 text-left text-sm font-semibold transition ${
                 isSurveyRoute
-                  ? "bg-slate-900 text-white shadow-lg shadow-slate-300/60 ring-1 ring-slate-800"
-                  : "text-slate-600 hover:bg-[#f2e7d4] hover:text-slate-900"
+                  ? "bg-graphite text-white shadow-lg ring-1 ring-graphite"
+                  : "text-muted hover:bg-accent-soft hover:text-graphite"
               }`}
               aria-expanded={showSurveyMenu}
             >
@@ -125,12 +125,12 @@ export function AppShell({
                       href={item.href}
                       className={`flex items-center justify-between rounded-[10px] px-3 py-2 text-xs font-semibold no-underline transition visited:no-underline ${
                         active
-                          ? "bg-[#f1e4cb] text-slate-900 ring-1 ring-[#e6cf9f]"
-                          : "text-slate-500 visited:text-slate-500 hover:bg-[#f6eddc] hover:text-slate-900"
+                          ? "bg-accent-soft text-graphite ring-1 ring-line"
+                          : "text-muted visited:text-muted hover:bg-accent-soft hover:text-graphite"
                       }`}
                     >
                       <span>{item.label}</span>
-                      {active ? <span className="h-2 w-2 rounded-full bg-[#8a651f]" /> : null}
+                      {active ? <span className="h-2 w-2 rounded-full bg-accent" /> : null}
                     </Link>
                   );
                 })}
@@ -141,15 +141,15 @@ export function AppShell({
               href="/employees"
               className={`flex items-center justify-between rounded-[12px] px-4 py-3 text-sm font-semibold no-underline transition visited:no-underline ${
                 pathname === "/employees"
-                  ? "bg-slate-900 text-white visited:text-white shadow-lg shadow-slate-300/60 ring-1 ring-slate-800"
-                  : "text-slate-600 visited:text-slate-600 hover:bg-[#f2e7d4] hover:text-slate-900"
+                  ? "bg-graphite text-white visited:text-white shadow-lg ring-1 ring-graphite"
+                  : "text-muted visited:text-muted hover:bg-accent-soft hover:text-graphite"
               }`}
             >
               <span className={pathname === "/employees" ? "text-white" : "text-inherit"}>
                 Gestion des employés
               </span>
               {pathname === "/employees" ? (
-                <span className="h-2.5 w-2.5 rounded-full bg-[#f0c36d]" />
+                <span className="h-2.5 w-2.5 rounded-full bg-accent-bright" />
               ) : null}
             </Link>
 
@@ -157,15 +157,15 @@ export function AppShell({
               href="/results"
               className={`flex items-center justify-between rounded-[12px] px-4 py-3 text-sm font-semibold no-underline transition visited:no-underline ${
                 pathname === "/results"
-                  ? "bg-slate-900 text-white visited:text-white shadow-lg shadow-slate-300/60 ring-1 ring-slate-800"
-                  : "text-slate-600 visited:text-slate-600 hover:bg-[#f2e7d4] hover:text-slate-900"
+                  ? "bg-graphite text-white visited:text-white shadow-lg ring-1 ring-graphite"
+                  : "text-muted visited:text-muted hover:bg-accent-soft hover:text-graphite"
               }`}
             >
               <span className={pathname === "/results" ? "text-white" : "text-inherit"}>
                 Résultats
               </span>
               {pathname === "/results" ? (
-                <span className="h-2.5 w-2.5 rounded-full bg-[#f0c36d]" />
+                <span className="h-2.5 w-2.5 rounded-full bg-accent-bright" />
               ) : null}
             </Link>
           </nav>
@@ -173,30 +173,30 @@ export function AppShell({
       </aside>
 
       <main className="pt-16 lg:pt-0 lg:pl-72">
-        <header className="sticky top-16 z-20 border-b border-[rgba(64,54,42,0.08)] bg-[rgba(245,240,231,0.90)] backdrop-blur-xl lg:sticky lg:top-0">
+        <header className="sticky top-16 z-20 border-b border-line bg-page backdrop-blur-xl lg:sticky lg:top-0">
           <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:flex-row lg:items-center lg:justify-between lg:px-10">
             <div className="flex items-center justify-between">
               <div className="mr-4 lg:hidden">
                 <BrandLogo />
               </div>
               {title ? (
-                <h1 className="font-[family-name:var(--font-manrope)] text-xl font-extrabold tracking-tight sm:text-2xl">
+                <h1 className="font-heading text-xl font-extrabold tracking-tight sm:text-2xl">
                   {title}
                 </h1>
               ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="card-surface group relative flex items-center gap-3 rounded-[12px] px-4 py-2.5 transition hover:bg-white hover:shadow-md">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#d5ba85] bg-gradient-to-br from-[#181818] to-[#2d2d2d] text-sm font-bold text-[#f7f1e6]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-line bg-graphite text-sm font-bold text-white">
                   {initials}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{displayName}</p>
-                  <p className="text-xs text-slate-500">{displayEmail || "Session en cours"}</p>
+                  <p className="text-sm font-semibold text-graphite">{displayName}</p>
+                  <p className="text-xs text-muted">{displayEmail || "Session en cours"}</p>
                 </div>
                 <button
                   onClick={() => void handleLogout()}
-                  className="ml-2 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="ml-2 flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-page hover:text-graphite focus:outline-none focus:ring-2 focus:ring-muted"
                   title="Se déconnecter"
                   aria-label="Se déconnecter"
                 >

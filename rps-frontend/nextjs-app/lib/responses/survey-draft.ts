@@ -114,6 +114,7 @@ export class SurveyDraftSession {
   base: SurveyDraft;
   revision: number;
   state: "saved" | "dirty" | "saving" | "error" = "saved";
+  lastSavedAt: number | null = null;
   completed = false;
   private inFlight: Promise<boolean> | null = null;
   private disposed = false;
@@ -229,6 +230,7 @@ export class SurveyDraftSession {
         );
         this.base = remote;
         this.revision = result.revision;
+        if (result.saved) this.lastSavedAt = Date.now();
         this.persist();
         if (!result.saved && ++conflicts >= 3)
           throw new Error("Concurrent draft updates");

@@ -1945,13 +1945,13 @@ export function SurveyBuilderDemo({
         <p>
           Le courriel sera envoye aux employes qui n'ont pas encore termine le sondage.
         </p>
-        <div className="mt-4 rounded-[14px] border border-slate-200 bg-white px-5 py-4">
-          <p className="font-bold text-slate-950">{effectiveCampaignTitle || "Sondage"}</p>
-          <p className="mt-1 text-sm text-slate-600">
-            Entreprise : <strong className="text-slate-950">{selectedCompanyName || "Entreprise"}</strong>
+        <div className="mt-4 rounded-[14px] border border-line bg-white px-5 py-4">
+          <p className="font-bold text-graphite">{effectiveCampaignTitle || "Sondage"}</p>
+          <p className="mt-1 text-sm text-muted">
+            Entreprise : <strong className="text-graphite">{selectedCompanyName || "Entreprise"}</strong>
           </p>
-          <p className="mt-1 text-sm text-slate-600">
-            Participants : <strong className="text-slate-950">{participantCount}</strong>
+          <p className="mt-1 text-sm text-muted">
+            Participants : <strong className="text-graphite">{participantCount}</strong>
           </p>
         </div>
       </ConfirmationModal>
@@ -1971,29 +1971,29 @@ export function SurveyBuilderDemo({
             ? "Êtes-vous sûr de vouloir renvoyer les invitations aux employés qui n’ont pas encore répondu ?"
             : "Êtes-vous sûr de vouloir envoyer les invitations aux employés importés dans ce sondage ?"}
         </p>
-        <div className="mt-4 rounded-[14px] border border-slate-200 bg-white px-5 py-4">
-          <p className="font-bold text-slate-950">{effectiveCampaignTitle || "Sondage"}</p>
-          <p className="mt-1 text-sm text-slate-600">
-            Entreprise : <strong className="text-slate-950">{selectedCompanyName || "Entreprise"}</strong>
+        <div className="mt-4 rounded-[14px] border border-line bg-white px-5 py-4">
+          <p className="font-bold text-graphite">{effectiveCampaignTitle || "Sondage"}</p>
+          <p className="mt-1 text-sm text-muted">
+            Entreprise : <strong className="text-graphite">{selectedCompanyName || "Entreprise"}</strong>
           </p>
-          <p className="mt-1 text-sm text-slate-600">
-            Participants : <strong className="text-slate-950">{participantCount}</strong>
+          <p className="mt-1 text-sm text-muted">
+            Participants : <strong className="text-graphite">{participantCount}</strong>
           </p>
         </div>
         {mode === "edit" ? (
-          <p className="mt-4 text-sm text-amber-800">
+          <p className="mt-4 text-sm text-accent">
             Le courriel contiendra le lien vers la version actuelle du sondage.
           </p>
         ) : null}
       </ConfirmationModal>
 
-      <Card className="overflow-hidden border border-slate-200 bg-white p-4 sm:p-6">
+      <Card className="overflow-hidden border border-line bg-white p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="font-[family-name:var(--font-manrope)] text-2xl font-extrabold tracking-tight text-slate-900">
+            <h2 className="font-heading text-2xl font-extrabold tracking-tight text-graphite">
               Configuration du sondage
             </h2>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-muted">
               Entreprise, période, description, questions, activation et import.
             </p>
           </div>
@@ -2005,7 +2005,7 @@ export function SurveyBuilderDemo({
                     type="button"
                     onClick={() => handleReminderEmailStep("email3")}
                     disabled={isBusy || isSendingInvitations || !isAllStepsComplete}
-                    className="inline-flex items-center justify-center rounded-[10px] bg-[#111827] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60 whitespace-nowrap"
+                    className="inline-flex items-center justify-center rounded-[10px] bg-graphite px-4 py-2 text-xs font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-track disabled:text-muted whitespace-nowrap"
                   >
                     {sendingReminderEmailType === "email3" ? "Envoi..." : "Email 3"}
                   </button>
@@ -2013,7 +2013,7 @@ export function SurveyBuilderDemo({
                     type="button"
                     onClick={() => handleReminderEmailStep("email2")}
                     disabled={isBusy || isSendingInvitations || !isAllStepsComplete}
-                    className="inline-flex items-center justify-center rounded-[10px] bg-[#111827] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60 whitespace-nowrap"
+                    className="inline-flex items-center justify-center rounded-[10px] bg-graphite px-4 py-2 text-xs font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-track disabled:text-muted whitespace-nowrap"
                   >
                     {sendingReminderEmailType === "email2" ? "Envoi..." : "Email 2"}
                   </button>
@@ -2023,7 +2023,7 @@ export function SurveyBuilderDemo({
                 type="button"
                 onClick={handleDeploymentStep}
                 disabled={isBusy || isSendingInvitations || !isAllStepsComplete}
-                className="inline-flex items-center justify-center rounded-[10px] bg-[#111827] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60 whitespace-nowrap"
+                className="inline-flex items-center justify-center rounded-[10px] bg-graphite px-4 py-2 text-xs font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-track disabled:text-muted whitespace-nowrap"
               >
                 {isSendingInvitations && !sendingReminderEmailType ? "Envoi..." : invitationActionLabel}
               </button>
@@ -2033,21 +2033,21 @@ export function SurveyBuilderDemo({
                 type="button"
                 onClick={downloadLinksList}
                 disabled={isBusy || isSendingInvitations}
-                className="inline-flex items-center justify-center rounded-[10px] border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 whitespace-nowrap"
+                className="inline-flex items-center justify-center rounded-[10px] border border-line bg-white px-4 py-2 text-xs font-semibold text-graphite transition hover:bg-page disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-track disabled:text-muted whitespace-nowrap"
               >
                 Télécharger les liens
               </button>
             ) : null}
             {hasSentInvitations ? (
-              <p className="text-[11px] font-medium text-emerald-700">
+              <p className="text-[11px] font-medium text-accent">
                 Invitations envoyées
               </p>
             ) : hasDownloadedLinks ? (
-              <p className="text-[11px] font-medium text-emerald-700">
+              <p className="text-[11px] font-medium text-accent">
                 Liens téléchargés
               </p>
             ) : isAllStepsComplete ? (
-              <p className="text-[11px] font-medium text-slate-500">
+              <p className="text-[11px] font-medium text-muted">
                 Prêt à envoyer
               </p>
             ) : null}
@@ -2056,18 +2056,18 @@ export function SurveyBuilderDemo({
 
         <div className="mt-6 grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {/* Card 1: Entreprise */}
-          <div className="relative order-1 rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
-            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+          <div className="relative order-1 rounded-[14px] border border-line bg-surface p-4 flex flex-col">
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-line bg-white text-[10px] font-bold text-graphite">
               1
             </span>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
               Entreprise
             </p>
 
             <select
               value={companyId ?? ""}
               onChange={(event) => handleCompanySelection(Number(event.target.value))}
-              className="mt-3 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+              className="mt-3 w-full rounded-[10px] border border-line bg-white px-3 py-2 text-sm outline-none"
             >
               <option value="" disabled>
                 Choisir
@@ -2082,7 +2082,7 @@ export function SurveyBuilderDemo({
             {/* Survey Selection Dropdown (Edit Mode) */}
             {mode === "edit" && (
               <div className="mt-4">
-                <label className="text-xs font-medium text-slate-600">Sondage</label>
+                <label className="text-xs font-medium text-muted">Sondage</label>
                 <select
                   value={campaignId ?? ""}
                   onChange={(event) => {
@@ -2091,7 +2091,7 @@ export function SurveyBuilderDemo({
                       syncSelectedCampaign(newCampaignId);
                     }
                   }}
-                  className="mt-1 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                  className="mt-1 w-full rounded-[10px] border border-line bg-white px-3 py-2 text-sm outline-none"
                 >
                   <option value="" disabled>
                     Choisir un sondage
@@ -2111,14 +2111,14 @@ export function SurveyBuilderDemo({
                 <input
                   value={newCompanyName}
                   onChange={(event) => setNewCompanyName(event.target.value)}
-                  className="min-w-0 flex-1 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                  className="min-w-0 flex-1 rounded-[10px] border border-line bg-white px-3 py-2 text-sm outline-none"
                   placeholder="Nouvelle..."
                 />
                 <button
                   type="button"
                   disabled={isBusy || newCompanyName.trim().length < 2}
                   onClick={createCompany}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-slate-300 bg-[#4b5563] text-base font-bold text-white transition hover:bg-[#374151] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-line bg-graphite text-base font-bold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-track disabled:text-muted"
                 >
                   +
                 </button>
@@ -2127,11 +2127,11 @@ export function SurveyBuilderDemo({
           </div>
 
           {isCreateMode ? (
-            <div className="relative order-2 rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col">
-              <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+            <div className="relative order-2 rounded-[14px] border border-line bg-surface p-4 flex flex-col">
+              <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-line bg-white text-[10px] font-bold text-graphite">
                 2
               </span>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
                 Modèle de questionnaire
               </p>
 
@@ -2145,8 +2145,8 @@ export function SurveyBuilderDemo({
                   }}
                   className={`rounded-[10px] border px-3 py-2 text-xs font-semibold ${
                     templateMode === "blank"
-                      ? "border-amber-300 bg-amber-50 text-amber-800"
-                      : "border-slate-200 bg-white text-slate-600"
+                      ? "border-accent-bright bg-accent-soft text-accent"
+                      : "border-line bg-white text-muted"
                   }`}
                 >
                   Partir de zéro
@@ -2156,8 +2156,8 @@ export function SurveyBuilderDemo({
                   onClick={() => setTemplateMode("existing")}
                   className={`rounded-[10px] border px-3 py-2 text-xs font-semibold ${
                     templateMode === "existing"
-                      ? "border-amber-300 bg-amber-50 text-amber-800"
-                      : "border-slate-200 bg-white text-slate-600"
+                      ? "border-accent-bright bg-accent-soft text-accent"
+                      : "border-line bg-white text-muted"
                   }`}
                 >
                   Depuis un modèle
@@ -2173,7 +2173,7 @@ export function SurveyBuilderDemo({
                       setSourceCompanyId(nextSourceCompanyId || null);
                       setSourceCampaignId(null);
                     }}
-                    className="w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                    className="w-full rounded-[10px] border border-line bg-white px-3 py-2 text-sm outline-none"
                   >
                     <option value="">Entreprise source</option>
                     {templateSourceCompanies.map((company) => (
@@ -2189,7 +2189,7 @@ export function SurveyBuilderDemo({
                       setSourceCampaignId(Number(event.target.value) || null)
                     }
                     disabled={!sourceCompanyId}
-                    className="w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none disabled:bg-slate-100"
+                    className="w-full rounded-[10px] border border-line bg-white px-3 py-2 text-sm outline-none disabled:bg-page"
                   >
                     <option value="">Questionnaire modèle</option>
                     {templateSourceCampaigns.map((campaign) => (
@@ -2200,7 +2200,7 @@ export function SurveyBuilderDemo({
                   </select>
 
                   {selectedSourceCampaign ? (
-                    <p className="text-xs leading-5 text-slate-500">
+                    <p className="text-xs leading-5 text-muted">
                       {selectedSourceCampaign.questions.filter((question) => question.type === "section").length} section(s),{" "}
                       {selectedSourceCampaign.questions.filter((question) => question.type !== "section").length} question(s) seront copiées.
                     </p>
@@ -2211,35 +2211,35 @@ export function SurveyBuilderDemo({
           ) : null}
 
           {/* Card 2: Periode */}
-          <div className={`relative ${mode === "edit" ? "order-3" : "order-3"} rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col`}>
-            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+          <div className={`relative ${mode === "edit" ? "order-3" : "order-3"} rounded-[14px] border border-line bg-surface p-4 flex flex-col`}>
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-line bg-white text-[10px] font-bold text-graphite">
               {mode === "edit" ? 3 : 3}
             </span>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
               Période
             </p>
             <div className="mt-3 space-y-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-600">Début</label>
+                <label className="text-xs font-medium text-muted">Début</label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(event) => setStartDate(event.target.value)}
-                  className="w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                  className="w-full rounded-[10px] border border-line bg-white px-3 py-2 text-sm outline-none"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-600">Fin</label>
+                <label className="text-xs font-medium text-muted">Fin</label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(event) => setEndDate(event.target.value)}
-                  className="w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                  className="w-full rounded-[10px] border border-line bg-white px-3 py-2 text-sm outline-none"
                 />
               </div>
             </div>
             {isDateRangeInvalid ? (
-              <p className="mt-2 flex items-center gap-1 text-[11px] font-medium text-rose-700">
+              <p className="mt-2 flex items-center gap-1 text-[11px] font-medium text-graphite">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 <span>La date de fin doit être supérieure ou égale au début.</span>
               </p>
@@ -2247,21 +2247,21 @@ export function SurveyBuilderDemo({
           </div>
 
           {/* Card 3: Nom et description */}
-          <div className={`relative ${mode === "edit" ? "order-2" : "order-4"} rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col`}>
-            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+          <div className={`relative ${mode === "edit" ? "order-2" : "order-4"} rounded-[14px] border border-line bg-surface p-4 flex flex-col`}>
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-line bg-white text-[10px] font-bold text-graphite">
               {mode === "edit" ? 2 : 4}
             </span>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
               Nom et description
             </p>
             <input
-              className="mt-3 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+              className="mt-3 w-full rounded-[10px] border border-line bg-white px-3 py-2 text-sm outline-none"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Nom du sondage"
             />
             <textarea
-              className="mt-2 w-full resize-none rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+              className="mt-2 w-full resize-none rounded-[10px] border border-line bg-white px-3 py-2 text-sm outline-none"
               rows={3}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
@@ -2270,30 +2270,30 @@ export function SurveyBuilderDemo({
           </div>
 
           {/* Card 4: Activation */}
-          <div className={`relative ${mode === "edit" ? "order-4" : "order-5"} rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col`}>
-            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+          <div className={`relative ${mode === "edit" ? "order-4" : "order-5"} rounded-[14px] border border-line bg-surface p-4 flex flex-col`}>
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-line bg-white text-[10px] font-bold text-graphite">
               {mode === "edit" ? 4 : 5}
             </span>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
               Activation
             </p>
             {status !== "active" ? (
               <>
-                <p className="mt-3 text-[11px] leading-5 text-slate-500">
+                <p className="mt-3 text-[11px] leading-5 text-muted">
                   Crée et vérifie les questions avant activation.
                 </p>
                 <button
                   type="button"
                   onClick={handleActivateStep}
                   disabled={!canActivateCampaign || isBusy}
-                  className="mt-3 inline-flex w-full items-center justify-center rounded-[10px] bg-[#111827] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-3 inline-flex w-full items-center justify-center rounded-[10px] bg-graphite px-3 py-2 text-xs font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-track disabled:text-muted"
                 >
                   Activer
                 </button>
               </>
             ) : (
               <div className="mt-3 space-y-2">
-                <div className="inline-flex w-full items-center justify-center rounded-[10px] bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                <div className="inline-flex w-full items-center justify-center rounded-[10px] bg-accent-soft px-3 py-2 text-xs font-semibold text-accent ring-1 ring-line">
                   <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
                   Actif
                 </div>
@@ -2301,7 +2301,7 @@ export function SurveyBuilderDemo({
                   type="button"
                   onClick={() => changeCampaignStatus("terminateCampaign")}
                   disabled={isBusy}
-                  className="inline-flex w-full items-center justify-center rounded-[10px] border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex w-full items-center justify-center rounded-[10px] border border-muted bg-white px-3 py-2 text-xs font-semibold text-graphite transition hover:bg-page disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-track disabled:text-muted"
                 >
                   Désactiver
                 </button>
@@ -2310,26 +2310,26 @@ export function SurveyBuilderDemo({
           </div>
 
           {/* Card 5: Import */}
-          <div className={`relative ${mode === "edit" ? "order-5" : "order-6"} rounded-[14px] border border-slate-200 bg-[#fbfbfc] p-4 flex flex-col`}>
-            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-700">
+          <div className={`relative ${mode === "edit" ? "order-5" : "order-6"} rounded-[14px] border border-line bg-surface p-4 flex flex-col`}>
+            <span className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-line bg-white text-[10px] font-bold text-graphite">
               {mode === "edit" ? 5 : 6}
             </span>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
               Import
             </p>
-            <p className="mt-3 text-[11px] leading-5 text-slate-500">
+            <p className="mt-3 text-[11px] leading-5 text-muted">
               Disponible après activation.
             </p>
             <button
               type="button"
               onClick={openImportModal}
               disabled={!isSurveyReadyForImport || isBusy || isPreparingImport}
-              className="mt-3 inline-flex w-full items-center justify-center rounded-[10px] bg-[#111827] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-3 inline-flex w-full items-center justify-center rounded-[10px] bg-graphite px-3 py-2 text-xs font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-track disabled:text-muted"
             >
               {isPreparingImport ? "Préparation..." : "Importer"}
             </button>
             {hasImportedEmployees ? (
-              <p className="mt-2 text-center text-[11px] font-medium text-emerald-700">
+              <p className="mt-2 text-center text-[11px] font-medium text-accent">
                 {participantCount || importSuccess?.count || 0} employé(s) importé(s)
               </p>
             ) : null}
@@ -2353,21 +2353,21 @@ export function SurveyBuilderDemo({
         )}
       </div>
 
-      <section className="mt-6 rounded-[16px] border border-slate-200 bg-[#fbfbfc] p-5 sm:p-6">
+      <section className="mt-6 rounded-[16px] border border-line bg-surface p-5 sm:p-6">
         <div className="max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
             Parcours de l&apos;employé
           </p>
-          <h2 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold text-slate-950">
+          <h2 className="mt-2 font-heading text-xl font-bold text-graphite">
             Introduction et conclusion
           </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
+          <p className="mt-2 text-sm leading-6 text-muted">
             Ces textes sont propres à ce sondage. L&apos;introduction apparaît avant les questions et la conclusion après la dernière section, avant l&apos;envoi des réponses.
           </p>
         </div>
         <div className="mt-5 grid gap-5 lg:grid-cols-2">
           <div>
-            <label htmlFor="survey-introduction" className="text-sm font-semibold text-slate-800">
+            <label htmlFor="survey-introduction" className="text-sm font-semibold text-graphite">
               Texte d&apos;introduction
             </label>
             <SurveyRichTextEditor
@@ -2376,12 +2376,12 @@ export function SurveyBuilderDemo({
               onChange={setIntroductionText}
               maxLength={10000}
             />
-            <p className="mt-1 text-right text-xs text-slate-400">
+            <p className="mt-1 text-right text-xs text-muted">
               {getSurveyTextLength(introductionText)}/10 000
             </p>
           </div>
           <div>
-            <label htmlFor="survey-conclusion" className="text-sm font-semibold text-slate-800">
+            <label htmlFor="survey-conclusion" className="text-sm font-semibold text-graphite">
               Texte de conclusion
             </label>
             <SurveyRichTextEditor
@@ -2390,20 +2390,20 @@ export function SurveyBuilderDemo({
               onChange={setConclusionText}
               maxLength={10000}
             />
-            <p className="mt-1 text-right text-xs text-slate-400">
+            <p className="mt-1 text-right text-xs text-muted">
               {getSurveyTextLength(conclusionText)}/10 000
             </p>
           </div>
         </div>
       </section>
 
-      <section className="mt-6 border-y border-slate-200 py-5">
+      <section className="mt-6 border-y border-line py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
               Contexte de l'entreprise
             </p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-2 text-sm leading-6 text-muted">
               Ce contexte est propre à {selectedCompanyName || "l'entreprise sélectionnée"}.
             </p>
           </div>
@@ -2425,25 +2425,25 @@ export function SurveyBuilderDemo({
           disabled={!companyId || isBusy}
           rows={8}
           placeholder="Saisir le contexte de l'entreprise..."
-          className="mt-4 min-h-48 w-full resize-y rounded-[8px] border border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+          className="mt-4 min-h-48 w-full resize-y rounded-[8px] border border-line bg-white px-4 py-3 text-sm leading-6 text-graphite outline-none transition focus:border-accent-bright focus:ring-2 focus:ring-line disabled:cursor-not-allowed disabled:bg-page"
         />
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label htmlFor="champion-name" className="text-sm font-medium text-slate-700">
+          <label htmlFor="champion-name" className="text-sm font-medium text-graphite">
             Nom du champion (facultatif)
             <input id="champion-name" type="text" value={championName}
               onChange={(event) => setChampionName(event.target.value)}
               maxLength={150} disabled={!companyId || isBusy}
-              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 disabled:bg-slate-100" />
+              className="mt-2 w-full rounded-lg border border-line bg-white px-4 py-3 disabled:bg-page" />
           </label>
-          <label htmlFor="champion-email" className="text-sm font-medium text-slate-700">
+          <label htmlFor="champion-email" className="text-sm font-medium text-graphite">
             Adresse courriel du champion (facultatif)
             <input id="champion-email" type="email" value={championEmail}
               onChange={(event) => setChampionEmail(event.target.value)}
               maxLength={254} disabled={!companyId || isBusy}
-              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 disabled:bg-slate-100" />
+              className="mt-2 w-full rounded-lg border border-line bg-white px-4 py-3 disabled:bg-page" />
           </label>
         </div>
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-muted">
           Ces coordonnées seront utilisées dans les prochains courriels de sondage de cette entreprise.
           Cliquez sur « Enregistrer le contexte » pour les sauvegarder.
         </p>
@@ -2451,10 +2451,10 @@ export function SurveyBuilderDemo({
 
       {/* Gestion des questions */}
       <div className="mt-4 sm:mt-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700 mb-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent mb-3">
           Gestion des questions
         </p>
-        <p className="mb-4 rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+        <p className="mb-4 rounded-[12px] border border-line bg-page px-4 py-3 text-sm leading-6 text-muted">
           Finalise les questions avant activation : ce contenu sera celui visible dans le lien envoyé aux employés.
         </p>
         <div className="flex flex-wrap gap-2 sm:gap-3 mb-4">
@@ -2512,28 +2512,28 @@ export function SurveyBuilderDemo({
         </div>
 
         {feedback && (
-          <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3">
-            <p className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+          <div className="mt-4 rounded-[12px] border border-line bg-accent-soft px-4 py-3">
+            <p className="flex items-center gap-2 text-sm font-medium text-accent">
               <CheckCircle2 className="h-4 w-4" />
               <span>{feedback}</span>
             </p>
           </div>
         )}
         {error && (
-          <div className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3">
-            <p className="flex items-center gap-2 text-sm font-medium text-rose-700">
+          <div className="mt-4 rounded-[12px] border border-muted bg-page px-4 py-3">
+            <p className="flex items-center gap-2 text-sm font-medium text-graphite">
               <AlertTriangle className="h-4 w-4" />
               <span>{error}</span>
             </p>
           </div>
         )}
         {answerableQuestionCount === 0 && status === "active" && (
-          <p className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+          <p className="mt-4 rounded-[12px] border border-muted bg-page px-4 py-3 text-sm font-medium text-graphite">
             Attention : Au moins une question est requise avant d&apos;importer les employés. Ajoutez au moins une question maintenant.
           </p>
         )}
         {!canEditQuestions && questions.length > 0 && (
-          <p className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+          <p className="mt-4 rounded-[12px] border border-line bg-accent-soft px-4 py-3 text-sm font-medium text-accent">
             Le sondage est actif. Les questions ne peuvent plus être modifiées tant qu&apos;il reste actif.
           </p>
         )}
@@ -2544,13 +2544,13 @@ export function SurveyBuilderDemo({
           }`}
         >
           {SHOW_QUESTION_SUGGESTIONS ? (
-          <aside className="rounded-[16px] border border-slate-200 bg-slate-50 p-4 lg:sticky lg:top-4">
+          <aside className="rounded-[16px] border border-line bg-page p-4 lg:sticky lg:top-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
                   Suggestions de questions
                 </p>
-                <p className="mt-2 text-xs leading-5 text-slate-600">
+                <p className="mt-2 text-xs leading-5 text-muted">
                   Choisissez une section, cochez les questions souhaitées, puis ajoutez-les au sondage.
                 </p>
               </div>
@@ -2558,7 +2558,7 @@ export function SurveyBuilderDemo({
                 <button
                   type="button"
                   onClick={() => setIsSuggestionDrawerOpen(false)}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600"
+                  className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-muted"
                   aria-label="Fermer les suggestions"
                 >
                   Fermer
@@ -2573,7 +2573,7 @@ export function SurveyBuilderDemo({
                 setError(null);
               }}
               disabled={!campaignId || !canEditQuestions}
-              className="mt-3 w-full rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-sm outline-none disabled:bg-slate-100"
+              className="mt-3 w-full rounded-[10px] border border-line bg-white px-3 py-2 text-sm outline-none disabled:bg-page"
             >
               <option value="">Choisir la section de destination</option>
               {questions
@@ -2592,12 +2592,12 @@ export function SurveyBuilderDemo({
               {QUESTION_SUGGESTION_SECTIONS.map((suggestionSection) => (
                 <details
                   key={suggestionSection.number}
-                  className="rounded-[12px] border border-slate-200 bg-white p-3"
+                  className="rounded-[12px] border border-line bg-white p-3"
                 >
-                  <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+                  <summary className="cursor-pointer text-sm font-semibold text-graphite">
                     Section {suggestionSection.number} · {suggestionSection.title}
                     {suggestionSection.optional ? (
-                      <span className="ml-2 text-xs font-medium text-slate-500">Facultative</span>
+                      <span className="ml-2 text-xs font-medium text-muted">Facultative</span>
                     ) : null}
                   </summary>
                   <div className="mt-3 space-y-2">
@@ -2615,15 +2615,15 @@ export function SurveyBuilderDemo({
                           !suggestionSectionId
                         }
                         onClick={() => toggleSuggestedQuestion(suggestion)}
-                        className={`w-full rounded-[10px] border px-3 py-3 text-left text-xs leading-5 transition disabled:cursor-not-allowed disabled:opacity-50 ${isSelected ? "border-amber-400 bg-amber-50 text-slate-800" : "border-slate-200 bg-white text-slate-700 hover:border-amber-300 hover:bg-amber-50"}`}
+                        className={`w-full rounded-[10px] border px-3 py-3 text-left text-xs leading-5 transition disabled:cursor-not-allowed disabled:opacity-50 ${isSelected ? "border-accent-bright bg-accent-soft text-graphite" : "border-line bg-white text-graphite hover:border-accent-bright hover:bg-accent-soft"}`}
                       >
                         <span className="flex items-start gap-2">
-                          <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${isSelected ? "border-amber-600 bg-amber-600 text-white" : "border-slate-300 bg-white"}`}>
+                          <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${isSelected ? "border-accent bg-accent text-white" : "border-line bg-white"}`}>
                             {isSelected ? "✓" : ""}
                           </span>
                           <span>
                             <span className="block">{suggestion.title}</span>
-                            <span className="mt-1 block text-[11px] font-semibold text-sky-700">
+                            <span className="mt-1 block text-[11px] font-semibold text-accent">
                               {alreadyAdded ? "Déjà ajoutée" : suggestion.type === "scale" ? "Échelle 1 à 5" : suggestion.type === "choice" ? "Question à choix" : "Texte libre"}
                             </span>
                           </span>
@@ -2634,8 +2634,8 @@ export function SurveyBuilderDemo({
                 </details>
               ))}
             </div>
-            <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-              <span className="text-sm font-semibold text-slate-700">
+            <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
+              <span className="text-sm font-semibold text-graphite">
                 {selectedSuggestionTitles.length} question{selectedSuggestionTitles.length > 1 ? "s" : ""} sélectionnée{selectedSuggestionTitles.length > 1 ? "s" : ""}
               </span>
               <PrimaryButton
@@ -2658,24 +2658,24 @@ export function SurveyBuilderDemo({
                 key={section ? `section-card-${section.question.id}` : "unsectioned-card"}
                 className={`rounded-[12px] sm:rounded-[16px] border p-3 sm:p-5 shadow-sm ${
                   section
-                    ? "border-amber-300 bg-amber-50/60"
-                    : "border-slate-200 bg-slate-50"
+                    ? "border-accent-bright bg-accent-soft"
+                    : "border-line bg-page"
                 }`}
               >
                 {section ? (
-                  <div className="flex flex-col gap-3 border-b border-amber-200 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <GripHorizontal className="h-5 w-5 text-amber-700" />
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                        <GripHorizontal className="h-5 w-5 text-accent" />
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
                           Section
                         </p>
                         {section.question.isVisible === false ? (
-                          <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                          <span className="rounded-full border border-line bg-page px-2 py-1 text-xs font-semibold text-muted">
                             Masquée
                           </span>
                         ) : null}
-                        <span className="rounded-full border border-amber-200 bg-white px-2 py-1 text-xs font-semibold text-amber-800">
+                        <span className="rounded-full border border-line bg-white px-2 py-1 text-xs font-semibold text-accent">
                           {sectionQuestionCount} question{sectionQuestionCount > 1 ? "s" : ""}
                         </span>
                       </div>
@@ -2685,7 +2685,7 @@ export function SurveyBuilderDemo({
                           updateQuestion(section.index, { title: event.target.value })
                         }
                         disabled={!canEditQuestions}
-                        className="w-full text-lg font-bold bg-transparent border-b-2 border-amber-300 pb-2 outline-none focus:border-amber-500"
+                        className="w-full text-lg font-bold bg-transparent border-b-2 border-accent-bright pb-2 outline-none focus:border-accent-bright"
                         placeholder="Titre de la section"
                       />
                       <textarea
@@ -2698,7 +2698,7 @@ export function SurveyBuilderDemo({
                           updateQuestion(section.index, { helpText: event.target.value })
                         }
                         disabled={!canEditQuestions}
-                        className="mt-3 min-h-24 w-full rounded-[12px] border border-amber-200 bg-white/80 px-3 py-3 text-sm leading-6 text-slate-700 outline-none focus:border-amber-400"
+                        className="mt-3 min-h-24 w-full rounded-[12px] border border-line bg-white px-3 py-3 text-sm leading-6 text-graphite outline-none focus:border-accent-bright"
                         placeholder="Description de la section visible avant ses questions"
                       />
                     </div>
@@ -2732,7 +2732,7 @@ export function SurveyBuilderDemo({
                         {section.question.isVisible === false ? "Afficher la section" : "Masquer la section"}
                       </SecondaryButton>
                       <SecondaryButton
-                        className="flex-1 sm:flex-none px-3 py-2 text-red-600 hover:bg-red-50"
+                        className="flex-1 sm:flex-none px-3 py-2"
                         disabled={!canEditQuestions}
                         onClick={() => removeQuestion(section.question)}
                       >
@@ -2741,8 +2741,8 @@ export function SurveyBuilderDemo({
                     </div>
                   </div>
                 ) : (
-                  <div className="border-b border-slate-200 pb-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  <div className="border-b border-line pb-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
                       Questions sans section
                     </p>
                   </div>
@@ -2750,7 +2750,7 @@ export function SurveyBuilderDemo({
 
                 <div className="mt-4 space-y-3">
                   {group.questions.length === 0 ? (
-                    <div className="rounded-[12px] border border-dashed border-amber-300 bg-white/70 px-4 py-5 text-sm font-medium text-slate-500">
+                    <div className="rounded-[12px] border border-dashed border-accent-bright bg-white px-4 py-5 text-sm font-medium text-muted">
                       Aucune question dans cette section.
                     </div>
                   ) : null}
@@ -2758,18 +2758,18 @@ export function SurveyBuilderDemo({
                   {group.questions.map(({ question, index }) => (
                     <div
                       key={`${question.id}-${index}`}
-                      className="rounded-[12px] border border-slate-200 bg-white p-3 sm:p-4"
+                      className="rounded-[12px] border border-line bg-white p-3 sm:p-4"
                     >
                     <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
                           Question {getQuestionNumber(questions, index)}
                         </p>
                         <p className="mt-2 text-sm font-semibold">{question.type === "scale"
                           ? { scale: "Échelle 1 à 5", scale_a: "Échelle A", scale_f: "Échelle F" }[getScaleEditorType(question.options)]
                           : question.type}</p>
                         {section ? (
-                          <p className="mt-1 text-xs font-medium text-slate-500">
+                          <p className="mt-1 text-xs font-medium text-muted">
                             Section: {section.question.title}
                           </p>
                         ) : null}
@@ -2795,7 +2795,7 @@ export function SurveyBuilderDemo({
                       value={question.title}
                       onChange={(event) => updateQuestion(index, { title: event.target.value })}
                       disabled={!canEditQuestions}
-                      className="mt-3 sm:mt-4 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
+                      className="mt-3 sm:mt-4 w-full rounded-[12px] border border-line bg-page px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                     />
                     <select
                       value={question.type === "scale" ? getScaleEditorType(question.options) : question.type}
@@ -2806,7 +2806,7 @@ export function SurveyBuilderDemo({
                           : { type: event.target.value as SurveyQuestion["type"] });
                       }}
                       disabled={!canEditQuestions}
-                      className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
+                      className="mt-3 w-full rounded-[12px] border border-line bg-page px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                     >
                       <option value="scale">Échelle 1 à 5</option>
                       <option value="scale_a">Échelle A</option>
@@ -2816,11 +2816,11 @@ export function SurveyBuilderDemo({
                     </select>
 
                     {question.type === "scale" && (
-                      <div className="mt-3 sm:mt-4 rounded-[12px] sm:rounded-[14px] border border-sky-200 bg-sky-50/70 p-3 sm:p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">
+                      <div className="mt-3 sm:mt-4 rounded-[12px] sm:rounded-[14px] border border-line bg-accent-soft p-3 sm:p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
                           Lecture de l&apos;echelle
                         </p>
-                        <p className="mt-2 text-sm text-slate-600">
+                        <p className="mt-2 text-sm text-muted">
                           {getScaleEditorType(question.options) === "scale_f"
                             ? "Le répondant choisit une note de 1 à 5 pour indiquer la fréquence."
                             : getScaleEditorType(question.options) === "scale_a"
@@ -2834,16 +2834,16 @@ export function SurveyBuilderDemo({
                           ).map((label, optionIndex) => (
                             <div
                               key={`scale-guide-${optionIndex + 1}`}
-                              className="rounded-[12px] border border-sky-200 bg-white px-3 py-3 text-center"
+                              className="rounded-[12px] border border-line bg-white px-3 py-3 text-center"
                             >
-                              <p className="text-base font-bold text-sky-800">{optionIndex + 1}</p>
+                              <p className="text-base font-bold text-accent">{optionIndex + 1}</p>
                               <input
                                 value={label}
                                 onChange={(event) =>
                                   updateChoiceOption(index, optionIndex, event.target.value)
                                 }
                                 disabled={!canEditQuestions}
-                                className="mt-2 w-full rounded-[8px] border border-sky-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
+                                className="mt-2 w-full rounded-[8px] border border-line bg-white px-2 py-2 text-xs text-graphite outline-none"
                               />
                             </div>
                           ))}
@@ -2852,9 +2852,9 @@ export function SurveyBuilderDemo({
                     )}
 
                     {question.type === "choice" && (
-                      <div className="mt-3 sm:mt-4 rounded-[12px] sm:rounded-[14px] border border-amber-200 bg-amber-50/50 p-3 sm:p-4">
+                      <div className="mt-3 sm:mt-4 rounded-[12px] sm:rounded-[14px] border border-line bg-accent-soft p-3 sm:p-4">
                         <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
                             Choix du QCM
                           </p>
                           <SecondaryButton
@@ -2872,7 +2872,7 @@ export function SurveyBuilderDemo({
                                 value={option}
                                 onChange={(event) => updateChoiceOption(index, optionIndex, event.target.value)}
                                 disabled={!canEditQuestions}
-                                className="w-full rounded-[12px] border border-amber-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
+                                className="w-full rounded-[12px] border border-line bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none"
                                 placeholder={`Choix ${optionIndex + 1}`}
                               />
                               <SecondaryButton
@@ -2907,48 +2907,48 @@ export function SurveyBuilderDemo({
       </div>
 
       <Card className="overflow-hidden">
-        <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_100%)] px-4 sm:px-6 py-3 sm:py-4 text-white">
-          <p className="text-xs sm:text-sm text-slate-300">Aperçu du sondage</p>
-          <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold">
+        <div className="border-b border-line bg-graphite px-4 sm:px-6 py-3 sm:py-4 text-white">
+          <p className="text-xs sm:text-sm text-white">Aperçu du sondage</p>
+          <h3 className="mt-1 font-heading text-lg sm:text-xl font-bold">
             Aperçu du questionnaire
           </h3>
         </div>
         <div className="space-y-3 sm:space-y-4 p-3 sm:p-6">
           {/* En-tête masqué pour aligner l'aperçu sur le parcours employé.
-          <div className="rounded-[12px] sm:rounded-[16px] border border-slate-200 bg-slate-50 p-3 sm:p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+          <div className="rounded-[12px] sm:rounded-[16px] border border-line bg-page p-3 sm:p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
               Sondage
             </p>
             <p className="mt-2 text-base sm:text-lg font-semibold">
               {effectiveCampaignTitle || "Entreprise a definir"}
             </p>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-muted">
               {companies.find((company) => company.id === companyId)?.name ?? "Entreprise a definir"}
             </p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+            <p className="mt-2 text-sm leading-6 text-muted">{description}</p>
           </div>
           */}
 
-          <div className="rounded-[12px] sm:rounded-[16px] border border-amber-200 bg-amber-50/60 p-4 sm:p-5">
+          <div className="rounded-[12px] sm:rounded-[16px] border border-line bg-accent-soft p-4 sm:p-5">
             <div className="flex items-center justify-end gap-3">
-              <span className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-semibold text-amber-700">
+              <span className="rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-accent">
                 Avant les questions
               </span>
             </div>
-            <p className="mt-3 text-lg font-bold text-slate-950">
+            <p className="mt-3 font-heading text-lg font-bold text-graphite">
               Un portrait de votre milieu de travail.
             </p>
             {introductionText.trim() ? (
               <RichSurveyText
                 text={introductionText.trim()}
-                className="mt-4 text-sm leading-7 text-slate-700"
+                className="mt-4 text-sm leading-7 text-graphite"
               />
             ) : (
-              <p className="mt-4 text-sm italic text-slate-500">
+              <p className="mt-4 text-sm italic text-muted">
                 Aucun texte d&apos;introduction renseigné.
               </p>
             )}
-            <span className="mt-5 inline-flex rounded-[10px] bg-[#111827] px-4 py-2 text-xs font-semibold text-white">
+            <span className="mt-5 inline-flex rounded-[10px] bg-graphite px-4 py-2 text-xs font-semibold text-white">
               Commencer le sondage
             </span>
             <div className="mt-5">
@@ -2960,34 +2960,34 @@ export function SurveyBuilderDemo({
             <div
               className={`rounded-[12px] sm:rounded-[16px] border p-4 sm:p-5 ${
                 previewSection.section
-                  ? "border-amber-300 bg-amber-50"
-                  : "border-slate-200 bg-white"
+                  ? "survey-section-heading border-line"
+                  : "border-line bg-white"
               }`}
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
                     {previewSection.section ? "Section" : "Questions sans section"}
                   </p>
-                  <p className="mt-2 text-base font-semibold text-slate-900">
+                  <p className="mt-2 font-heading text-base font-semibold text-graphite">
                     {previewSection.section?.question.title ?? "Questions générales"}
                   </p>
                 </div>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                <span className="rounded-full border border-line bg-page px-3 py-1 text-xs font-semibold text-muted">
                   {previewIndex + 1} / {previewSections.length}
                 </span>
               </div>
 
               {previewSection.section?.question.helpText &&
                 previewSection.section.question.helpText !== "Section du questionnaire" ? (
-                <p className="mt-4 rounded-[12px] border border-amber-200 bg-white px-4 py-4 text-sm leading-6 text-slate-700">
+                <p className="mt-4 rounded-[12px] border border-line bg-white px-4 py-4 text-sm leading-6 text-graphite">
                   {previewSection.section.question.helpText}
                 </p>
               ) : null}
 
               <div className="mt-4 space-y-3 sm:space-y-4">
                 {previewSection.questions.length === 0 ? (
-                  <div className="rounded-[12px] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm font-medium text-slate-500">
+                  <div className="rounded-[12px] border border-dashed border-line bg-page px-4 py-6 text-sm font-medium text-muted">
                     Cette section ne contient pas encore de question.
                   </div>
                 ) : null}
@@ -2995,11 +2995,11 @@ export function SurveyBuilderDemo({
                 {previewSection.questions.map(({ question, index }) => (
                   <div
                     key={`${question.id}-preview-${index}`}
-                    className="rounded-[12px] border border-slate-200 bg-white p-4 sm:p-5"
+                    className="rounded-[12px] border border-line bg-white p-4 sm:p-5"
                   >
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="survey-question-title text-sm font-semibold text-graphite">
                       {getQuestionNumber(questions, index)}. {question.title}
-                      <span className="ml-1 text-rose-500">*</span>
+                      <span className="ml-1 text-graphite">*</span>
                     </p>
 
                     {question.type === "scale" ? (
@@ -3010,13 +3010,13 @@ export function SurveyBuilderDemo({
                         ).map((label, optionIndex) => (
                           <label
                             key={`${question.id}-scale-preview-${optionIndex + 1}`}
-                            className="flex items-center gap-3 text-sm text-slate-700"
+                            className="flex items-center gap-3 text-sm text-muted"
                           >
                             <input
                               type="radio"
                               readOnly
                               checked={false}
-                              className="h-4 w-4 accent-amber-600"
+                              className="h-4 w-4 accent-accent"
                             />
                             <span>
                               {optionIndex + 1} - {label}
@@ -3031,13 +3031,13 @@ export function SurveyBuilderDemo({
                         {sanitizeOptions(question.options).map((option, optionIndex) => (
                           <label
                             key={`${question.id}-${option}`}
-                            className="flex items-center gap-3 text-sm text-slate-700"
+                            className="flex items-center gap-3 text-sm text-muted"
                           >
                             <input
                               type="radio"
                               readOnly
                               checked={false}
-                              className="h-4 w-4 accent-amber-600"
+                              className="h-4 w-4 accent-accent"
                             />
                             <span>{option}</span>
                           </label>
@@ -3048,13 +3048,13 @@ export function SurveyBuilderDemo({
                     {question.type === "text" ? (
                       <textarea
                         readOnly
-                        className="mt-4 min-h-28 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                        className="mt-4 min-h-28 w-full rounded-[12px] border border-line bg-surface px-4 py-3 text-sm outline-none"
                         placeholder="Reponse libre"
                       />
                     ) : null}
 
                     <div className="mt-3">
-                      <span className="inline-flex rounded-[12px] border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">
+                      <span className="inline-flex rounded-[12px] border border-line bg-white px-4 py-2.5 text-sm font-semibold text-graphite">
                         {PREFER_NOT_TO_ANSWER}
                       </span>
                     </div>
@@ -3088,27 +3088,27 @@ export function SurveyBuilderDemo({
               </div>
             </div>
           ) : (
-            <div className="rounded-[12px] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm font-medium text-slate-500">
+            <div className="rounded-[12px] border border-dashed border-line bg-page px-4 py-6 text-sm font-medium text-muted">
               Ajoutez une section puis des questions pour afficher l'aperçu.
             </div>
           )}
 
-          <div className="rounded-[12px] sm:rounded-[16px] border border-emerald-200 bg-emerald-50/70 p-4 sm:p-5">
+          <div className="rounded-[12px] sm:rounded-[16px] border border-line bg-accent-soft p-4 sm:p-5">
             <div className="flex items-center justify-end gap-3">
-              <span className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700">
+              <span className="rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-accent">
                 Après l&apos;envoi · page finale
               </span>
             </div>
-            <p className="mt-3 text-lg font-bold text-slate-950">
+            <p className="mt-3 font-heading text-lg font-bold text-graphite">
               Merci. Votre voix compte dans le portrait.
             </p>
             {conclusionText.trim() ? (
               <RichSurveyText
                 text={conclusionText.trim()}
-                className="mt-3 text-sm leading-7 text-slate-700"
+                className="mt-3 text-sm leading-7 text-graphite"
               />
             ) : (
-              <p className="mt-3 text-sm italic text-slate-500">
+              <p className="mt-3 text-sm italic text-muted">
                 Aucun texte de conclusion renseigné.
               </p>
             )}
@@ -3120,17 +3120,17 @@ export function SurveyBuilderDemo({
       </Card>
 
       {isImportModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-950/55 px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-graphite/55 px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto">
           <div className="relative w-full max-w-5xl my-4 sm:my-0 rounded-[16px] sm:rounded-[24px] bg-white shadow-2xl overflow-y-auto max-h-[95vh] sm:max-h-[92vh]">
-            <div className="sticky top-0 z-10 flex items-start justify-between gap-3 sm:gap-4 border-b border-slate-200 bg-white px-4 sm:px-6 py-4 sm:py-5">
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-3 sm:gap-4 border-b border-line bg-white px-4 sm:px-6 py-4 sm:py-5">
               <div className="flex-1 pr-8 sm:pr-12">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
                   Import des employés
                 </p>
-                <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl sm:text-2xl font-bold text-slate-900">
+                <h3 className="mt-2 font-heading text-xl sm:text-2xl font-bold text-graphite">
                   {effectiveCampaignTitle || "Sondage"} - {selectedCompanyName || "Entreprise"}
                 </h3>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-muted">
                   Chargez ici le fichier des employés. 
                   Une fois l&apos;import terminé, 
                   vous pourrez télécharger la liste des liens individuels.
@@ -3139,7 +3139,7 @@ export function SurveyBuilderDemo({
               <button
                 type="button"
                 onClick={closeImportModal}
-                className="shrink-0 rounded-[12px] border border-slate-200 px-3 sm:px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                className="shrink-0 rounded-[12px] border border-line px-3 sm:px-4 py-2 text-sm font-semibold text-muted hover:bg-page"
               >
                 Fermer
               </button>
@@ -3170,36 +3170,36 @@ export function SurveyBuilderDemo({
                   <div
                     key={`modal-step-${item.step}`}
                     className={`rounded-[12px] sm:rounded-[16px] border p-3 sm:p-4 ${
-                      item.done ? "border-emerald-200 bg-emerald-50/70" : "border-slate-200 bg-slate-50/70"
+                      item.done ? "border-line bg-accent-soft" : "border-line bg-page"
                     }`}
                   >
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-bold text-slate-900">
+                      <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-line bg-white text-sm font-bold text-graphite">
                         {item.step}
                       </span>
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                        <p className="text-xs text-slate-500">{item.done ? "Terminé" : "En cours"}</p>
+                        <p className="text-sm font-semibold text-graphite">{item.title}</p>
+                        <p className="text-xs text-muted">{item.done ? "Terminé" : "En cours"}</p>
                       </div>
                     </div>
-                    <p className="mt-2 sm:mt-3 text-sm leading-6 text-slate-600">{item.body}</p>
+                    <p className="mt-2 sm:mt-3 text-sm leading-6 text-muted">{item.body}</p>
                   </div>
                 ))}
               </div>
 
               <Card className="p-4 sm:p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
                   Etape 2
                 </p>
-                <div className="mt-4 rounded-[12px] border border-dashed border-slate-300 bg-slate-50/80 p-3 sm:p-4">
+                <div className="mt-4 rounded-[12px] border border-dashed border-line bg-page p-3 sm:p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">Ajouter un fichier</p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="text-sm font-semibold text-graphite">Ajouter un fichier</p>
+                      <p className="mt-1 text-xs text-muted">
                         Formats acceptés : .xlsx, .xls, .csv
                       </p>
                     </div>
-                    <label className="inline-flex cursor-pointer items-center justify-center rounded-[12px] border border-slate-200 bg-[#181818] px-4 py-2.5 sm:py-3 text-sm font-semibold text-white transition hover:bg-[#242424]">
+                    <label className="inline-flex cursor-pointer items-center justify-center rounded-[12px] border border-line bg-graphite px-4 py-2.5 sm:py-3 text-sm font-semibold text-white transition hover:bg-accent">
                       Choisir un fichier
                       <input
                         type="file"
@@ -3210,20 +3210,20 @@ export function SurveyBuilderDemo({
                     </label>
                   </div>
                   {selectedFileName ? (
-                    <p className="mt-3 text-xs text-slate-500">Fichier sélectionné : {selectedFileName}</p>
+                    <p className="mt-3 text-xs text-muted">Fichier sélectionné : {selectedFileName}</p>
                   ) : null}
                 </div>
 
                 <div className="mt-4 sm:mt-5">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold text-slate-700">
+                    <label className="text-sm font-semibold text-graphite">
                       Données CSV
                     </label>
                     {importCsv.trim() ? (
                       <button
                         type="button"
                         onClick={validateImportCsv}
-                        className="text-xs font-semibold text-amber-700 hover:text-amber-800"
+                        className="text-xs font-semibold text-accent hover:text-accent"
                       >
                         Vérifier le format
                       </button>
@@ -3235,19 +3235,19 @@ export function SurveyBuilderDemo({
                       setImportCsv(event.target.value);
                       setImportValidationErrors([]);
                     }}
-                    className="mt-2 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none font-mono min-h-32 sm:min-h-40"
+                    className="mt-2 w-full rounded-[12px] border border-line bg-page px-3 sm:px-4 py-2.5 sm:py-3 text-sm outline-none font-mono min-h-32 sm:min-h-40"
                     placeholder="Nom,Prenom,Adresse courriel,Fonction"
                   />
                 </div>
 
                 {importValidationErrors.length > 0 ? (
-                  <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-3 sm:px-4 py-3">
-                    <p className="text-sm font-semibold text-amber-800">
+                  <div className="mt-4 rounded-[12px] border border-line bg-accent-soft px-3 sm:px-4 py-3">
+                    <p className="text-sm font-semibold text-accent">
                       {importValidationErrors.length} erreur(s) détectée(s)
                     </p>
                     <ul className="mt-2 space-y-1">
                       {importValidationErrors.map((validationError, index) => (
-                        <li key={`validation-${index}`} className="text-xs text-amber-700">
+                        <li key={`validation-${index}`} className="text-xs text-accent">
                           • {validationError}
                         </li>
                       ))}
@@ -3256,13 +3256,13 @@ export function SurveyBuilderDemo({
                 ) : null}
 
                 {importFeedback ? (
-                  <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-3 sm:px-4 py-3">
-                    <p className="text-sm font-medium text-emerald-700">{importFeedback}</p>
+                  <div className="mt-4 rounded-[12px] border border-line bg-accent-soft px-3 sm:px-4 py-3">
+                    <p className="text-sm font-medium text-accent">{importFeedback}</p>
                   </div>
                 ) : null}
                 {importError ? (
-                  <div className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-3 sm:px-4 py-3">
-                    <p className="text-sm font-medium text-rose-700">{importError}</p>
+                  <div className="mt-4 rounded-[12px] border border-muted bg-page px-3 sm:px-4 py-3">
+                    <p className="text-sm font-medium text-graphite">{importError}</p>
                   </div>
                 ) : null}
 
@@ -3282,13 +3282,13 @@ export function SurveyBuilderDemo({
 
               {displayedImportedParticipants.length > 0 ? (
                 <Card className="p-4 sm:p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
                     Liste des employés et liens
                   </p>
-                  <h4 className="mt-2 text-base sm:text-lg font-bold text-slate-900">
+                  <h4 className="mt-2 text-base sm:text-lg font-bold text-graphite">
                     {importSuccess?.count ?? displayedImportedParticipants.length} employé(s) importé(s)
                   </h4>
-                  <p className="mt-2 text-sm text-slate-600">
+                  <p className="mt-2 text-sm text-muted">
                     {importSuccess
                       ? "L'import est terminé. Vous pouvez maintenant télécharger la liste des liens."
                       : "Ces employés sont déjà importés pour ce sondage. Les liens restent valides."}
@@ -3303,20 +3303,20 @@ export function SurveyBuilderDemo({
                     {displayedImportedParticipants.map((participant, index) => (
                       <div
                         key={`participant-link-${index}`}
-                        className="flex flex-col gap-2 sm:gap-3 rounded-[12px] border border-slate-200 bg-slate-50 p-3 sm:p-4"
+                        className="flex flex-col gap-2 sm:gap-3 rounded-[12px] border border-line bg-page p-3 sm:p-4"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-slate-900">{participant.name}</p>
-                          <p className="text-xs text-slate-500">{participant.email}</p>
+                          <p className="text-sm font-semibold text-graphite">{participant.name}</p>
+                          <p className="text-xs text-muted">{participant.email}</p>
                           {participant.department || participant.status ? (
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="mt-1 text-xs text-muted">
                               {[participant.department, formatParticipantStatus(participant.status)]
                                 .filter(Boolean)
                                 .join(" - ")}
                             </p>
                           ) : null}
                         </div>
-                        <code className="block flex-1 truncate text-xs text-slate-600">
+                        <code className="block flex-1 truncate text-xs text-muted">
                           {participant.link}
                         </code>
                         <SecondaryButton

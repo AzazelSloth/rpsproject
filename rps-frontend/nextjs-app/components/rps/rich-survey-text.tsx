@@ -9,7 +9,7 @@ const RICH_TEXT_MARKER = "<!--rps-rich-text-->";
 // Use the same typography in the editor, preview and participant questionnaire.
 // Empty blocks are intentional blank lines; don't add spacing between blocks.
 const SURVEY_TEXT_CLASS_NAME =
-  "whitespace-pre-wrap break-words [&_p]:m-0 [&_p]:min-h-[1lh] [&_div]:m-0 [&_div]:min-h-[1lh] [&_a]:text-sky-700 [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-sky-900 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6";
+  "whitespace-pre-wrap break-words [&_p]:m-0 [&_p]:min-h-[1lh] [&_div]:m-0 [&_div]:min-h-[1lh] [&_a]:text-accent [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-accent [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6";
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   // Browsers insert divs as well as paragraphs when pressing Enter.
@@ -272,12 +272,12 @@ export function SurveyRichTextEditor({
   }
 
   const toolbarButtonClass =
-    "inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50";
+    "inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-line bg-white px-3 text-xs font-semibold text-graphite hover:bg-page";
 
   return (
     <>
-      <div className="mt-2 overflow-hidden rounded-[12px] border border-slate-200 bg-white focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-100">
-        <div className="flex flex-wrap gap-1 border-b border-slate-200 bg-slate-50 p-2" role="toolbar">
+      <div className="mt-2 overflow-hidden rounded-[12px] border border-line bg-white focus-within:border-accent-bright focus-within:ring-2 focus-within:ring-line">
+        <div className="flex flex-wrap gap-1 border-b border-line bg-page p-2" role="toolbar">
           <button
             type="button"
             className={toolbarButtonClass}
@@ -328,13 +328,13 @@ export function SurveyRichTextEditor({
             event.preventDefault();
             insertClipboardContent(event.dataTransfer);
           }}
-          className={`${SURVEY_TEXT_CLASS_NAME} min-h-48 px-4 py-3 text-left text-sm leading-7 text-slate-800 outline-none`}
+          className={`${SURVEY_TEXT_CLASS_NAME} min-h-48 px-4 py-3 text-left text-sm leading-7 text-graphite outline-none`}
         />
       </div>
 
       {isLinkDialogOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-graphite/55 px-4 py-6"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
@@ -346,21 +346,21 @@ export function SurveyRichTextEditor({
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${id}-link-dialog-title`}
-            className="w-full max-w-md rounded-[20px] border border-slate-200 bg-white p-5 shadow-2xl sm:p-6"
+            className="w-full max-w-md rounded-[20px] border border-line bg-white p-5 shadow-2xl sm:p-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 id={`${id}-link-dialog-title`} className="text-lg font-bold text-slate-950">
+                <h3 id={`${id}-link-dialog-title`} className="text-lg font-bold text-graphite">
                   Ajouter un lien
                 </h3>
-                <p className="mt-1 text-sm leading-6 text-slate-500">
+                <p className="mt-1 text-sm leading-6 text-muted">
                   Indiquez le texte visible et l’adresse de destination.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={closeLinkDialog}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xl text-muted hover:bg-page hover:text-graphite"
                 aria-label="Fermer"
               >
                 ×
@@ -368,18 +368,18 @@ export function SurveyRichTextEditor({
             </div>
 
             <div className="mt-5 space-y-4">
-              <label className="block text-sm font-semibold text-slate-800">
+              <label className="block text-sm font-semibold text-graphite">
                 Texte affiché
                 <input
                   type="text"
                   value={linkText}
                   onChange={(event) => setLinkText(event.target.value)}
-                  className="mt-2 w-full rounded-[10px] border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal text-slate-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                  className="mt-2 w-full rounded-[10px] border border-line bg-white px-3 py-2.5 text-sm font-normal text-graphite outline-none focus:border-accent-bright focus:ring-2 focus:ring-line"
                   placeholder="Ex. Confidentialité"
                   autoFocus={!linkText}
                 />
               </label>
-              <label className="block text-sm font-semibold text-slate-800">
+              <label className="block text-sm font-semibold text-graphite">
                 Adresse du lien
                 <input
                   type="url"
@@ -391,7 +391,7 @@ export function SurveyRichTextEditor({
                       applyLink();
                     }
                   }}
-                  className="mt-2 w-full rounded-[10px] border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal text-slate-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                  className="mt-2 w-full rounded-[10px] border border-line bg-white px-3 py-2.5 text-sm font-normal text-graphite outline-none focus:border-accent-bright focus:ring-2 focus:ring-line"
                   placeholder="https://exemple.com"
                   autoFocus={Boolean(linkText)}
                 />
@@ -399,7 +399,7 @@ export function SurveyRichTextEditor({
             </div>
 
             {linkError ? (
-              <p className="mt-3 rounded-[10px] bg-red-50 px-3 py-2 text-sm font-medium text-red-700" role="alert">
+              <p className="mt-3 rounded-[10px] bg-page px-3 py-2 text-sm font-medium text-graphite" role="alert">
                 {linkError}
               </p>
             ) : null}
@@ -408,14 +408,14 @@ export function SurveyRichTextEditor({
               <button
                 type="button"
                 onClick={closeLinkDialog}
-                className="rounded-[10px] border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-[10px] border border-line bg-white px-4 py-2.5 text-sm font-semibold text-graphite hover:bg-page"
               >
                 Annuler
               </button>
               <button
                 type="button"
                 onClick={applyLink}
-                className="rounded-[10px] bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                className="rounded-[10px] bg-graphite px-4 py-2.5 text-sm font-semibold text-white hover:bg-graphite"
               >
                 Ajouter le lien
               </button>

@@ -43,12 +43,12 @@ export function ResultsSurveyTable({
 
   return (
     <Card className="overflow-hidden">
-      <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 border-b border-line px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h3 className="font-[family-name:var(--font-manrope)] text-xl font-bold">
+          <h3 className="font-heading text-xl font-bold">
             Tableau des sondages
           </h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted">
             Retrouve rapidement un sondage pour acceder aux resultats ou lancer l'analyse Drive.
           </p>
         </div>
@@ -58,13 +58,13 @@ export function ResultsSurveyTable({
             placeholder="Rechercher par entreprise ou sondage"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+            className="rounded-[12px] border border-line bg-white px-4 py-3 text-sm outline-none"
           />
           <select
             aria-label="Filtrer les sondages par statut"
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
-            className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+            className="rounded-[12px] border border-line bg-white px-4 py-3 text-sm outline-none"
           >
             {STATUS_FILTERS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -77,7 +77,7 @@ export function ResultsSurveyTable({
 
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-50 uppercase tracking-[0.18em] text-slate-500">
+          <thead className="bg-page uppercase tracking-[0.18em] text-muted">
             <tr>
               <th className="px-6 py-4">Entreprise</th>
               <th className="px-6 py-4">Statut</th>
@@ -93,10 +93,10 @@ export function ResultsSurveyTable({
                 const canAnalyze = hasCampaignEnded(survey.endDate);
 
                 return (
-                  <tr key={survey.id} className="border-t border-slate-100 align-top">
+                  <tr key={survey.id} className="border-t border-line align-top">
                     <td className="px-6 py-4">
                       <p className="font-semibold">{survey.companyName}</p>
-                      <p className="mt-1 text-slate-600">{survey.title}</p>
+                      <p className="mt-1 text-muted">{survey.title}</p>
                     </td>
                     <td className="px-6 py-4">
                       <Pill tone={getStatusTone(survey.status)}>
@@ -108,15 +108,15 @@ export function ResultsSurveyTable({
                         <Pill tone={survey.participationRate >= 70 ? "success" : "warning"}>
                           {survey.participationRate}%
                         </Pill>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-muted">
                           {survey.completedParticipants}/{survey.totalParticipants} participants
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-6 py-4 text-muted">
                       {formatShortDate(survey.startDate)}
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-6 py-4 text-muted">
                       {formatShortDate(survey.endDate)}
                     </td>
                     <td className="px-6 py-4">
@@ -128,7 +128,7 @@ export function ResultsSurveyTable({
                         />
                         <Link
                           href={buildReportHref(survey.id, scenario ?? null)}
-                          className="inline-flex items-center justify-center rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-[0_12px_24px_rgba(24,24,24,0.06)] transition hover:-translate-y-0.5 hover:bg-slate-50"
+                          className="inline-flex items-center justify-center rounded-[12px] border border-line bg-white px-4 py-2 text-xs font-semibold text-graphite shadow-[0_12px_24px_rgba(31,37,40,0.06)] transition hover:-translate-y-0.5 hover:bg-page"
                         >
                           Rapport
                         </Link>
@@ -148,8 +148,8 @@ export function ResultsSurveyTable({
                 );
               })
             ) : (
-              <tr className="border-t border-slate-100">
-                <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+              <tr className="border-t border-line">
+                <td colSpan={6} className="px-6 py-12 text-center text-muted">
                   {surveys.length > 0
                     ? "Aucun sondage ne correspond a la recherche."
                     : "Aucun sondage disponible."}

@@ -37,6 +37,7 @@ export function useSurveyDraft({
       totalSteps,
     ),
     state: "saved" as SurveyDraftSession["state"],
+    lastSavedAt: null as number | null,
     completed,
     ready: false,
   }));
@@ -65,6 +66,7 @@ export function useSurveyDraft({
           setView({
             draft: current.draft,
             state: current.state,
+            lastSavedAt: current.lastSavedAt,
             completed: current.completed,
             ready: true,
           });

@@ -938,7 +938,7 @@ function buildDepartmentStressBars(employeesData: EmployeeRecord[]) {
 }
 
 function buildDepartmentDistributionFromParticipants(progress: BackendCampaignProgress) {
-  const palette = ["#F59E0B", "#FCD34D", "#D97706", "#92400E", "#B45309"];
+  const palette = ["#0A6F6C", "#0E9894", "#1F2528", "#5C6265", "#D3D5D6"];
   const totals = new Map<string, number>();
 
   for (const participant of progress.participants) {

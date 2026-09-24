@@ -40,13 +40,13 @@ export default function EntreprisesEmployesPage() {
     <section className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a651f]">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
             Vue interne
           </p>
-          <h2 className="font-[family-name:var(--font-manrope)] text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">
+          <h2 className="font-heading text-2xl font-extrabold tracking-tight text-graphite sm:text-3xl">
             Entreprises et employes
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
             Vue Awesome Table dediee aux listes anonymisees par entreprise.
           </p>
         </div>
@@ -56,7 +56,7 @@ export default function EntreprisesEmployesPage() {
             href={awesomeTableUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-950"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] border border-line bg-white px-4 text-sm font-semibold text-graphite shadow-sm transition hover:border-line hover:text-graphite"
           >
             <ExternalLink className="h-4 w-4" aria-hidden="true" />
             Ouvrir
@@ -64,7 +64,7 @@ export default function EntreprisesEmployesPage() {
         ) : null}
       </div>
 
-      <div className="overflow-hidden rounded-[8px] border border-[rgba(64,54,42,0.1)] bg-white shadow-[0_18px_45px_rgba(42,32,18,0.08)]">
+      <div className="overflow-hidden rounded-[8px] border border-line bg-white shadow-[0_18px_45px_rgba(31,37,40,0.08)]">
         {awesomeTableUrl ? (
           <iframe
             src={awesomeTableUrl}
@@ -76,8 +76,8 @@ export default function EntreprisesEmployesPage() {
           />
         ) : (
           <div className="flex min-h-[420px] flex-col items-center justify-center px-6 text-center">
-            <p className="text-lg font-bold text-slate-900">Vue Awesome Table non configuree.</p>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+            <p className="text-lg font-bold text-graphite">Vue Awesome Table non configuree.</p>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
               Definir AWESOME_TABLE_EMPLOYEES_URL avec le lien iframe/direct link de la vue
               Awesome Table anonymisee.
             </p>

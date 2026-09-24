@@ -48,12 +48,12 @@ export function DashboardDemo({
           ["Alertes detectées", `${metrics.alertsDetected}`, "2 critiques"],
         ].map(([label, value, detail]) => (
           <Card key={label} className="p-5">
-            <div className="h-1.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-300" />
-            <p className="mt-4 text-sm text-slate-500">{label}</p>
-            <p className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold">
+            <div className="h-1.5 rounded-full bg-accent-bright" />
+            <p className="mt-4 text-sm text-muted">{label}</p>
+            <p className="mt-3 font-heading text-3xl font-extrabold">
               {value}
             </p>
-            <p className="mt-2 text-sm text-slate-500">{detail}</p>
+            <p className="mt-2 text-sm text-muted">{detail}</p>
           </Card>
         ))}
       </div>
@@ -62,37 +62,37 @@ export function DashboardDemo({
         <Card className="p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-slate-500">Evolution du stress dans le temps</p>
-              <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
+              <p className="text-sm text-muted">Evolution du stress dans le temps</p>
+              <h3 className="mt-1 font-heading text-xl font-bold">
                 Evolution du stress
               </h3>
             </div>
             <div className="flex gap-2">
               <SecondaryButton
-                className={range === "monthly" ? "border-slate-900 text-slate-900" : ""}
+                className={range === "monthly" ? "ring-2 ring-accent-bright ring-offset-2" : ""}
                 onClick={() => setRange("monthly")}
               >
                 Mensuel
               </SecondaryButton>
               <SecondaryButton
-                className={range === "weekly" ? "border-slate-900 text-slate-900" : ""}
+                className={range === "weekly" ? "ring-2 ring-accent-bright ring-offset-2" : ""}
                 onClick={() => setRange("weekly")}
               >
                 Hebdo
               </SecondaryButton>
             </div>
           </div>
-          <div className="mt-8 flex h-64 items-end gap-3 rounded-[12px] bg-gradient-to-b from-amber-50 to-white p-5">
+          <div className="mt-8 flex h-64 items-end gap-3 rounded-[12px] bg-accent-soft p-5">
             {trend.map((item) => (
               <div key={item.label} className="flex flex-1 items-end">
                 <div
-                  className="w-full rounded-t-[12px] bg-gradient-to-t from-amber-500 to-yellow-300"
+                  className="w-full rounded-t-[12px] bg-accent-bright"
                   style={{ height: `${item.value * 52}px` }}
                 />
               </div>
             ))}
           </div>
-          <div className={`mt-4 grid text-center text-xs font-medium text-slate-500 ${range === "monthly" ? "grid-cols-7" : "grid-cols-5"}`}>
+          <div className={`mt-4 grid text-center text-xs font-medium text-muted ${range === "monthly" ? "grid-cols-7" : "grid-cols-5"}`}>
             {trend.map((item) => (
               <span key={item.label}>{item.label}</span>
             ))}
@@ -101,8 +101,8 @@ export function DashboardDemo({
 
         <div className="space-y-5">
           <Card className="p-6">
-            <p className="text-sm text-slate-500">Répartition par département</p>
-            <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
+            <p className="text-sm text-muted">Répartition par département</p>
+            <h3 className="mt-1 font-heading text-xl font-bold">
               Répartition par département
             </h3>
             <div className="mx-auto mt-6 h-56 w-56 rounded-full" style={{ background: conic }} />
@@ -120,13 +120,13 @@ export function DashboardDemo({
           </Card>
 
           <Card className="p-6">
-            <p className="text-sm text-slate-500">Analyse automatique</p>
-            <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
+            <p className="text-sm text-muted">Analyse automatique</p>
+            <h3 className="mt-1 font-heading text-xl font-bold">
               Synthèse automatique
             </h3>
             <div className="mt-5 space-y-3">
               {insights.map((item) => (
-                <div key={item} className="rounded-[12px] border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-medium text-slate-700">
+                <div key={item} className="rounded-[12px] border border-line bg-accent-soft px-4 py-3 text-sm font-medium text-graphite">
                   {item}
                 </div>
               ))}

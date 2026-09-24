@@ -3,11 +3,11 @@ const PRIVACY_URL = "https://laroche360.odoo.com/confidentialite";
 
 export function SurveyPrivacyFooter() {
   return (
-    <footer className="border-t border-slate-200 pt-4 text-center text-xs leading-5 text-slate-500">
+    <footer className="border-t border-line pt-4 text-center text-xs leading-5 text-muted">
       <a
         href={PRIVACY_RESOURCES_URL}
         target="_blank"
-        className="underline-offset-2 hover:!underline"
+        className="text-accent underline underline-offset-2 hover:!underline"
       >
         Ressources d'aide
       </a>
@@ -15,7 +15,7 @@ export function SurveyPrivacyFooter() {
       <a
         href={PRIVACY_URL}
         target="_blank"
-        className="underline-offset-2 hover:!underline"
+        className="text-accent underline underline-offset-2 hover:!underline"
       >
         Confidentialité
       </a>

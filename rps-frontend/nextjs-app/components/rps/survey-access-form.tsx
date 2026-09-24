@@ -23,13 +23,13 @@ export function SurveyAccessForm() {
 
   return (
     <Card className="mx-auto max-w-2xl p-6 sm:p-8">
-      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-amber-700">
+      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-accent">
         Acces salarie
       </p>
-      <h2 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold tracking-tight">
+      <h2 className="mt-3 font-heading text-3xl font-extrabold tracking-tight">
         Ouvrir le questionnaire avec un lien unique
       </h2>
-      <p className="mt-3 text-sm leading-6 text-slate-600">
+      <p className="mt-3 text-sm leading-6 text-muted">
         Colle ici le token recu dans l&apos;invitation pour ouvrir ton questionnaire personnel.
       </p>
 
@@ -38,7 +38,7 @@ export function SurveyAccessForm() {
           value={token}
           onChange={(event) => setToken(event.target.value)}
           placeholder="Exemple: 4f2c8c9e-..."
-          className="w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+          className="w-full rounded-[12px] border border-line bg-page px-4 py-3 text-sm outline-none"
         />
         <div className="flex flex-col gap-3 sm:flex-row">
           <PrimaryButton

@@ -12,7 +12,7 @@ export default async function DashboardLayout({
 }>) {
   const user = await requireServerSessionUser();
 
-  return <Suspense fallback={<div className="min-h-screen bg-[#f7f3eb]" />}>
+  return <Suspense fallback={<div className="min-h-screen bg-page" />}>
     <AppShell initialUser={user}>{children}</AppShell>
   </Suspense>;
 }

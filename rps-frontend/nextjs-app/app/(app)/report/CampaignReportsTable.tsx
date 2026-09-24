@@ -86,8 +86,8 @@ export function CampaignReportsTable({
   if (campaigns.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-lg text-slate-500">Aucune campagne pour le moment.</p>
-        <p className="mt-2 text-sm text-slate-400">
+        <p className="text-lg text-muted">Aucune campagne pour le moment.</p>
+        <p className="mt-2 text-sm text-muted">
           Crée une campagne depuis la page "Sondages" pour commencer.
         </p>
       </Card>
@@ -99,7 +99,7 @@ export function CampaignReportsTable({
       {/* Filter */}
       {/* <Card className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
-          <label htmlFor="company-filter" className="text-sm font-semibold text-slate-700">
+          <label htmlFor="company-filter" className="text-sm font-semibold text-graphite">
             Filtrer par entreprise :
           </label>
           <select
@@ -109,7 +109,7 @@ export function CampaignReportsTable({
               setFilterCompanyId(e.target.value === "" ? "" : Number(e.target.value));
               setMessage(null);
             }}
-            className="rounded-[12px] border border-slate-200 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9b7223]/30"
+            className="rounded-[12px] border border-line bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="">Toutes les entreprises</option>
             {Array.from(new Set(companyMap.entries())).map(([id, name]) => (
@@ -119,7 +119,7 @@ export function CampaignReportsTable({
             ))}
           </select>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted">
           {filteredCampaigns.length} campagne{filteredCampaigns.length > 1 ? "s" : ""}
         </p>
       </Card> */}
@@ -129,13 +129,13 @@ export function CampaignReportsTable({
         <Card
           className={`px-5 py-4 ${
             message.type === "success"
-              ? "border-l-4 border-emerald-500 bg-emerald-50"
-              : "border-l-4 border-red-500 bg-red-50"
+              ? "border-l-4 border-accent-bright bg-accent-soft"
+              : "border-l-4 border-muted bg-page"
           }`}
         >
           <p
             className={`text-sm font-medium ${
-              message.type === "success" ? "text-emerald-800" : "text-red-800"
+              message.type === "success" ? "text-accent" : "text-graphite"
             }`}
           >
             {message.type === "success" ? "✅" : "❌"} {message.text}
@@ -147,7 +147,7 @@ export function CampaignReportsTable({
       {/* <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-50 uppercase tracking-[0.16em] text-slate-500">
+            <thead className="bg-page uppercase tracking-[0.16em] text-muted">
               <tr>
                 <th className="px-6 py-4">Campagne</th>
                 <th className="px-6 py-4">Entreprise</th>
@@ -171,17 +171,17 @@ export function CampaignReportsTable({
                 const disabledReason = "Analyse disponible apres la date de fin du sondage.";
 
                 return (
-                  <tr key={campaign.id} className="border-t border-slate-100 align-top">
+                  <tr key={campaign.id} className="border-t border-line align-top">
                     <td className="px-6 py-4">
-                      <p className="font-semibold text-slate-900">{campaign.name}</p>
+                      <p className="font-semibold text-graphite">{campaign.name}</p>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-6 py-4 text-muted">
                       {campaign.company?.name || companyMap.get(campaign.company?.id ?? 0) || "-"}
                     </td>
                     <td className="px-6 py-4">
                       <Pill tone={statusTone}>{statusLabel}</Pill>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-6 py-4 text-muted">
                       {formatShortDate(campaign.start_date)}
                     </td>
                     <td className="px-6 py-4">
@@ -190,17 +190,17 @@ export function CampaignReportsTable({
                           href={campaign.report!.report_path}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm font-medium text-[#9b7223] hover:underline"
+                          className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
                         >
                           📄 Consulter Drive
                         </a>
                       ) : (
-                        <span className="text-xs text-slate-400">Aucun rapport</span>
+                        <span className="text-xs text-muted">Aucun rapport</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
                       {hasReport ? (
-                        <span className="text-xs text-emerald-600 font-medium">
+                        <span className="text-xs text-accent font-medium">
                           ✅ Complété
                         </span>
                       ) : (
@@ -214,7 +214,7 @@ export function CampaignReportsTable({
                             {analyzingId === campaign.id ? "Lancement..." : "Analyser"}
                           </PrimaryButton>
                           {!canAnalyze ? (
-                            <p className="text-xs leading-5 text-slate-500">{disabledReason}</p>
+                            <p className="text-xs leading-5 text-muted">{disabledReason}</p>
                           ) : null}
                         </div>
                       )}
@@ -228,8 +228,8 @@ export function CampaignReportsTable({
       </Card> */}
 
       {/* Info */}
-      {/* <Card className="border-l-4 border-amber-400 bg-amber-50 px-5 py-4">
-        <p className="text-sm text-amber-900">
+      {/* <Card className="border-l-4 border-accent-bright bg-accent-soft px-5 py-4">
+        <p className="text-sm text-accent">
           💡 <strong>Info :</strong> L&apos;analyse prend 1 à 2 minutes. Le rapport complet sera
           disponible dans Google Drive.
         </p>

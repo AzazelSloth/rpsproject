@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CloudCheck, CloudOff, LoaderCircle, Save } from "lucide-react";
 import { useSurveyDraft } from "@/components/rps/use-survey-draft";
 import type { BackendSurveyDraft } from "@/lib/responses/survey-draft";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/rps/ui";
@@ -108,15 +107,15 @@ export function SurveyResponseDemo({
 
   if (isCompleted && conclusionText?.trim()) {
     return (
-      <Card className="mx-auto max-w-3xl p-6 sm:p-8">
+      <Card className="mx-auto max-w-3xl bg-accent-soft p-6 sm:p-8">
         <div className="mt-8 space-y-6">
-          <div className="rounded-[12px] border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
-            <p className="text-lg font-bold text-slate-950">
+          <div className="rounded-[12px] border border-line bg-accent-soft p-5 sm:p-6">
+            <p className="font-heading text-lg font-bold text-graphite">
               Merci. Votre voix compte dans le portrait.
             </p>
             <RichSurveyText
               text={conclusionText.trim()}
-              className="mt-4 text-sm leading-7 text-slate-700"
+              className="mt-4 text-sm leading-7 text-graphite"
             />
           </div>
 
@@ -128,8 +127,8 @@ export function SurveyResponseDemo({
 
   if (isCompleted) {
     return (
-      <Card className="mx-auto max-w-3xl border border-emerald-200 bg-emerald-50 p-5">
-        <p className="text-sm font-semibold text-emerald-800">
+      <Card className="mx-auto max-w-3xl border border-line bg-accent-soft p-5">
+        <p className="text-sm font-semibold text-accent">
           Ce sondage a déjà  été complété.
         </p>
         <div className="mt-5">
@@ -142,20 +141,20 @@ export function SurveyResponseDemo({
   if (!hasStarted && introductionText?.trim()) {
     return (
       <Card className="mx-auto max-w-3xl p-6 sm:p-8">
-        <p className="text-lg font-bold text-slate-950">
+        <p className="font-heading text-lg font-bold text-graphite">
           Un portrait de votre milieu de travail.
         </p>
         {/* Titre et entreprise masqués à la demande du client.
-        <h1 className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold text-slate-950">
+        <h1 className="mt-3 font-heading text-3xl font-extrabold text-graphite">
           {campaignName || "Sondage"}
         </h1>
         {companyName ? (
-          <p className="mt-2 text-sm font-semibold text-slate-500">{companyName}</p>
+          <p className="mt-2 text-sm font-semibold text-muted">{companyName}</p>
         ) : null}
         */}
         <RichSurveyText
           text={introductionText.trim()}
-          className="mt-6 text-sm leading-7 text-slate-700"
+          className="mt-6 text-sm leading-7 text-graphite"
         />
         <PrimaryButton
           className="mt-8 sm:w-auto"
@@ -177,56 +176,56 @@ export function SurveyResponseDemo({
       {/* En-tête du questionnaire masqué à la demande du client.
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-accent">
             Sondage
           </p>
-          <h1 className="font-[family-name:var(--font-manrope)] text-3xl font-extrabold">
+          <h1 className="font-heading text-3xl font-extrabold">
             {campaignName || "Sondage"}
           </h1>
           {employeeName ? (
-            <p className="mt-2 text-sm text-slate-500">Attribué à {employeeName}</p>
+            <p className="mt-2 text-sm text-muted">Attribué à {employeeName}</p>
           ) : null}
         </div>
       </div> */}
 
       {/* Statut du lien masqué à la demande du client.
       {status ? (
-        <div className="mt-4 text-sm text-slate-500">
-          Statut du lien: <span className="font-semibold text-slate-700">{status}</span>
+        <div className="mt-4 text-sm text-muted">
+          Statut du lien: <span className="font-semibold text-graphite">{status}</span>
         </div>
       ) : null} */}
 
       <div className="mt-8 space-y-6">
         {/* Informations d'identification masquées dans toutes les étapes.
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-[12px] border border-slate-200 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+          <div className="rounded-[12px] border border-line p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
               Nom de l&apos;employeur
             </p>
             <input
               value={companyName ?? ""}
               readOnly
-              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              className="mt-3 w-full rounded-[12px] border border-line bg-page px-4 py-3 text-sm outline-none"
             />
           </div>
-          <div className="rounded-[12px] border border-slate-200 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+          <div className="rounded-[12px] border border-line p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
               Prénoms et Nom
             </p>
             <input
               value={employeeName ?? ""}
               readOnly
-              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              className="mt-3 w-full rounded-[12px] border border-line bg-page px-4 py-3 text-sm outline-none"
             />
           </div>
-          <div className="rounded-[12px] border border-slate-200 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+          <div className="rounded-[12px] border border-line p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
               Titre professionnel
             </p>
             <input
               value={employeeTitle ?? ""}
               readOnly
-              className="mt-3 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              className="mt-3 w-full rounded-[12px] border border-line bg-page px-4 py-3 text-sm outline-none"
             />
           </div>
         </div>
@@ -234,14 +233,14 @@ export function SurveyResponseDemo({
         */}
 
         {totalSteps > 1 ? (
-          <nav aria-label="Sections du sondage" className="rounded-[12px] bg-slate-50 p-4">
-            <div className="flex items-center justify-between gap-4 text-sm font-semibold text-slate-700">
+          <nav aria-label="Sections du sondage" className="rounded-[12px] bg-page p-4">
+            <div className="flex items-center justify-between gap-4 font-mono text-sm font-semibold text-graphite">
               <span>Étape {currentSectionIndex + 1} sur {totalSteps}</span>
               <span>{currentSection?.title}</span>
             </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-track">
               <div
-                className="h-full rounded-full bg-amber-400 transition-all"
+                className="h-full rounded-full bg-accent-bright transition-all"
                 style={{ width: `${((currentSectionIndex + 1) / totalSteps) * 100}%` }}
               />
             </div>
@@ -253,13 +252,13 @@ export function SurveyResponseDemo({
             key={question.id}
             className={`rounded-[12px] border p-5 ${
               question.type === "section"
-                ? "border-amber-300 bg-amber-50"
+                ? "survey-section-heading border-line"
                 : question.sectionId
-                  ? "ml-4 border-slate-200 sm:ml-8"
-                  : "border-slate-200"
+                  ? "ml-4 border-line bg-surface sm:ml-8"
+                  : "border-line bg-surface"
             }`}
           >
-            <p className="text-sm font-semibold">
+            <p className="survey-question-title text-sm font-semibold">
               {question.type === "section"
                 ? question.title
                 : `${getQuestionNumber(questions, originalIndex)}. ${question.title}`}
@@ -267,7 +266,7 @@ export function SurveyResponseDemo({
 
             {question.type === "section" ? (
               question.helpText && question.helpText !== "Section du questionnaire" ? (
-                <p className="mt-2 text-sm text-slate-600">{question.helpText}</p>
+                <p className="mt-2 text-sm text-muted">{question.helpText}</p>
               ) : null
             ) : question.type === "scale" ? (
               <>
@@ -278,17 +277,17 @@ export function SurveyResponseDemo({
                       onClick={() =>
                         setAnswers((current) => ({ ...current, [question.id]: String(value) }))
                       }
-                      className={`rounded-[12px] border px-4 py-3 text-sm font-semibold transition hover:border-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
+                      className={`survey-answer rounded-[12px] px-4 py-3 text-sm font-semibold transition ${
                         answers[question.id] === String(value)
-                          ? "border-amber-400 bg-amber-50 text-amber-800"
-                          : "border-slate-200 bg-white text-slate-600"
+                          ? "survey-answer--selected"
+                          : ""
                       }`}
                     >
                       {value}
                     </button>
                   ))}
                 </div>
-                <div className="mt-3 grid gap-2 text-xs text-slate-500 sm:grid-cols-5">
+                <div className="mt-3 grid gap-2 text-xs text-muted sm:grid-cols-5">
                   {(question.options?.length === 5
                     ? question.options
                     : [
@@ -310,8 +309,8 @@ export function SurveyResponseDemo({
                     key={option}
                     className={
                       answers[question.id] === option
-                        ? "border !border-amber-400 !bg-amber-50 !text-amber-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-                        : "border !border-slate-200 !bg-white !text-slate-700 hover:!border-amber-300 hover:!bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                        ? "survey-answer survey-answer--selected"
+                        : "survey-answer"
                     }
                     onClick={() =>
                       setAnswers((current) => ({ ...current, [question.id]: option }))
@@ -335,9 +334,9 @@ export function SurveyResponseDemo({
                     setAnswers((current) => ({ ...current, [question.id]: event.target.value }))
                   }
                   disabled={isPreferNotToAnswer(answers[question.id])}
-                  className="mt-4 min-h-32 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                  className="mt-4 min-h-32 w-full rounded-[12px] border border-line bg-surface px-4 py-3 text-sm outline-none"
                 />
-                <p id={`answer-length-${question.id}`} className="mt-2 text-right text-xs text-slate-500">
+                <p id={`answer-length-${question.id}`} className="mt-2 text-right text-xs text-muted">
                   {isPreferNotToAnswer(answers[question.id]) ? 0 : (answers[question.id] ?? "").length}
                   {" / 1 000 caractères"}
                 </p>
@@ -348,8 +347,8 @@ export function SurveyResponseDemo({
                 <SecondaryButton
                   className={
                     isPreferNotToAnswer(answers[question.id])
-                      ? "border !border-slate-700 !bg-slate-700 !text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-                      : "border !border-slate-200 !bg-white !text-slate-700 hover:!border-amber-300 hover:!bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                      ? "survey-answer survey-answer--declined"
+                      : "survey-answer"
                   }
                   onClick={() =>
                     setAnswers((current) => ({
@@ -371,24 +370,33 @@ export function SurveyResponseDemo({
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SecondaryButton
           className="sm:w-auto"
-          disabled={currentSectionIndex === 0 || isPending}
-          onClick={() => setCurrentSectionIndex((index) => Math.max(0, index - 1))}
+          disabled={(currentSectionIndex === 0 && !introductionText?.trim()) || isPending}
+          onClick={() => {
+            if (currentSectionIndex === 0 && introductionText?.trim()) {
+              setHasStarted(false);
+            } else {
+              setCurrentSectionIndex((index) => Math.max(0, index - 1));
+            }
+          }}
         >
           Précédente
         </SecondaryButton>
         {participantToken ? (
-          <SecondaryButton
-            className={`sm:w-auto ${persistence.state === "error" ? "!bg-rose-700" : ""}`}
-            aria-label="Enregistrer"
-            title="Enregistrer"
-            aria-busy={persistence.state === "saving"}
-            onClick={() => { void persistence.save(); }}
+          <span
+            className={`text-center text-sm ${persistence.state === "error" ? "text-graphite" : "text-muted"}`}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
           >
-            {persistence.state === "saving" ? <LoaderCircle aria-hidden className="h-5 w-5 animate-spin" />
-              : persistence.state === "saved" ? <CloudCheck aria-hidden className="h-5 w-5" />
-              : persistence.state === "error" ? <CloudOff aria-hidden className="h-5 w-5" />
-              : <Save aria-hidden className="h-5 w-5" />}
-          </SecondaryButton>
+            {!persistence.ready ? "Chargement du brouillon…"
+              : persistence.state === "error" ? "Enregistrement impossible"
+              : persistence.state === "saving" || persistence.state === "dirty" ? "Enregistrement en cours…"
+              : persistence.lastSavedAt !== null
+                ? `Enregistré à ${new Date(persistence.lastSavedAt).toLocaleTimeString("fr-FR", {
+                    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+                  }).replace(":", " h ")}`
+                : "Enregistrement automatique"}
+          </span>
         ) : null}
         {isFinalStep ? <PrimaryButton
           className="sm:w-auto"
@@ -407,12 +415,12 @@ export function SurveyResponseDemo({
           Suivante
         </PrimaryButton>}
         {submitted ? (
-          <span className="text-sm font-medium text-emerald-700">
+          <span className="text-sm font-medium text-accent">
             Réponses enregistrées.
           </span>
         ) : null}
         {submitError ? (
-          <span className="text-sm font-medium text-rose-700">{submitError}</span>
+          <span className="text-sm font-medium text-graphite">{submitError}</span>
         ) : null}
       </div>
       </fieldset>
