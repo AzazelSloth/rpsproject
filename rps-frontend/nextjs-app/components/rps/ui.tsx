@@ -25,15 +25,15 @@ export function SectionHeader({
     <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div className="space-y-2">
         {eyebrow ? (
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#9b7223]">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-accent">
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="font-[family-name:var(--font-manrope)] text-3xl font-extrabold tracking-tight text-slate-900">
+        <h1 className="font-heading text-3xl font-extrabold tracking-tight text-graphite">
           {title}
         </h1>
         {description ? (
-          <p className="max-w-3xl text-sm leading-6 text-slate-600">{description}</p>
+          <p className="max-w-3xl text-sm leading-6 text-muted">{description}</p>
         ) : null}
       </div>
       {action}
@@ -50,10 +50,10 @@ export function Pill({
 }) {
   const classes =
     tone === "success"
-      ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+      ? "bg-accent-soft text-accent ring-line"
       : tone === "warning"
-        ? "bg-[#f4ead6] text-[#8a651f] ring-[#e6cf9f]"
-        : "bg-slate-100 text-slate-700 ring-slate-200";
+        ? "bg-page text-graphite ring-muted"
+        : "bg-page text-graphite ring-line";
 
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${classes}`}>
@@ -72,8 +72,7 @@ export function PrimaryButton({
 }) {
   return (
     <button
-      className={`rounded-[12px] bg-[#181818] px-5 py-3 text-sm font-semibold shadow-[0_14px_28px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:translate-y-0 disabled:opacity-60 ${className}`}
-      style={{ color: '#ffffff' }}
+      className={`rounded-[12px] bg-graphite px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(31,37,40,0.12)] transition hover:-translate-y-0.5 hover:bg-accent disabled:translate-y-0 disabled:opacity-100 disabled:bg-track disabled:text-muted ${className}`}
       {...props}
     >
       {children}
@@ -91,8 +90,7 @@ export function SecondaryButton({
 }) {
   return (
     <button
-      className={`rounded-[12px] bg-[#181818] px-5 py-3 text-sm font-semibold transition hover:bg-[#242424] disabled:opacity-60 ${className}`}
-      style={{ color: '#ffffff' }}
+      className={`rounded-[12px] bg-graphite px-5 py-3 text-sm font-semibold text-white transition hover:bg-accent disabled:opacity-100 disabled:bg-track disabled:text-muted ${className}`}
       {...props}
     >
       {children}

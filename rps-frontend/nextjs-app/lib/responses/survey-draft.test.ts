@@ -38,6 +38,75 @@ const accept = async (
 });
 const noop = () => {};
 
+test("save time advances only after a server acknowledgment, never for local or unchanged drafts", async (t) => {
+  let now = 1000;
+  t.mock.method(Date, "now", () => now);
+  let release!: (value: SaveDraftResult) => void;
+  const session = new SurveyDraftSession(
+    "token", blank(), 0, storage(),
+    () => new Promise((resolve) => { release = resolve; }), noop,
+  );
+
+  assert.equal(session.lastSavedAt, null);
+  await session.save();
+  assert.equal(session.lastSavedAt, null);
+
+  session.update({ ...blank(), answers: { "1": "first" } });
+  assert.equal(session.lastSavedAt, null);
+  const firstSave = session.save();
+  assert.equal(session.state, "saving");
+  assert.equal(session.lastSavedAt, null);
+  now = 2000;
+  release(await accept(toBackendDraft(session.draft), 0));
+  await firstSave;
+  assert.equal(session.state, "saved");
+  assert.equal(session.lastSavedAt, 2000);
+
+  now = 3000;
+  await session.save();
+  assert.equal(session.lastSavedAt, 2000);
+  session.update({ ...blank(), answers: { "1": "second" } });
+  const secondSave = session.save();
+  assert.equal(session.lastSavedAt, 2000);
+  now = 4000;
+  release(await accept(toBackendDraft(session.draft), 1));
+  await secondSave;
+  assert.equal(session.lastSavedAt, 4000);
+});
+
+test("failed saves and revision conflicts preserve the last confirmation time until a successful retry", async (t) => {
+  let now = 1000;
+  t.mock.method(Date, "now", () => now);
+  let mode = "accept";
+  const session = new SurveyDraftSession(
+    "token", blank(), 0, storage(),
+    async (draft, revision) => {
+      if (mode === "offline") throw new Error("offline");
+      if (mode === "conflict") return {
+        saved: false, completed: false, revision: revision + 1, draft: null,
+      };
+      return accept(draft, revision);
+    }, noop,
+  );
+  session.update({ ...blank(), answers: { "1": "first" } });
+  await session.save();
+  assert.equal(session.lastSavedAt, 1000);
+
+  now = 2000;
+  session.update({ ...blank(), answers: { "1": "second" } });
+  for (mode of ["offline", "conflict"]) {
+    assert.equal(await session.save(), false);
+    assert.equal(session.state, "error");
+    assert.equal(session.lastSavedAt, 1000);
+  }
+
+  now = 3000;
+  mode = "accept";
+  assert.equal(await session.save(), true);
+  assert.equal(session.state, "saved");
+  assert.equal(session.lastSavedAt, 3000);
+});
+
 test("immediate close and offline failures retain even unfinished text locally", async () => {
   const cache = storage();
   const first = new SurveyDraftSession(

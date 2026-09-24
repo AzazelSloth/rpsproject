@@ -51,7 +51,7 @@ export function LinkedSurveyText({ text }: { text: string }) {
           target: "_blank",
           rel: "noopener noreferrer",
           referrerPolicy: "no-referrer",
-          className: "break-words text-sky-700 underline underline-offset-2 hover:text-sky-900",
+          className: "break-words text-accent underline underline-offset-2 hover:text-accent",
         }, part.text)
       : part.text,
   ));

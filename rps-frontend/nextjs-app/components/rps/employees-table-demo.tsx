@@ -368,45 +368,45 @@ export function EmployeesTableDemo({
         <p>
           Êtes-vous sûr de vouloir envoyer immédiatement un courriel de relance aux employés qui n’ont pas encore répondu ?
         </p>
-        <div className="mt-4 rounded-[14px] border border-slate-200 bg-white px-5 py-4">
-          <p className="font-bold text-slate-950">{selectedSurveyTitle || "Sondage"}</p>
-          <p className="mt-1 text-sm text-slate-600">
+        <div className="mt-4 rounded-[14px] border border-line bg-white px-5 py-4">
+          <p className="font-bold text-graphite">{selectedSurveyTitle || "Sondage"}</p>
+          <p className="mt-1 text-sm text-muted">
             Entreprise :{" "}
-            <strong className="text-slate-950">
+            <strong className="text-graphite">
               {companies.find(
                 (company) => company.id === manualReminderConfirmation?.companyId,
               )?.name ?? "Entreprise"}
             </strong>
           </p>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-muted">
             Participants à relancer :{" "}
-            <strong className="text-slate-950">
+            <strong className="text-graphite">
               {manualReminderConfirmation?.pendingCount ?? 0}
             </strong>
           </p>
         </div>
-        <p className="mt-4 text-sm font-medium text-amber-800">
+        <p className="mt-4 text-sm font-medium text-accent">
           Cette action force la relance sans attendre le délai automatique habituel.
         </p>
       </ConfirmationModal>
 
       <div className="grid gap-5">
         <Card className="p-4 sm:p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
             Suivi du sondage
           </p>
-          <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold">
+          <h3 className="mt-2 font-heading text-lg sm:text-xl font-bold">
             Gestion des participants
           </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
+          <p className="mt-2 text-sm leading-6 text-muted">
             Sélectionnez un sondage pour consulter les participants, suivre leur statut et ouvrir
             leurs liens individuels.
           </p>
 
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             <div>
-              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Building2 className="h-4 w-4 text-amber-600" />
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-graphite">
+                <Building2 className="h-4 w-4 text-accent" />
                 Entreprise
               </p>
               <div className="relative">
@@ -424,7 +424,7 @@ export function EmployeesTableDemo({
                       pushSelection(event.target.value, "");
                     }
                   }}
-                  className="w-full appearance-none rounded-xl border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50 px-4 py-3 pr-10 text-sm font-medium text-slate-900 outline-none transition-all duration-200 hover:border-amber-300 hover:shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                  className="w-full appearance-none rounded-xl border-2 border-line bg-white px-4 py-3 pr-10 text-sm font-medium text-graphite outline-none transition-all duration-200 hover:border-accent-bright hover:shadow-sm focus:border-accent-bright focus:ring-2 focus:ring-line"
                 >
                   <option value="">-- Choisir une entreprise --</option>
                   {companies.map((company) => {
@@ -439,13 +439,13 @@ export function EmployeesTableDemo({
                   })}
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                  <ChevronDown className="h-5 w-5 text-amber-600" />
+                  <ChevronDown className="h-5 w-5 text-accent" />
                 </div>
               </div>
               {lockedCompanyId && (
-                <div className="mt-2 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2">
-                  <CheckCircle2 className="h-4 w-4 text-amber-700" />
-                  <p className="text-xs text-amber-800">
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-2">
+                  <CheckCircle2 className="h-4 w-4 text-accent" />
+                  <p className="text-xs text-accent">
                     Entreprise sélectionnée : <span className="font-semibold">{companies.find(c => String(c.id) === lockedCompanyId)?.name}</span>
                   </p>
                 </div>
@@ -453,8 +453,8 @@ export function EmployeesTableDemo({
             </div>
 
             <div>
-              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <BarChart3 className="h-4 w-4 text-amber-600" />
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-graphite">
+                <BarChart3 className="h-4 w-4 text-accent" />
                 Sondage
               </p>
               <div className="relative">
@@ -462,7 +462,7 @@ export function EmployeesTableDemo({
                   value={selectedCampaignId}
                   onChange={(event) => handleSurveySelection(event.target.value)}
                   disabled={availableSurveys.length === 0}
-                  className="w-full appearance-none rounded-xl border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50 px-4 py-3 pr-10 text-sm font-medium text-slate-900 outline-none transition-all duration-200 hover:border-amber-300 hover:shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full appearance-none rounded-xl border-2 border-line bg-white px-4 py-3 pr-10 text-sm font-medium text-graphite outline-none transition-all duration-200 hover:border-accent-bright hover:shadow-sm focus:border-accent-bright focus:ring-2 focus:ring-line disabled:opacity-100 disabled:bg-track disabled:text-muted disabled:cursor-not-allowed"
                 >
                   {availableSurveys.length === 0 ? (
                     <option value="">Aucun sondage disponible</option>
@@ -478,13 +478,13 @@ export function EmployeesTableDemo({
                   )}
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                  <ChevronDown className="h-5 w-5 text-amber-600" />
+                  <ChevronDown className="h-5 w-5 text-accent" />
                 </div>
               </div>
               {selectedCampaignId && selectedSurvey && (
-                <div className="mt-2 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2">
-                  <Info className="h-4 w-4 text-blue-700" />
-                  <p className="text-xs text-blue-800">
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-2">
+                  <Info className="h-4 w-4 text-accent" />
+                  <p className="text-xs text-accent">
                     Sondage sélectionné : <span className="font-semibold">{selectedSurveyTitle}</span>
                   </p>
                 </div>
@@ -493,44 +493,44 @@ export function EmployeesTableDemo({
           </div>
 
           {hasCompanyMismatch ? (
-            <div className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3">
-              <p className="text-sm font-medium text-rose-700">
+            <div className="mt-4 rounded-[12px] border border-muted bg-page px-4 py-3">
+              <p className="text-sm font-medium text-graphite">
                 L’entreprise choisie ne correspond pas au sondage sélectionné.
               </p>
             </div>
           ) : null}
 
           {feedback ? (
-            <div className="mt-4 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3">
-              <p className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+            <div className="mt-4 rounded-[12px] border border-line bg-accent-soft px-4 py-3">
+              <p className="flex items-center gap-2 text-sm font-medium text-accent">
                 <CheckCircle2 className="h-4 w-4" />
                 <span>{feedback}</span>
               </p>
             </div>
           ) : null}
           {error ? (
-            <div className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3">
-              <p className="flex items-center gap-2 text-sm font-medium text-rose-700">
+            <div className="mt-4 rounded-[12px] border border-muted bg-page px-4 py-3">
+              <p className="flex items-center gap-2 text-sm font-medium text-graphite">
                 <AlertCircle className="h-4 w-4" />
                 <span>{error}</span>
               </p>
             </div>
           ) : null}
 
-          <div className="mt-5 flex flex-col gap-4 rounded-[12px] bg-slate-50 p-4 md:flex-row md:items-center md:justify-between">
+          <div className="mt-5 flex flex-col gap-4 rounded-[12px] bg-page p-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm text-slate-500">Participants à relancer</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
+              <p className="text-sm text-muted">Participants à relancer</p>
+              <p className="mt-2 text-2xl font-bold text-graphite">
                 {isReminderSelectionLoaded ? pendingParticipantsCount : "-"}
               </p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-muted">
                 Sondage sélectionné : {selectedSurveyTitle || "Aucun sondage"}
               </p>
             </div>
             <button
               onClick={handleRemindPending}
               disabled={isPending || !canRemindSelectedSurvey}
-              className="rounded-[12px] bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60"
+              className="rounded-[12px] bg-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-accent disabled:opacity-100 disabled:bg-track disabled:text-muted"
             >
               {isPending ? "En cours..." : "Forcer une relance manuelle"}
             </button>
@@ -541,36 +541,36 @@ export function EmployeesTableDemo({
       {/* Survey Details Card */}
       {selectedCampaignId && (
         <Card className="p-4 sm:p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
             Détails du sondage
           </p>
-          <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold">
+          <h3 className="mt-2 font-heading text-lg sm:text-xl font-bold">
             {loadingSurveyDetails ? "Chargement..." : surveyDetailsTitle}
           </h3>
           
           {loadingSurveyDetails ? (
-            <p className="mt-4 text-sm text-slate-500">Chargement des details...</p>
+            <p className="mt-4 text-sm text-muted">Chargement des details...</p>
           ) : surveyDetailsError ? (
-            <div className="mt-4 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3">
-              <p className="text-sm font-medium text-rose-700">{surveyDetailsError}</p>
+            <div className="mt-4 rounded-[12px] border border-muted bg-page px-4 py-3">
+              <p className="text-sm font-medium text-graphite">{surveyDetailsError}</p>
             </div>
           ) : surveyDetails ? (
             <div className="mt-4 space-y-4">
               {/* Dates */}
               <div>
-                <p className="text-xs font-semibold uppercase text-slate-500 tracking-[0.05em]">Dates</p>
+                <p className="text-xs font-semibold uppercase text-muted tracking-[0.05em]">Dates</p>
                 <div className="mt-2 grid grid-cols-2 gap-3">
-                  <div className="rounded-[8px] bg-slate-50 p-3">
-                    <p className="text-xs text-slate-500">Début</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                  <div className="rounded-[8px] bg-page p-3">
+                    <p className="text-xs text-muted">Début</p>
+                    <p className="mt-1 text-sm font-semibold text-graphite">
                       {surveyDetails?.start_date
                         ? new Date(surveyDetails.start_date).toLocaleDateString('fr-FR')
                         : "Non défini"}
                     </p>
                   </div>
-                  <div className="rounded-[8px] bg-slate-50 p-3">
-                    <p className="text-xs text-slate-500">Fin</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                  <div className="rounded-[8px] bg-page p-3">
+                    <p className="text-xs text-muted">Fin</p>
+                    <p className="mt-1 text-sm font-semibold text-graphite">
                       {surveyDetails?.end_date
                         ? new Date(surveyDetails.end_date).toLocaleDateString('fr-FR')
                         : "Non défini"}
@@ -582,8 +582,8 @@ export function EmployeesTableDemo({
               {/* Description */}
               {surveyDetails?.description && (
                 <div>
-                  <p className="text-xs font-semibold uppercase text-slate-500 tracking-[0.05em]">Description</p>
-                  <p className="mt-2 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  <p className="text-xs font-semibold uppercase text-muted tracking-[0.05em]">Description</p>
+                  <p className="mt-2 text-sm text-graphite leading-relaxed whitespace-pre-wrap">
                     {surveyDetails.description}
                   </p>
                 </div>
@@ -592,14 +592,14 @@ export function EmployeesTableDemo({
               {/* Questions Count */}
               {surveyDetails?.questions && (
                 <div>
-                  <p className="text-xs font-semibold uppercase text-slate-500 tracking-[0.05em]">Questions</p>
+                  <p className="text-xs font-semibold uppercase text-muted tracking-[0.05em]">Questions</p>
                   <div className="mt-2">
                     {surveyDetails.questions.length > 0 ? (
                       <Pill tone="neutral">
                         {surveyDetails.questions.length} question{surveyDetails.questions.length > 1 ? 's' : ''}
                       </Pill>
                     ) : (
-                      <p className="text-sm text-slate-500">Aucune question</p>
+                      <p className="text-sm text-muted">Aucune question</p>
                     )}
                   </div>
                 </div>
@@ -607,7 +607,7 @@ export function EmployeesTableDemo({
 
               {/* Status */}
               <div>
-                <p className="text-xs font-semibold uppercase text-slate-500 tracking-[0.05em]">Statut</p>
+                <p className="text-xs font-semibold uppercase text-muted tracking-[0.05em]">Statut</p>
                 <div className="mt-2">
                   <Pill tone={surveyDetails?.status === 'active' ? 'success' : 'neutral'}>
                     {formatSurveyStatusLabel(surveyDetails?.status)}
@@ -616,18 +616,18 @@ export function EmployeesTableDemo({
               </div>
             </div>
           ) : (
-            <p className="mt-4 text-sm text-slate-500">Aucun detail de sondage disponible.</p>
+            <p className="mt-4 text-sm text-muted">Aucun detail de sondage disponible.</p>
           )}
         </Card>
       )}
 
       <Card className="overflow-hidden">
-        <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 border-b border-line px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h3 className="font-[family-name:var(--font-manrope)] text-lg sm:text-xl font-bold">
+            <h3 className="font-heading text-lg sm:text-xl font-bold">
               Participants au sondage
             </h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-muted">
               Liens individuels et statut de complétion.
             </p>
           </div>
@@ -636,14 +636,14 @@ export function EmployeesTableDemo({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Rechercher un participant"
-              className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none w-full sm:w-auto"
+              className="rounded-[12px] border border-line bg-white px-4 py-3 text-sm outline-none w-full sm:w-auto"
             />
             <select
               value={filter}
               onChange={(event) =>
                 setFilter(event.target.value as "all" | "completed" | "in_progress" | "pending" | "reminded")
               }
-              className="rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+              className="rounded-[12px] border border-line bg-white px-4 py-3 text-sm outline-none"
             >
               <option value="all">Tous</option>
               <option value="completed">Complétés</option>
@@ -656,12 +656,12 @@ export function EmployeesTableDemo({
 
         {filteredParticipants.length === 0 ? (
           <div className="px-4 py-12 text-center sm:px-6">
-            <p className="text-sm text-slate-500">Aucun participant trouvé.</p>
+            <p className="text-sm text-muted">Aucun participant trouvé.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50 uppercase tracking-[0.18em] text-slate-500">
+              <thead className="bg-page uppercase tracking-[0.18em] text-muted">
                 <tr>
                   <th className="px-4 py-4 sm:px-6">Participant</th>
                   <th className="hidden px-4 py-4 sm:px-6 md:table-cell">Fonction</th>
@@ -672,14 +672,14 @@ export function EmployeesTableDemo({
               </thead>
               <tbody>
                 {filteredParticipants.map((participant) => (
-                  <tr key={participant.id} className="border-t border-slate-100 align-top">
+                  <tr key={participant.id} className="border-t border-line align-top">
                     <td className="px-4 py-4 sm:px-6">
                       <p className="font-semibold">{participant.name}</p>
-                      <p className="mt-1 text-xs text-slate-600 sm:text-sm">
+                      <p className="mt-1 text-xs text-muted sm:text-sm">
                         {participant.email}
                       </p>
                     </td>
-                    <td className="hidden px-4 py-4 text-slate-600 sm:px-6 md:table-cell">
+                    <td className="hidden px-4 py-4 text-muted sm:px-6 md:table-cell">
                       {participant.department}
                     </td>
                     <td className="px-4 py-4 sm:px-6">
@@ -697,10 +697,10 @@ export function EmployeesTableDemo({
                         </Pill>
                       </div>
                     </td>
-                    <td className="hidden px-4 py-4 text-slate-600 sm:px-6 lg:table-cell">
+                    <td className="hidden px-4 py-4 text-muted sm:px-6 lg:table-cell">
                       <p className="text-xs sm:text-sm">{formatShortDate(participant.invitationSentAt)}</p>
                       {participant.reminderSentAt ? (
-                        <p className="mt-1 text-xs text-amber-700">
+                        <p className="mt-1 text-xs text-accent">
                           Relance : {formatShortDate(participant.reminderSentAt)}
                         </p>
                       ) : null}
@@ -709,11 +709,11 @@ export function EmployeesTableDemo({
                       <div className="flex flex-col gap-2">
                         <Link
                           href={participant.surveyUrl}
-                          className="text-xs font-semibold text-amber-700 underline-offset-4 hover:underline sm:text-sm"
+                          className="text-xs font-semibold text-accent underline-offset-4 hover:underline sm:text-sm"
                         >
                           Ouvrir le lien
                         </Link>
-                        <code className="max-w-[12rem] truncate text-xs text-slate-500 sm:max-w-[24rem]">
+                        <code className="max-w-[12rem] truncate text-xs text-muted sm:max-w-[24rem]">
                           {participant.participationToken}
                         </code>
                       </div>

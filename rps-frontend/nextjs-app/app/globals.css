@@ -1,57 +1,121 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f0e7;
-  --foreground: #151515;
-  --panel: rgba(255, 252, 246, 0.92);
-  --panel-border: rgba(64, 54, 42, 0.1);
-  --shadow-soft: 0 18px 45px rgba(42, 32, 18, 0.08);
-  --font-inter:
-    "Aptos", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-manrope:
-    "Aptos Display", "Trebuchet MS", "Segoe UI", sans-serif;
+  color-scheme: light;
+  --brand-page: #f7f1e8;
+  --brand-surface: #ffffff;
+  --brand-graphite: #1f2528;
+  --brand-muted: #5c6265;
+  --brand-line: #d3d5d6;
+  --brand-mint: #e1f0ef;
+  --brand-turquoise: #0e9894;
+  --brand-teal: #0a6f6c;
+  --brand-track: #e9eaea;
+  --background: var(--brand-page);
+  --foreground: var(--brand-graphite);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-manrope);
+  /* Only the approved brand palette is available to color utilities. */
+  --color-*: initial;
+  --color-background: var(--brand-page);
+  --color-foreground: var(--brand-graphite);
+  --color-page: var(--brand-page);
+  --color-surface: var(--brand-surface);
+  --color-white: var(--brand-surface);
+  --color-graphite: var(--brand-graphite);
+  --color-muted: var(--brand-muted);
+  --color-line: var(--brand-line);
+  --color-accent-soft: var(--brand-mint);
+  --color-accent-bright: var(--brand-turquoise);
+  --color-accent: var(--brand-teal);
+  --color-track: var(--brand-track);
+  --font-sans: var(--font-hanken), sans-serif;
+  --font-heading: var(--font-bricolage), sans-serif;
+  --font-mono: var(--font-space-mono), monospace;
+  --shadow-xs: 0 1px 2px rgb(31 37 40 / 0.04);
+  --shadow-sm: 0 2px 8px rgb(31 37 40 / 0.05);
+  --shadow-md: 0 4px 16px rgb(31 37 40 / 0.06);
+  --shadow-lg: 0 8px 24px rgb(31 37 40 / 0.08);
+  --shadow-xl: 0 12px 32px rgb(31 37 40 / 0.1);
+  --shadow-2xl: 0 20px 48px rgb(31 37 40 / 0.12);
 }
 
-* {
-  box-sizing: border-box;
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--brand-page);
+    color: var(--brand-graphite);
+    font-family: var(--font-hanken), sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-bricolage), sans-serif;
+  }
+  label, legend, th, dt, time,
+  :where([class~="text-xs"], [class~="text-[11px]"], [class~="text-[10px]"], [class~="uppercase"]) {
+    font-family: var(--font-space-mono), monospace;
+  }
+  input, select, textarea {
+    color: var(--brand-graphite);
+    accent-color: var(--brand-teal);
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--brand-muted);
+    opacity: 1;
+  }
+  a { color: inherit; text-decoration: none; }
+  ::selection { background: var(--brand-mint); color: var(--brand-graphite); }
 }
 
-html {
-  scroll-behavior: smooth;
+@layer components {
+  .card-surface {
+    background: var(--brand-surface);
+    border: 1px solid var(--brand-line);
+    box-shadow: var(--shadow-sm);
+  }
+  .grid-pattern {
+    background-image:
+      linear-gradient(var(--brand-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--brand-line) 1px, transparent 1px);
+    background-size: 36px 36px;
+  }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-inter), sans-serif;
-  background-image:
-    radial-gradient(circle at top left, rgba(212, 161, 61, 0.12), transparent 24%),
-    radial-gradient(circle at 88% 14%, rgba(255, 255, 255, 0.42), transparent 20%),
-    linear-gradient(180deg, #f7f2e9 0%, #f2ece3 42%, #eee6db 100%);
+/* A consistent, visible keyboard focus on all interactive controls. */
+:where(a, button, input, select, textarea, summary, [contenteditable="true"], [tabindex]):focus-visible {
+  outline: 2px solid var(--brand-teal);
+  outline-offset: 2px;
+  box-shadow: none;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+.survey-question-title {
+  color: var(--brand-graphite);
+  font-family: var(--font-bricolage), sans-serif;
 }
-
-.card-surface {
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(10px);
+.survey-section-heading {
+  border-left: 3px solid var(--brand-teal);
+  background: var(--brand-mint);
 }
-
-.grid-pattern {
-  background-image:
-    linear-gradient(rgba(155, 114, 35, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(155, 114, 35, 0.06) 1px, transparent 1px);
-  background-size: 36px 36px;
+.survey-answer {
+  border: 1px solid var(--brand-line);
+  background: var(--brand-surface);
+  color: var(--brand-graphite);
+  font-family: var(--font-space-mono), monospace;
+}
+.survey-answer:hover {
+  border-color: var(--brand-turquoise);
+  background: var(--brand-mint);
+}
+.survey-answer--selected,
+.survey-answer--selected:hover {
+  border-color: var(--brand-teal);
+  background: var(--brand-teal);
+  color: var(--brand-surface);
+}
+.survey-answer--declined,
+.survey-answer--declined:hover {
+  border-color: var(--brand-graphite);
+  background: var(--brand-graphite);
+  color: var(--brand-surface);
 }

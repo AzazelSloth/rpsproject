@@ -7,16 +7,16 @@ export default function SurveyResponsePage() {
       {/* En-tête d'accès masqué à la demande du client.
       <div className="mx-auto mb-6 flex max-w-3xl justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-accent">
             Accès employé
           </p>
-          <h1 className="mt-2 font-[family-name:var(--font-manrope)] text-3xl font-extrabold">
+          <h1 className="mt-2 font-heading text-3xl font-extrabold">
             Accès au sondage
           </h1>
         </div>
         <Link
           href="/login"
-          className="rounded-[12px] border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          className="rounded-[12px] border border-line bg-white px-5 py-3 text-sm font-semibold text-graphite transition hover:bg-page"
         >
           Retour à la page de connexion
         </Link>

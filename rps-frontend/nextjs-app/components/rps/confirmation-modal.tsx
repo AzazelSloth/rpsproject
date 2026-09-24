@@ -29,7 +29,7 @@ export function ConfirmationModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-graphite/55 px-4 py-6"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !pending) {
@@ -41,28 +41,28 @@ export function ConfirmationModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirmation-modal-title"
-        className="w-full max-w-lg overflow-hidden rounded-[24px] border border-slate-200 bg-[#fffdf9] shadow-2xl"
+        className="w-full max-w-lg overflow-hidden rounded-[24px] border border-line bg-surface shadow-2xl"
       >
-        <div className="border-b border-slate-200 px-6 py-5 sm:px-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+        <div className="border-b border-line px-6 py-5 sm:px-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
             {eyebrow}
           </p>
           <h2
             id="confirmation-modal-title"
-            className="mt-2 font-[family-name:var(--font-manrope)] text-2xl font-bold text-slate-950"
+            className="mt-2 font-heading text-2xl font-bold text-graphite"
           >
             {title}
           </h2>
         </div>
-        <div className="px-6 py-6 text-sm leading-7 text-slate-600 sm:px-8">
+        <div className="px-6 py-6 text-sm leading-7 text-muted sm:px-8">
           {children}
         </div>
-        <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-6 py-5 sm:flex-row sm:justify-end sm:px-8">
+        <div className="flex flex-col-reverse gap-3 border-t border-line bg-white px-6 py-5 sm:flex-row sm:justify-end sm:px-8">
           <button
             type="button"
             disabled={pending}
             onClick={onCancel}
-            className="inline-flex items-center justify-center rounded-[12px] border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-[12px] border border-line bg-white px-5 py-3 text-sm font-semibold text-graphite transition hover:bg-page disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-track disabled:text-muted"
           >
             Annuler
           </button>
@@ -70,7 +70,7 @@ export function ConfirmationModal({
             type="button"
             disabled={pending}
             onClick={onConfirm}
-            className="inline-flex items-center justify-center rounded-[12px] bg-[#111827] px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(15,23,42,0.18)] transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-[12px] bg-graphite px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(31,37,40,0.18)] transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-track disabled:text-muted"
           >
             {pending ? pendingLabel : confirmLabel}
           </button>

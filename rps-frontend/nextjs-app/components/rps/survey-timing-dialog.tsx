@@ -48,17 +48,17 @@ export function SurveyTimingDialog({ campaignId, onClose }: { campaignId: number
   }, [campaignId]);
 
   return <dialog ref={dialog} onCancel={onClose} onClose={onClose} aria-labelledby="survey-timing-title"
-    className="m-auto w-[min(95vw,900px)] rounded-xl border border-slate-200 bg-white p-6 backdrop:bg-slate-950/50">
+    className="m-auto w-[min(95vw,900px)] rounded-xl border border-line bg-white p-6 backdrop:bg-graphite/50">
     <div className="mb-5 flex items-center justify-between gap-4">
       <h2 id="survey-timing-title" className="text-xl font-bold">Horodateur</h2>
-      <button type="button" aria-label="Fermer" onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100"><X aria-hidden className="h-5 w-5" /></button>
+      <button type="button" aria-label="Fermer" onClick={onClose} className="rounded-lg p-2 hover:bg-page"><X aria-hidden className="h-5 w-5" /></button>
     </div>
     {loading ? <LoaderCircle aria-label="Chargement" className="h-5 w-5 animate-spin" /> : null}
-    {error ? <p role="alert" className="text-sm text-rose-700">{error}</p> : null}
-    {!loading && !error ? <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
-      <p className="text-sm font-medium text-slate-700">Temps moyen de remplissage (durée active)</p>
+    {error ? <p role="alert" className="text-sm text-graphite">{error}</p> : null}
+    {!loading && !error ? <div className="mb-5 rounded-lg border border-line bg-page p-4">
+      <p className="text-sm font-medium text-graphite">Temps moyen de remplissage (durée active)</p>
       <p className="mt-1 text-2xl font-bold tabular-nums">{formatDuration(summary.averageSeconds)}</p>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-muted">
         {summary.count > 0
           ? `Calculé sur ${summary.count} questionnaire${summary.count > 1 ? 's' : ''} terminé${summary.count > 1 ? 's' : ''} avec une durée enregistrée. Format : heures:minutes:secondes.`
           : 'Aucun questionnaire terminé avec une durée enregistrée.'}
@@ -68,7 +68,7 @@ export function SurveyTimingDialog({ campaignId, onClose }: { campaignId: number
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm">
         <thead><tr>{['Employé', 'Début', 'Fin', 'Durée active'].map((label) => <th key={label} className="px-3 py-3">{label}</th>)}</tr></thead>
-        <tbody>{rows.map((row) => <tr key={row.participant_id} className="border-t border-slate-100">
+        <tbody>{rows.map((row) => <tr key={row.participant_id} className="border-t border-line">
           <td className="px-3 py-3">{row.employee_name ?? '—'}</td>
           <td className="whitespace-nowrap px-3 py-3">{formatDate(row.started_at)}</td>
           <td className="whitespace-nowrap px-3 py-3">{formatDate(row.completed_at)}</td>

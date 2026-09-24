@@ -12,7 +12,7 @@ function fixture({ started = false, section = 0, ready = true, completed = false
   const buttons = [];
   const persistence = {
     draft: { answers: { 'q1': 'Ma réponse sauvegardée' }, currentSection: section, started },
-    ready, completed, state: 'saved',
+    ready, completed, state: 'saved', lastSavedAt: null,
   };
   // The component destructures this callback from the hook result.
   persistence.setHasStarted = (value) => { persistence.draft.started = value; };
@@ -92,8 +92,38 @@ test('start remains disabled while the saved draft is loading', () => {
 test('first section restores saved answers without identifying fields', () => {
   const html = fixture({ started: true }).render();
   assert.ok(html.includes('Ma réponse sauvegardée'));
-  assert.ok(html.includes('aria-label="Enregistrer"'));
+  assert.ok(html.includes('Enregistrement automatique'));
+  assert.ok(!html.includes('aria-label="Enregistrer"'));
   assert.ok(!html.includes('Commencer le sondage'));
+});
+
+test('save status shows the confirmed local time and hides it while edits are pending or failed', () => {
+  const screen = fixture({ started: true });
+  screen.persistence.lastSavedAt = new Date(2026, 8, 24, 14, 32).getTime();
+  let html = screen.render();
+  assert.ok(html.includes('Enregistré à 14 h 32'));
+  assert.ok(html.includes('role="status"'));
+  assert.ok(html.includes('aria-live="polite"'));
+  assert.ok(!html.includes('aria-label="Enregistrer"'));
+
+  for (const state of ['dirty', 'saving', 'error']) {
+    screen.persistence.state = state;
+    html = screen.render();
+    assert.ok(html.includes(state === 'error' ? 'Enregistrement impossible' : 'Enregistrement en cours…'));
+    assert.ok(!html.includes('Enregistré à'));
+  }
+
+  screen.persistence.state = 'saved';
+  screen.persistence.lastSavedAt = new Date(2026, 8, 24, 14, 35).getTime();
+  html = screen.render();
+  assert.ok(html.includes('Enregistré à 14 h 35'));
+  assert.ok(!html.includes('Enregistrement impossible'));
+});
+
+test('loading a draft does not show a save confirmation', () => {
+  const html = fixture({ started: true, ready: false }).render();
+  assert.ok(html.includes('Chargement du brouillon…'));
+  assert.ok(!html.includes('Enregistré à'));
 });
 
 test('resume opens the saved section without repeating the introduction', () => {

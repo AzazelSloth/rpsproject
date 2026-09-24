@@ -49,7 +49,7 @@ export function ResultsAnalyzeButton({
 
   if (hasDeliveredReport) {
     return (
-      <div className="max-w-[14rem] rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold leading-5 text-emerald-800">
+      <div className="max-w-[14rem] rounded-[12px] border border-line bg-accent-soft px-4 py-3 text-xs font-semibold leading-5 text-accent">
         Analyse terminee. Consultez votre Drive.
       </div>
     );
@@ -62,18 +62,18 @@ export function ResultsAnalyzeButton({
         onClick={handleAnalyze}
         disabled={isDisabled}
         title={!canAnalyze ? disabledReason : undefined}
-        className="inline-flex items-center justify-center rounded-[12px] bg-[#181818] px-4 py-2 text-xs font-semibold shadow-[0_12px_24px_rgba(24,24,24,0.12)] transition hover:-translate-y-0.5 hover:bg-[#242424] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex items-center justify-center rounded-[12px] bg-graphite px-4 py-2 text-xs font-semibold shadow-[0_12px_24px_rgba(31,37,40,0.12)] transition hover:-translate-y-0.5 hover:bg-accent disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-track disabled:text-muted"
         style={{ color: "#ffffff" }}
       >
         {isAnalyzing ? "Lancement..." : "Analyser"}
       </button>
       {!canAnalyze ? (
-        <p className="text-xs leading-5 text-slate-500">{disabledReason}</p>
+        <p className="text-xs leading-5 text-muted">{disabledReason}</p>
       ) : null}
       {state.message ? (
         <p
           className={`text-xs leading-5 ${
-            state.type === "success" ? "text-emerald-700" : "text-red-700"
+            state.type === "success" ? "text-accent" : "text-graphite"
           }`}
         >
           {state.message}

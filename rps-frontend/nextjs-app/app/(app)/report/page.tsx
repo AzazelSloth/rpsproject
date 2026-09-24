@@ -27,7 +27,7 @@ export default async function ReportPage({
           description="Configure le backend pour lancer l'analyse IA de tes campagnes et consulter les livraisons dans Drive."
         />
         <Card className="p-8 text-center">
-          <p className="text-slate-500">Backend non configuré.</p>
+          <p className="text-muted">Backend non configuré.</p>
         </Card>
       </section>
     );
@@ -134,12 +134,12 @@ function ReportOverview({ report, results }: ReportOverviewProps) {
           },
         ].map((item) => (
           <Card key={item.label} className="overflow-hidden p-5">
-            <div className="h-1.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-400 to-[#f0c36d]" />
-            <p className="mt-4 text-sm font-medium text-slate-500">{item.label}</p>
-            <p className="mt-3 font-[family-name:var(--font-manrope)] text-3xl font-extrabold text-slate-900">
+            <div className="h-1.5 rounded-full bg-accent-bright" />
+            <p className="mt-4 text-sm font-medium text-muted">{item.label}</p>
+            <p className="mt-3 font-heading text-3xl font-extrabold text-graphite">
               {item.value}
             </p>
-            <p className="mt-2 text-sm leading-6 text-slate-500">{item.tone}</p>
+            <p className="mt-2 text-sm leading-6 text-muted">{item.tone}</p>
           </Card>
         ))}
       </div>
@@ -148,8 +148,8 @@ function ReportOverview({ report, results }: ReportOverviewProps) {
         <Card className="p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm text-slate-500">Lecture departement par departement</p>
-              <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
+              <p className="text-sm text-muted">Lecture departement par departement</p>
+              <h3 className="mt-1 font-heading text-xl font-bold">
                 Intensité du stress perçu
               </h3>
             </div>
@@ -160,23 +160,23 @@ function ReportOverview({ report, results }: ReportOverviewProps) {
             {results.bars.map((bar, index) => (
               <div
                 key={bar.department}
-                className="rounded-[14px] border border-slate-200 bg-[linear-gradient(180deg,#fffdf8_0%,#ffffff_100%)] p-4"
+                className="rounded-[14px] border border-line bg-surface p-4"
               >
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{bar.department}</p>
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                    <p className="text-sm font-semibold text-graphite">{bar.department}</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted">
                       Rang {index + 1}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-slate-900">{bar.average} / 5</p>
-                    <p className="text-xs text-slate-500">stress moyen</p>
+                    <p className="text-lg font-bold text-graphite">{bar.average} / 5</p>
+                    <p className="text-xs text-muted">stress moyen</p>
                   </div>
                 </div>
-                <div className="h-3 rounded-full bg-slate-100">
+                <div className="h-3 rounded-full bg-page">
                   <div
-                    className="h-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500"
+                    className="h-3 rounded-full bg-accent-bright"
                     style={{ width: `${Math.max(bar.value, 8)}%` }}
                   />
                 </div>
@@ -187,32 +187,32 @@ function ReportOverview({ report, results }: ReportOverviewProps) {
 
         <div className="space-y-5">
           <Card className="p-6">
-            <p className="text-sm text-slate-500">Repartition des retours</p>
-            <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
+            <p className="text-sm text-muted">Repartition des retours</p>
+            <h3 className="mt-1 font-heading text-xl font-bold">
               Lecture exécutive
             </h3>
             <div className="mt-5 space-y-4">
-              <div className="rounded-[14px] border border-emerald-100 bg-emerald-50 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+              <div className="rounded-[14px] border border-line bg-accent-soft px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
                   Participation
                 </p>
-                <p className="mt-2 text-2xl font-extrabold text-emerald-950">
+                <p className="mt-2 text-2xl font-extrabold text-accent">
                   {results.metrics.participationRate}%
                 </p>
               </div>
-              <div className="rounded-[14px] border border-amber-100 bg-amber-50 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+              <div className="rounded-[14px] border border-line bg-accent-soft px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
                   Stress moyen
                 </p>
-                <p className="mt-2 text-2xl font-extrabold text-amber-950">
+                <p className="mt-2 text-2xl font-extrabold text-accent">
                   {results.metrics.averageStress} / 5
                 </p>
               </div>
-              <div className="rounded-[14px] border border-slate-200 bg-slate-50 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+              <div className="rounded-[14px] border border-line bg-page px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
                   Zones de risque
                 </p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
+                <p className="mt-2 text-sm leading-6 text-muted">
                   {report.riskAreas.length ? report.riskAreas.join(", ") : "Aucune zone prioritaire."}
                 </p>
               </div>
@@ -220,15 +220,15 @@ function ReportOverview({ report, results }: ReportOverviewProps) {
           </Card>
 
           <Card className="p-6">
-            <p className="text-sm text-slate-500">Analyse automatique</p>
-            <h3 className="mt-1 font-[family-name:var(--font-manrope)] text-xl font-bold">
+            <p className="text-sm text-muted">Analyse automatique</p>
+            <h3 className="mt-1 font-heading text-xl font-bold">
               Points saillants
             </h3>
             <div className="mt-5 space-y-3">
               {results.analysis.map((item, index) => (
-                <div key={item} className="rounded-[14px] border border-amber-100 bg-amber-50 px-4 py-4">
+                <div key={item} className="rounded-[14px] border border-line bg-accent-soft px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm font-medium leading-6 text-slate-700">{item}</p>
+                    <p className="text-sm font-medium leading-6 text-graphite">{item}</p>
                     <Pill tone={index === 0 ? "warning" : "neutral"}>
                       {index === 0 ? "Priorite" : "Lecture"}
                     </Pill>
@@ -241,11 +241,11 @@ function ReportOverview({ report, results }: ReportOverviewProps) {
       </div>
 
       <Card className="p-6">
-        <p className="text-sm text-slate-500">Recommandations</p>
+        <p className="text-sm text-muted">Recommandations</p>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {report.recommendations.map((item) => (
-            <div key={item} className="rounded-[14px] border border-slate-200 bg-slate-50 px-4 py-4">
-              <p className="text-sm leading-6 text-slate-700">{item}</p>
+            <div key={item} className="rounded-[14px] border border-line bg-page px-4 py-4">
+              <p className="text-sm leading-6 text-graphite">{item}</p>
             </div>
           ))}
         </div>

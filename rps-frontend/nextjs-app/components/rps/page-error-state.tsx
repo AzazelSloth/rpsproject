@@ -14,9 +14,9 @@ export function PageErrorState({
   return (
     <section className="space-y-6">
       <SectionHeader eyebrow={eyebrow} title={title} description={description} />
-      <Card className="border border-rose-200 bg-rose-50 p-8">
-        <p className="text-sm font-semibold text-rose-800">Chargement impossible</p>
-        <p className="mt-2 text-sm leading-6 text-rose-700">{message}</p>
+      <Card className="border border-muted bg-page p-8">
+        <p className="text-sm font-semibold text-graphite">Chargement impossible</p>
+        <p className="mt-2 text-sm leading-6 text-graphite">{message}</p>
       </Card>
     </section>
   );
