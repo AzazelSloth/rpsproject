@@ -103,11 +103,13 @@ test('resume opens the saved section without repeating the introduction', () => 
   assert.ok(!html.includes('Bienvenue dans le questionnaire.'));
 });
 
-test('conclusion retains the final submission button without identifying fields', () => {
-  const html = fixture({ started: true, section: 2 }).render();
-  assert.ok(html.includes('Merci de votre participation.'));
+test('the last question section offers submission without showing the conclusion', () => {
+  const html = fixture({ started: true, section: 1 }).render();
+  assert.ok(!html.includes('Merci de votre participation.'));
+  assert.ok(!html.includes('Merci. Votre voix compte dans le portrait.'));
   assert.ok(html.includes('Envoyer mes réponses'));
-  assert.ok(!html.includes('Deuxième question'));
+  assert.ok(html.includes('Deuxième question'));
+  assert.ok(html.includes('Étape 2 sur 2'));
 });
 
 test('an empty introduction opens the questions directly', () => {
@@ -116,8 +118,10 @@ test('an empty introduction opens the questions directly', () => {
   assert.ok(!html.includes('Commencer le sondage'));
 });
 
-test('a completed questionnaire shows neither introduction nor identifying fields', () => {
+test('a completed questionnaire shows the conclusion without introduction or submission controls', () => {
   const html = fixture({ completed: true }).render();
+  assert.ok(html.includes('Merci. Votre voix compte dans le portrait.'));
+  assert.ok(html.includes('Merci de votre participation.'));
   assert.ok(!html.includes('Commencer le sondage'));
   assert.ok(!html.includes('Première question'));
   assert.ok(!html.includes('Envoyer mes réponses'));
