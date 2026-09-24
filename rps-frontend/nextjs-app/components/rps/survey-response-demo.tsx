@@ -54,8 +54,7 @@ export function SurveyResponseDemo({
     [questions],
   );
   const surveySections = useMemo(() => buildSurveySections(questions), [questions]);
-  const hasConclusionPage = Boolean(conclusionText?.trim());
-  const totalSteps = surveySections.length + (hasConclusionPage ? 1 : 0);
+  const totalSteps = surveySections.length;
   const sectionQuestionIds = useMemo(() => surveySections.map((section) =>
     section.items.filter(({ question }) => question.type !== "section").map(({ question }) => question.id),
   ), [surveySections]);
@@ -68,7 +67,6 @@ export function SurveyResponseDemo({
   const { setAnswers, setCurrentSectionIndex, setHasStarted } = persistence;
   const isCompleted = Boolean(completedAt) || status === 'completed' || submitted || persistence.completed;
   const currentSection = surveySections[currentSectionIndex] ?? surveySections[0];
-  const isConclusionStep = hasConclusionPage && currentSectionIndex === surveySections.length;
   const isFinalStep = currentSectionIndex === totalSteps - 1;
 
   function handleSubmit() {
@@ -106,6 +104,26 @@ export function SurveyResponseDemo({
         persistence.resumeTiming();
       }
     });
+  }
+
+  if (isCompleted && conclusionText?.trim()) {
+    return (
+      <Card className="mx-auto max-w-3xl p-6 sm:p-8">
+        <div className="mt-8 space-y-6">
+          <div className="rounded-[12px] border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
+            <p className="text-lg font-bold text-slate-950">
+              Merci. Votre voix compte dans le portrait.
+            </p>
+            <RichSurveyText
+              text={conclusionText.trim()}
+              className="mt-4 text-sm leading-7 text-slate-700"
+            />
+          </div>
+
+          <SurveyPrivacyFooter />
+        </div>
+      </Card>
+    );
   }
 
   if (isCompleted) {
@@ -219,7 +237,7 @@ export function SurveyResponseDemo({
           <nav aria-label="Sections du sondage" className="rounded-[12px] bg-slate-50 p-4">
             <div className="flex items-center justify-between gap-4 text-sm font-semibold text-slate-700">
               <span>Étape {currentSectionIndex + 1} sur {totalSteps}</span>
-              {!isConclusionStep ? <span>{currentSection?.title}</span> : null}
+              <span>{currentSection?.title}</span>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
               <div
@@ -230,7 +248,7 @@ export function SurveyResponseDemo({
           </nav>
         ) : null}
 
-        {!isConclusionStep ? currentSection?.items.map(({ question, originalIndex }) => (
+        {currentSection?.items.map(({ question, originalIndex }) => (
           <div
             key={question.id}
             className={`rounded-[12px] border p-5 ${
@@ -304,19 +322,26 @@ export function SurveyResponseDemo({
                 ))}
               </div>
             ) : (
-              <textarea
-                maxLength={4000}
-                value={
-                  isPreferNotToAnswer(answers[question.id])
-                    ? ""
-                    : (answers[question.id] ?? "")
-                }
-                onChange={(event) =>
-                  setAnswers((current) => ({ ...current, [question.id]: event.target.value }))
-                }
-                disabled={isPreferNotToAnswer(answers[question.id])}
-                className="mt-4 min-h-32 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-              />
+              <>
+                <textarea
+                  maxLength={1000}
+                  aria-describedby={`answer-length-${question.id}`}
+                  value={
+                    isPreferNotToAnswer(answers[question.id])
+                      ? ""
+                      : (answers[question.id] ?? "")
+                  }
+                  onChange={(event) =>
+                    setAnswers((current) => ({ ...current, [question.id]: event.target.value }))
+                  }
+                  disabled={isPreferNotToAnswer(answers[question.id])}
+                  className="mt-4 min-h-32 w-full rounded-[12px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                />
+                <p id={`answer-length-${question.id}`} className="mt-2 text-right text-xs text-slate-500">
+                  {isPreferNotToAnswer(answers[question.id]) ? 0 : (answers[question.id] ?? "").length}
+                  {" / 1 000 caractères"}
+                </p>
+              </>
             )}
             {question.type !== "section" ? (
               <div className="mt-3">
@@ -338,19 +363,7 @@ export function SurveyResponseDemo({
               </div>
             ) : null}
           </div>
-        )) : null}
-
-        {isConclusionStep && conclusionText?.trim() ? (
-          <div className="rounded-[12px] border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
-            <p className="text-lg font-bold text-slate-950">
-              Merci. Votre voix compte dans le portrait.
-            </p>
-            <RichSurveyText
-              text={conclusionText.trim()}
-              className="mt-4 text-sm leading-7 text-slate-700"
-            />
-          </div>
-        ) : null}
+        ))}
 
         <SurveyPrivacyFooter />
       </div>
