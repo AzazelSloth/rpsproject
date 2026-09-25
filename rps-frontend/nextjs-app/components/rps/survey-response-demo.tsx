@@ -277,7 +277,7 @@ export function SurveyResponseDemo({
                       onClick={() =>
                         setAnswers((current) => ({ ...current, [question.id]: String(value) }))
                       }
-                      className={`survey-answer rounded-[12px] px-4 py-3 text-sm font-semibold transition ${
+                      className={`survey-answer survey-answer--numeric rounded-[12px] px-4 py-3 text-sm font-semibold transition ${
                         answers[question.id] === String(value)
                           ? "survey-answer--selected"
                           : ""
@@ -287,7 +287,7 @@ export function SurveyResponseDemo({
                     </button>
                   ))}
                 </div>
-                <div className="mt-3 grid gap-2 text-xs text-muted sm:grid-cols-5">
+                <div className="mt-3 grid gap-2 font-sans text-xs text-muted sm:grid-cols-5">
                   {(question.options?.length === 5
                     ? question.options
                     : [
@@ -347,8 +347,8 @@ export function SurveyResponseDemo({
                 <SecondaryButton
                   className={
                     isPreferNotToAnswer(answers[question.id])
-                      ? "survey-answer survey-answer--declined"
-                      : "survey-answer"
+                      ? "survey-answer survey-answer--refusal survey-answer--declined"
+                      : "survey-answer survey-answer--refusal"
                   }
                   onClick={() =>
                     setAnswers((current) => ({

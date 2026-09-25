@@ -101,6 +101,9 @@
   border: 1px solid var(--brand-line);
   background: var(--brand-surface);
   color: var(--brand-graphite);
+  font-family: var(--font-hanken), sans-serif;
+}
+.survey-answer--numeric {
   font-family: var(--font-space-mono), monospace;
 }
 .survey-answer:hover {
@@ -113,8 +116,14 @@
   background: var(--brand-teal);
   color: var(--brand-surface);
 }
+.survey-answer--refusal {
+  border-style: dashed;
+  color: var(--brand-muted);
+  font-weight: 400;
+}
 .survey-answer--declined,
 .survey-answer--declined:hover {
+  border-style: solid;
   border-color: var(--brand-graphite);
   background: var(--brand-graphite);
   color: var(--brand-surface);

@@ -3010,7 +3010,7 @@ export function SurveyBuilderDemo({
                         ).map((label, optionIndex) => (
                           <label
                             key={`${question.id}-scale-preview-${optionIndex + 1}`}
-                            className="flex items-center gap-3 text-sm text-muted"
+                            className="flex items-center gap-3 font-sans text-sm text-muted"
                           >
                             <input
                               type="radio"
@@ -3019,7 +3019,7 @@ export function SurveyBuilderDemo({
                               className="h-4 w-4 accent-accent"
                             />
                             <span>
-                              {optionIndex + 1} - {label}
+                              <span className="font-mono">{optionIndex + 1}</span> - {label}
                             </span>
                           </label>
                         ))}
@@ -3031,7 +3031,7 @@ export function SurveyBuilderDemo({
                         {sanitizeOptions(question.options).map((option, optionIndex) => (
                           <label
                             key={`${question.id}-${option}`}
-                            className="flex items-center gap-3 text-sm text-muted"
+                            className="flex items-center gap-3 font-sans text-sm text-muted"
                           >
                             <input
                               type="radio"
@@ -3054,7 +3054,7 @@ export function SurveyBuilderDemo({
                     ) : null}
 
                     <div className="mt-3">
-                      <span className="inline-flex rounded-[12px] border border-line bg-white px-4 py-2.5 text-sm font-semibold text-graphite">
+                      <span className="survey-answer survey-answer--refusal inline-flex rounded-[12px] px-4 py-3 text-sm">
                         {PREFER_NOT_TO_ANSWER}
                       </span>
                     </div>
