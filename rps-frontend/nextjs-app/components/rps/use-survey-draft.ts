@@ -9,6 +9,7 @@ import {
   SurveyDraftSession,
   type BackendSurveyDraft,
   type SurveyDraft,
+  type DraftQuestion,
 } from "@/lib/responses/survey-draft";
 
 export function useSurveyDraft({
@@ -19,6 +20,7 @@ export function useSurveyDraft({
   started,
   sections,
   totalSteps,
+  questions,
 }: {
   token?: string | null;
   initialDraft?: BackendSurveyDraft | null;
@@ -27,6 +29,7 @@ export function useSurveyDraft({
   started: boolean;
   sections: string[][];
   totalSteps: number;
+  questions: readonly DraftQuestion[];
 }) {
   const session = useRef<SurveyDraftSession | null>(null);
   const timing = useRef<SurveyTimingTracker | null>(null);
@@ -50,6 +53,7 @@ export function useSurveyDraft({
     } catch {
       /* Private browser settings. */
     }
+    let timer: SurveyTimingTracker | null = null;
     const current = new SurveyDraftSession(
       `rps-survey-draft:${token ?? "preview"}`,
       fromBackendDraft(initialDraft, started),
@@ -62,7 +66,8 @@ export function useSurveyDraft({
           ...draft,
         }),
       () => {
-        if (active)
+        if (active) {
+          if (current.completed) timer?.finish();
           setView({
             draft: current.draft,
             state: current.state,
@@ -70,10 +75,12 @@ export function useSurveyDraft({
             completed: current.completed,
             ready: true,
           });
+        }
       },
+      questions,
     );
     session.current = current;
-    const timer = token ? new SurveyTimingTracker(
+    timer = token ? new SurveyTimingTracker(
       `rps-survey-timing:${token}`, storage,
       (payload) => getTrpcClient().surveyResponses.saveTiming.mutate({ participantToken: token, ...payload }),
       document.visibilityState === 'visible',
@@ -125,6 +132,7 @@ export function useSurveyDraft({
       active = false;
       timer?.setVisible(false);
       void timer?.flush();
+      timer?.dispose();
       current.dispose();
       window.clearInterval(retry);
       window.clearInterval(tick);
@@ -137,7 +145,7 @@ export function useSurveyDraft({
       window.removeEventListener("online", save);
       document.removeEventListener("visibilitychange", visibility);
     };
-  }, [token, initialDraft, revision, completed, started, sections, totalSteps]);
+  }, [token, initialDraft, revision, completed, started, sections, totalSteps, questions]);
 
   useEffect(() => {
     if (!token || !view.ready || view.completed) return;

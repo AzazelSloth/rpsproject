@@ -60,7 +60,7 @@ export function SurveyResponseDemo({
   const persistence = useSurveyDraft({
     token: participantToken, initialDraft, revision: draftRevision,
     completed: Boolean(completedAt) || status === 'completed', started: !introductionText?.trim(),
-    sections: sectionQuestionIds, totalSteps,
+    sections: sectionQuestionIds, totalSteps, questions,
   });
   const { answers, currentSection: currentSectionIndex, started: hasStarted } = persistence.draft;
   const { setAnswers, setCurrentSectionIndex, setHasStarted } = persistence;

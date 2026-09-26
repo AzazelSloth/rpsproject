@@ -82,3 +82,40 @@ test('final validation clears pending timing and stops subsequent ticks', () => 
 test('overlapping tabs are merged instead of double counted', () => {
   assert.deepEqual(mergeTimingIntervals([{ start: 0, end: 5000 }, { start: 2000, end: 8000 }]), [{ start: 0, end: 8000 }]);
 });
+
+test('timing only writes timestamps, even when a legacy cache has extra fields', () => {
+  const { storage } = fixture();
+  storage.setItem('token', JSON.stringify({
+    started_at: 1000, answers: { '1': 'Texte sensible' },
+    intervals: [{ start: 1000, end: 2000, comment: 'Texte sensible' }],
+  }));
+  const tracker = new SurveyTimingTracker('token', storage, async () => undefined, true, () => 2000);
+  tracker.tick();
+  assert.deepEqual(JSON.parse(storage.getItem('token')!), {
+    started_at: 1000, intervals: [{ start: 1000, end: 2000 }],
+  });
+});
+
+test('late timing responses never recreate a key after completion or unmount', async () => {
+  for (const disposed of [false, true]) {
+    for (const fails of [false, true]) {
+      let resolve!: () => void;
+      let reject!: (error: Error) => void;
+      const { tracker, storage, advance, now } = fixture(() => new Promise<void>((ok, fail) => {
+        resolve = ok; reject = fail;
+      }));
+      tracker.start(); advance(5000); tracker.tick();
+      const sending = tracker.flush();
+      if (disposed) {
+        tracker.dispose();
+        const reopened = new SurveyTimingTracker('token', storage, async () => undefined, true, now);
+        reopened.finish();
+      } else tracker.finish();
+      if (fails) reject(new Error('late failure')); else resolve();
+      await sending;
+      tracker.tick(); tracker.setVisible(true);
+      await tracker.flush();
+      assert.equal(storage.getItem('token'), null);
+    }
+  }
+});

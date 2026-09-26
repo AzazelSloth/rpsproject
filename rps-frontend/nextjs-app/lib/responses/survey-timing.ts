@@ -9,7 +9,7 @@ export function mergeTimingIntervals(intervals: TimingInterval[]) {
     if (interval.end <= interval.start) continue;
     const last = result[result.length - 1];
     if (last && interval.start <= last.end) last.end = Math.max(last.end, interval.end);
-    else result.push({ ...interval });
+    else result.push({ start: interval.start, end: interval.end });
   }
   return result;
 }
@@ -34,6 +34,7 @@ export class SurveyTimingTracker {
   private lastActivity: number;
   private visible: boolean;
   private finished = false;
+  private disposed = false;
   private pending: TimingInterval[] = [];
   private inFlight: Promise<void> | null = null;
   private acknowledgedStart = false;
@@ -63,13 +64,16 @@ export class SurveyTimingTracker {
       const raw = this.storage?.getItem(this.key);
       const value = raw ? JSON.parse(raw) as SurveyTimingPayload : null;
       if (value && Number.isSafeInteger(value.started_at) && Array.isArray(value.intervals) &&
-        value.intervals.every((item) => Number.isSafeInteger(item.start) && Number.isSafeInteger(item.end) && item.end >= item.start)) return value;
+        value.intervals.every((item) => Number.isSafeInteger(item.start) && Number.isSafeInteger(item.end) && item.end >= item.start)) return {
+          started_at: value.started_at,
+          intervals: value.intervals.map(({ start, end }) => ({ start, end })),
+        };
     } catch { /* Storage can be unavailable. */ }
     return null;
   }
 
   start() {
-    if (this.finished) return;
+    if (this.finished || this.disposed) return;
     if (this.startedAt === null) {
       this.startedAt = this.now();
       this.lastTick = this.lastActivity = this.startedAt;
@@ -80,7 +84,7 @@ export class SurveyTimingTracker {
   }
 
   tick() {
-    if (this.finished) return;
+    if (this.finished || this.disposed) return;
     const now = this.now();
     // A suspended browser/process must not count its entire sleeping interval.
     if (this.startedAt !== null && this.visible && now - this.lastTick <= 15000) {
@@ -106,7 +110,7 @@ export class SurveyTimingTracker {
   }
 
   private persist() {
-    if (this.startedAt === null || this.finished) return;
+    if (this.startedAt === null || this.finished || this.disposed) return;
     const cached = this.read();
     this.pending = mergeTimingIntervals([...this.pending, ...(cached?.intervals ?? [])]);
     this.startedAt = Math.min(this.startedAt, cached?.started_at ?? this.startedAt);
@@ -120,12 +124,12 @@ export class SurveyTimingTracker {
   }
 
   flush(): Promise<void> {
-    if (this.finished) return Promise.resolve();
+    if (this.finished || this.disposed) return Promise.resolve();
     if (this.inFlight) return this.inFlight;
     const payload = this.snapshot();
     if (!payload || (this.acknowledgedStart && !payload.intervals.length)) return Promise.resolve();
     this.inFlight = this.send(payload).then(() => {
-      if (this.finished) return;
+      if (this.finished || this.disposed) return;
       this.acknowledgedStart = true;
       const cached = this.read();
       this.pending = subtractIntervals(mergeTimingIntervals([
@@ -142,5 +146,9 @@ export class SurveyTimingTracker {
     this.finished = true;
     this.pending = [];
     try { this.storage?.removeItem(this.key); } catch { /* best effort */ }
+  }
+
+  dispose() {
+    this.disposed = true;
   }
 }

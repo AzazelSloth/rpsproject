@@ -108,6 +108,10 @@ function isDraft(value: unknown): value is SurveyDraft {
 }
 
 export type DraftStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+export type DraftQuestion = {
+  id: string;
+  type: "scale" | "choice" | "text" | "section";
+};
 
 export class SurveyDraftSession {
   draft: SurveyDraft;
@@ -125,6 +129,7 @@ export class SurveyDraftSession {
     revision: number,
   ) => Promise<SaveDraftResult>;
   private readonly changed: () => void;
+  private readonly questionTypes: ReadonlyMap<string, DraftQuestion["type"]>;
 
   constructor(
     key: string,
@@ -136,28 +141,48 @@ export class SurveyDraftSession {
       revision: number,
     ) => Promise<SaveDraftResult>,
     changed: () => void,
+    questions: readonly DraftQuestion[],
   ) {
     this.key = key;
     this.storage = storage;
     this.send = send;
     this.changed = changed;
+    this.questionTypes = new Map(questions.map(({ id, type }) => [id, type]));
     this.base = initial;
     this.draft = initial;
     this.revision = revision;
+    let hadCache = false;
     try {
       const raw = storage?.getItem(key);
+      hadCache = raw != null;
       const cached = raw ? JSON.parse(raw) : null;
       if (
         cached?.version === 1 &&
         isDraft(cached.base) &&
         isDraft(cached.draft)
       ) {
-        this.draft = mergeDraft(cached.base, cached.draft, initial);
+        this.draft = mergeDraft(
+          this.localDraft(cached.base), this.localDraft(cached.draft), initial,
+        );
       }
     } catch {
       /* A blocked or corrupt cache must not prevent answering. */
     }
     this.state = this.dirty ? "dirty" : "saved";
+    // Scrub legacy caches immediately, including text in the server snapshot.
+    if (hadCache) this.persist();
+  }
+
+  private localDraft(draft: SurveyDraft): SurveyDraft {
+    return {
+      answers: Object.fromEntries(Object.entries(draft.answers).filter(([id, answer]) => {
+        const type = this.questionTypes.get(id);
+        return type === "scale" || type === "choice" ||
+          (type === "text" && isPreferNotToAnswer(answer));
+      })),
+      currentSection: draft.currentSection,
+      started: draft.started,
+    };
   }
 
   get dirty() {
@@ -169,7 +194,11 @@ export class SurveyDraftSession {
     try {
       this.storage?.setItem(
         this.key,
-        JSON.stringify({ version: 1, base: this.base, draft: this.draft }),
+        JSON.stringify({
+          version: 1,
+          base: this.localDraft(this.base),
+          draft: this.localDraft(this.draft),
+        }),
       );
     } catch {
       /* Server synchronization and the exit guard remain available. */
@@ -217,7 +246,7 @@ export class SurveyDraftSession {
       this.changed();
       try {
         const result = await this.send(toBackendDraft(sent), this.revision);
-        if (this.disposed) return false;
+        if (this.disposed || this.completed) return false;
         if (result.completed) {
           this.finish();
           return false;
@@ -235,7 +264,7 @@ export class SurveyDraftSession {
         if (!result.saved && ++conflicts >= 3)
           throw new Error("Concurrent draft updates");
       } catch {
-        if (this.disposed) return false;
+        if (this.disposed || this.completed) return false;
         this.state = "error";
         this.persist();
         this.changed();
